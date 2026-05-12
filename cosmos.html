@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>宇宙演化</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#060504; --text-primary:#e4d5ba; --text-secondary:#b8a88a;
+  --text-dim:#7a6e5a; --accent-warm:#c4854a; --line-color:#2a2118;
+  --card-bg:rgba(18,14,10,0.7); --card-border:rgba(196,133,74,0.12);
+}
+html { scroll-behavior:smooth; }
+body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','Georgia',serif; line-height:1.9; overflow-x:hidden; }
+
+/* ===== CSS 奇点发光点 ===== */
+#singularity-dot {
+  position:fixed; z-index:50;
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  width:6px; height:6px; border-radius:50%;
+  background:var(--accent-warm);
+  box-shadow: 0 0 20px var(--accent-warm), 0 0 60px rgba(196,133,74,0.4), 0 0 120px rgba(196,133,74,0.15);
+  animation: singularity-pulse 2s ease-in-out infinite;
+  transition: opacity 0.5s ease, transform 1s ease;
+}
+#singularity-dot.burst {
+  opacity:0;
+  transform: translate(-50%,-50%) scale(80);
+  transition: opacity 0.3s ease 0.2s, transform 0.6s ease;
+}
+@keyframes singularity-pulse {
+  0%,100% { box-shadow: 0 0 20px var(--accent-warm), 0 0 60px rgba(196,133,74,0.3), 0 0 120px rgba(196,133,74,0.1); transform:translate(-50%,-50%) scale(1); }
+  50% { box-shadow: 0 0 30px var(--accent-warm), 0 0 80px rgba(196,133,74,0.5), 0 0 160px rgba(196,133,74,0.2); transform:translate(-50%,-50%) scale(1.3); }
+}
+
+#canvas-container { position:fixed; inset:0; z-index:1; opacity:0; transition: opacity 0.8s ease; }
+#canvas-container.visible { opacity:1; }
+#static-stars { position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0; transition: opacity 1s ease; }
+#static-stars.visible { opacity:1; }
+#flash { position:fixed; inset:0; background:#fff; opacity:0; z-index:100; pointer-events:none; transition:opacity 0.12s ease-out; }
+.vignette { position:fixed; inset:0; pointer-events:none; z-index:2; background:radial-gradient(circle at center, transparent 10%, rgba(0,0,0,0.8) 100%); }
+.grain { position:fixed; inset:0; pointer-events:none; z-index:3; opacity:0.08; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='2.5' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size:200px 200px; }
+.progress-bar { position:fixed; top:0; left:0; height:1px; background:var(--accent-warm); z-index:100; width:0%; opacity:0.5; }
+
+.hero-space { position:relative; z-index:10; height:100vh; display:flex; align-items:flex-end; justify-content:center; padding-bottom:50px; }
+.scroll-arrow { font-size:14px; color:var(--text-dim); opacity:0; animation:arrow-in 2s ease 10s forwards; }
+.scroll-arrow::after { content:''; display:block; width:1px; height:30px; background:linear-gradient(to bottom, var(--text-dim), transparent); margin:12px auto 0; animation:scroll-pulse 2s ease-in-out infinite; }
+@keyframes arrow-in { to { opacity:0.3; } }
+@keyframes scroll-pulse { 0%,100%{opacity:0.3} 50%{opacity:0.7} }
+
+.content { position:relative; z-index:10; max-width:680px; margin:0 auto; padding:0 24px; }
+.timeline { position:relative; padding:0 0 80px 44px; }
+.timeline::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:1px; background:linear-gradient(to bottom, transparent, var(--line-color) 5%, var(--line-color) 95%, transparent); }
+.epoch { position:relative; margin-bottom:90px; opacity:0; transform:translateY(50px); transition:opacity 1s ease, transform 1s ease; }
+.epoch.revealed { opacity:1; transform:translateY(0); }
+.epoch-dot { position:absolute; left:-40px; top:8px; width:10px; height:10px; border-radius:50%; border:2px solid var(--accent-warm); background:var(--bg); transition:all 0.6s ease; }
+.epoch.revealed .epoch-dot { box-shadow:0 0 14px rgba(196,133,74,0.5); background:var(--accent-warm); }
+.epoch-time { font-family:'EB Garamond',serif; font-size:12px; color:var(--text-dim); letter-spacing:3px; margin-bottom:6px; }
+.epoch-title { font-size:22px; font-weight:500; color:var(--text-primary); margin-bottom:24px; line-height:1.4; }
+.story { font-size:15px; font-weight:300; color:var(--text-secondary); line-height:2.1; margin-bottom:24px; }
+.story b { font-weight:500; color:var(--text-primary); }
+.aside-toggle { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim); letter-spacing:2px; cursor:pointer; padding:8px 0; border:none; background:none; font-family:inherit; transition:color 0.3s; }
+.aside-toggle:hover { color:var(--accent-warm); }
+.aside-toggle .arr { display:inline-block; transition:transform 0.3s; font-size:10px; }
+.aside-toggle.open .arr { transform:rotate(90deg); }
+.aside-content { max-height:0; overflow:hidden; transition:max-height 0.6s ease, opacity 0.4s ease; opacity:0; }
+.aside-content.open { opacity:1; }
+.aside-inner { font-size:13px; color:var(--text-dim); line-height:1.9; padding:16px 20px; margin:8px 0 24px; border-left:1px solid var(--card-border); background:var(--card-bg); border-radius:0 4px 4px 0; }
+.aside-inner b { font-weight:500; color:var(--text-secondary); }
+.cards { display:flex; flex-direction:column; gap:2px; margin-top:20px; padding:16px 20px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:4px; }
+.card-item { font-size:13px; color:var(--text-dim); line-height:1.7; padding:4px 0; display:flex; align-items:baseline; gap:10px; }
+.card-item::before { content:''; width:3px; height:3px; border-radius:50%; background:var(--accent-warm); flex-shrink:0; margin-top:9px; opacity:0.5; }
+.card-item b { font-weight:500; color:var(--text-secondary); }
+.back-btn { display:block; margin:80px auto 120px; padding:14px 36px; background:transparent; border:1px solid var(--line-color); color:var(--text-dim); font-family:'EB Garamond',serif; font-size:14px; letter-spacing:3px; cursor:pointer; transition:all 0.3s; border-radius:2px; }
+.back-btn:hover { border-color:var(--accent-warm); color:var(--accent-warm); }
+@media (max-width:600px) { .timeline{padding-left:32px} .epoch-dot{left:-28px} .epoch-title{font-size:18px} .story{font-size:14px} }
+::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(196,133,74,0.15);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="singularity-dot"></div>
+<div id="canvas-container"></div>
+<div id="static-stars"></div>
+<div id="flash"></div>
+<div class="vignette"></div>
+<div class="grain"></div>
+<div class="progress-bar" id="progress"></div>
+
+<div class="hero-space"><div class="scroll-arrow" id="scroll-arrow">↓</div></div>
+
+<div class="content">
+<div class="timeline">
+
+<div class="epoch">
+<div class="epoch-dot"></div>
+<div class="epoch-time">t = 0</div>
+<div class="epoch-title">一切的开始</div>
+<div class="story">宇宙最初的状态，物理学家叫它<b>奇点</b>——意思是：在那一刻，所有的数学公式都算不出结果，所有已知的物理规律都失效了。我们能描述的只有"它之后"发生了什么，"它本身"是什么，目前没有人知道。<br><br>那时候温度高到大约 10³² 度——比太阳核心还要热一亿亿亿倍。热到任何你知道的东西都不可能存在。所有的能量被挤在一个极小极小的范围里。<br><br>然后——没有人知道为什么——它开始<b>膨胀</b>。<br><br>"大爆炸"这个名字其实起错了。它不是一个炸弹在某个地方炸开。它是<b>空间本身</b>在变大——每一个点和每一个点之间的距离都在变大。像一壶滚烫的水倒进一个越来越大的池子里，水还是那些水，但温度降了，因为摊薄了。<br><br>温度一降，一件事就发生了：<b>粒子开始能够稳定存在</b>。之前温度太高，就算粒子短暂出现了，也会立刻被撞碎。现在温度够低了，有些粒子终于能活下来不被摧毁了。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 什么是时空、场、能量</button>
+<div class="aside-content"><div class="aside-inner"><b>什么是"时空"？</b><br>时间和空间不是两样分开的东西，它们是一张布的两面。你在空间里移动得越快，你的时间就走得越慢——这不是比喻，是爱因斯坦用实验验证过的事实。<br><br><b>什么是"场"？</b><br>想象一片无边无际的海。海面上局部鼓起来的一个浪包 = 粒子。所以"场"是那片海本身。粒子不是独立的小球，它是场的一部分局部震动起来了。<br><br><b>什么是"能量"？</b><br>能量是"让事情发生的能力"。热、光、运动——只是能量的不同表现形式，可以互相转换，但总量不变。</div></div>
+<div class="cards"><div class="card-item"><b>原始状态</b> — 所有能量挤在极小范围，温度高到粒子无法存在</div><div class="card-item"><b>宇宙大爆炸</b> — 不是炸弹，是空间本身在变大</div><div class="card-item"><b>为什么宇宙不为零</b> — "什么都没有"反而是最不自洽的状态</div></div>
+</div>
+
+<div class="epoch">
+<div class="epoch-dot"></div>
+<div class="epoch-time">t &lt; 3 分钟</div>
+<div class="epoch-title">粒子时代</div>
+<div class="story">温度继续降。<b>夸克</b>第一次能稳定地组合在一起了。三个夸克被<b>强力</b>绑在一起，形成<b>质子</b>或<b>中子</b>。<br><br>质子带正电，中子不带电。质子的数量决定了一个原子是什么元素：1个 = 氢，6个 = 碳，26个 = 铁，92个 = 铀。<b>质子数 = 元素的身份证号</b>。<br><br>还有<b>电子</b>——比质子轻得多，带负电，到处散着。<b>光子</b>——光的最小单位。<b>中微子</b>——极其轻，能直接穿过整个地球。<br><br>宇宙诞生 3 分钟时，质子和中子开始组合——氢核、氦核、少量锂核。宇宙变成了一锅<b>"核汤"</b>。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 四种力与质量</button>
+<div class="aside-content"><div class="aside-inner"><b>四种力：</b><br>① <b>强力</b> — 把夸克绑成质子中子。力最强，只管原子核内部。<br>② <b>电磁力</b> — 控制电荷、光、化学反应。日常几乎所有现象都是它。<br>③ <b>弱力</b> — 让粒子变身，核聚变和放射性衰变需要它。<br>④ <b>引力</b> — 质量让时空弯曲。力最弱但管最远。<br><br><b>质量</b> = 一个东西有多难推动。越大越难推，也越能让时空弯曲。</div></div>
+<div class="cards"><div class="card-item"><b>夸克</b> — 最基本的砖头，三个绑一起 = 质子或中子</div><div class="card-item"><b>质子</b> — 带正电，质子数 = 元素身份证号</div><div class="card-item"><b>中子</b> — 不带电，帮质子们待在一起</div><div class="card-item"><b>电子·光子·中微子</b> — 到处飞的三种轻粒子</div><div class="card-item"><b>核汤</b> — 原子核 + 电子 + 光子散着飘，还没组装成原子</div></div>
+</div>
+
+<div class="epoch">
+<div class="epoch-dot"></div>
+<div class="epoch-time">~38 万年</div>
+<div class="epoch-title">宇宙变透明</div>
+<div class="story">38 万年里，宇宙一直是一片"白雾"——光子不停地撞电子，走不了直线。<br><br>终于冷到约 3000 度。光子不够力气把电子撞飞了。电子被原子核吸住——<b>第一批完整的原子诞生</b>。光子突然可以自由飞行。宇宙从"白雾"变成<b>透明</b>。<br><br>那一刻释放出来的光子今天还在飞。波长被拉长成了微波——<b>宇宙微波背景辐射</b>，宇宙婴儿时期的"照片"。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 暗物质</button>
+<div class="aside-content"><div class="aside-inner">星系转得太快——能看见的物质的引力不够。说明有看不见的东西在提供额外引力。它占宇宙总质量的 85%。<br><br>它先聚成"引力坑"，普通物质掉进去才形成恒星和星系。<b>宇宙先长骨架（暗物质），再长肉（普通物质）</b>。</div></div>
+<div class="cards"><div class="card-item"><b>宇宙变透明</b> — 电子被接住 → 光子自由 → 白雾消散</div><div class="card-item"><b>宇宙微波背景辐射</b> — 38万年前的光，今天还在飞</div><div class="card-item"><b>暗物质</b> — 看不见但有引力，宇宙结构的骨架</div></div>
+</div>
+
+<div class="epoch">
+<div class="epoch-dot"></div>
+<div class="epoch-time">~1 亿年</div>
+<div class="epoch-title">第一代恒星 — 元素工厂</div>
+<div class="story">黑暗时期。没有恒星，没有光源，到处是氢和氦。<br><br>但宇宙不均匀。密一点的地方引力强一点，拉来更多气体——正反馈。当温度到约一千万度——<b>核聚变点燃</b>。第一代恒星诞生。<br><br>它们极端巨大，几十到上百个太阳质量，只活<b>几百万年</b>。核心是元素锻造厂：氢→氦→碳→氧→硅→铁。铁是终点——之后聚变要吸收能量。<br><br>铁堆积，核心塌缩，不到一秒——反弹——<b>超新星爆炸</b>。瞬间造出铁到铀的所有元素，炸进宇宙。<br><br><b>你身体里的碳、血液里的铁、骨头里的钙——全是某颗恒星爆炸时喷出来的。</b></div>
+<div class="cards"><div class="card-item"><b>核聚变</b> — 轻核合成重核，少掉的质量变能量</div><div class="card-item"><b>第一代恒星</b> — 纯氢氦，超大质量，内部锻造氢到铁</div><div class="card-item"><b>超新星爆炸</b> — 铁核塌缩 → 反弹 → 炸出 26-92 号元素</div></div>
+</div>
+
+<div class="epoch">
+<div class="epoch-dot"></div>
+<div class="epoch-time">~2 亿 – 10 亿年</div>
+<div class="epoch-title">第二代恒星 → 星系成型</div>
+<div class="story">爆炸后宇宙有了重元素。重元素帮气体散热——相当于装了散热器。气体能降温、碎裂成小块，形成<b>大量大小不一的恒星</b>。<br><br>大量恒星 + 暗物质骨架 + 气体 = <b>星系</b>。暗物质做骨架，气体做肌肉，恒星做灯光，黑洞做心脏。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 恒星死后变什么</button>
+<div class="aside-content"><div class="aside-inner"><b>小恒星</b>（&lt;8太阳质量）→ 外层吹掉 → 核心变<b>白矮星</b><br><b>大恒星</b>（8-25太阳质量）→ 超新星 → 核心变<b>中子星</b><br><b>极大恒星</b>（&gt;25太阳质量）→ 核心变<b>黑洞</b></div></div>
+<div class="cards"><div class="card-item"><b>第二代恒星</b> — 有重元素 → 能散热 → 大量小恒星形成</div><div class="card-item"><b>星系</b> — 暗物质骨架 + 恒星 + 气体 + 黑洞心脏</div></div>
+</div>
+
+<div class="epoch">
+<div class="epoch-dot"></div>
+<div class="epoch-time">~92 亿年</div>
+<div class="epoch-title">太阳系诞生</div>
+<div class="story">某颗恒星爆炸，冲击波挤压附近的气体和尘埃，触发坍缩。角动量守恒使它们转成扁平圆盘。中心温度达到核聚变——<b>太阳点燃</b>。<br><br>距太阳近的地方太热，只有岩石和金属能存在——形成<b>水星、金星、地球、火星</b>。远处冷，冰和气体能留下——形成<b>木星、土星等气体巨行星</b>。</div>
+<div class="cards"><div class="card-item"><b>太阳</b> — 气体坍缩 → 旋转成盘 → 核心点燃</div><div class="card-item"><b>冰线</b> — 分割了岩石行星和气体行星的边界</div></div>
+</div>
+
+<div class="epoch">
+<div class="epoch-dot"></div>
+<div class="epoch-time">~92 亿 – 96 亿年</div>
+<div class="epoch-title">地球的诞生与演化</div>
+<div class="story">早期太阳系像台球桌——到处碰撞。一个火星大小的天体<b>Theia</b>撞上原始地球，整颗星熔化成岩浆球。碎片聚集成<b>月球</b>。<br><br>之后铁等重金属<b>下沉到核心</b>，释放的势能让地球更热。形成分层结构：铁核 → 地幔 → 地壳。<br><br>地幔极热产生<b>对流</b>——像锅里煮汤。这个对流后来驱动了<b>板块运动</b>。<br><br>火山喷发释放水汽、二氧化碳——形成原始<b>无氧大气</b>。温度终于降到 100°C 以下，千年暴雨落下，积成了<b>最早的海洋</b>。<br><br>闪电、紫外线、液态水——化学汤正在沸腾。<b>生命即将破壳。</b></div>
+<div class="cards"><div class="card-item"><b>Theia 碰撞</b> — 全星熔化，碎片变月球</div><div class="card-item"><b>铁下沉</b> — 重的沉底，势能变热，形成地核</div><div class="card-item"><b>对流</b> — 热的上升冷的下沉，驱动板块运动</div><div class="card-item"><b>放气</b> — 岩石里的气体被烤出来 → 原始大气</div><div class="card-item"><b>海洋</b> — 水蒸气反复蒸发-凝结，最终积成海</div><div class="card-item"><b>舞台就绪</b> — 闪电 + 紫外线给化学汤注入能量</div></div>
+</div>
+
+</div>
+<button class="back-btn" onclick="window.location.href='./index.html'">← 返回研究室</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============ CSS 静态星空（补充背景密度）============
+!function(){
+  const c = document.getElementById('static-stars');
+  for(let i=0; i<660; i++){
+    const s = document.createElement('div');
+    const sz = Math.random() < 0.9 ? 1 : 1.5;
+    Object.assign(s.style, {
+      position:'absolute', borderRadius:'50%', background:'#fff',
+      width:sz+'px', height:sz+'px',
+      left:Math.random()*100+'%', top:Math.random()*100+'%',
+      opacity:Math.random()*0.4+0.05
+    });
+    s.style.animation = `tw ${4+Math.random()*6}s ease-in-out ${Math.random()*5}s infinite alternate`;
+    c.appendChild(s);
+  }
+  const st = document.createElement('style');
+  st.textContent = `@keyframes tw { from{opacity:0.05} to{opacity:0.4} }`;
+  document.head.appendChild(st);
+}();
+/**
+ * 融合版动画：
+ * - 新文件的平滑 exp 展开 + File 2 的奇点→暴胀闪光
+ * - 圆形发光粒子（不再是方块）
+ *
+ * 时间线：
+ *  0-3s   奇点：紧致一团，缓慢脉动（File 2 风格）
+ *  3s     白屏闪光（File 2 的 triggerFlash）
+ *  3-5s   暴胀急速扩张（File 2 风格）
+ *  5-11s  平滑继续展开（新文件的 exp(val)*0.5 曲线）
+ *  11s+   ambient 慢转
+ */
+
+// 生成圆形发光纹理（解决方块问题）
+function makeStarTexture() {
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 32;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.3, 'rgba(255,255,255,0.6)');
+  g.addColorStop(0.7, 'rgba(255,255,255,0.15)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 32, 32);
+  return new THREE.CanvasTexture(c);
+}
+
+class CosmicFusion {
+  constructor() {
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 20000);
+    this.camera.position.z = 60;
+
+    this.renderer = new THREE.WebGLRenderer({ antialias:true });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+
+    this.clock = new THREE.Clock();
+    this.flashed = false;
+
+    // 粒子（新文件的分布范围 [-75,75]，圆形纹理）
+    const count = 200000;
+    this.count = count;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      // 球形均匀分布（不再是正方体！）
+      const r = Math.pow(Math.random(), 1/3) * 75;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+      pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i*3+2] = r * Math.cos(phi);
+      col[i*3] = 1; col[i*3+1] = 1; col[i*3+2] = 1;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+    this.material = new THREE.PointsMaterial({
+      size: 0.35,
+      map: makeStarTexture(),     // 圆形发光，不再是方块
+      vertexColors: true,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      opacity: 0.85
+    });
+    this.particles = new THREE.Points(geo, this.material);
+    this.scene.add(this.particles);
+
+    this.animate();
+  }
+
+  triggerFlash() {
+    if (this.flashed) return;
+    this.flashed = true;
+    const f = document.getElementById('flash');
+    f.style.transition = 'opacity 0.08s ease-out';
+    f.style.opacity = '0.9';
+    setTimeout(() => {
+      f.style.transition = 'opacity 0.7s ease-out';
+      f.style.opacity = '0';
+    }, 100);
+  }
+
+  animate() {
+    requestAnimationFrame(() => this.animate());
+    const t = this.clock.getElapsedTime();
+
+    /*
+      0-3s    纯 CSS 发光奇点在呼吸（Three.js 隐藏，不渲染）
+      3s      CSS 点爆开 + 白屏闪光 + Three.js 淡入
+      3-5s    Three.js 球形粒子从极小扩张（暴胀）
+      5-11s   平滑 exp 展开
+      11s+    ambient 慢转
+    */
+
+    // ===== Phase 1 (0-3s): CSS 奇点独唱，Three.js 待命 =====
+    if (t < 1) {
+      this.particles.scale.setScalar(0.001);
+      this.renderer.render(this.scene, this.camera); // 渲染一帧黑底
+      return;
+    }
+
+    // ===== 3 秒：触发过渡 =====
+    if (!this.transitioned) {
+      this.transitioned = true;
+      this.tStart = t;
+      document.getElementById('singularity-dot').classList.add('burst');
+      this.triggerFlash();
+      document.getElementById('canvas-container').classList.add('visible');
+      document.getElementById('static-stars').classList.add('visible');
+    }
+
+    const dt = t - this.tStart;
+
+    // ===== Phase 2 (3-5s): 暴胀 — 球形粒子从极小扩张 =====
+    if (dt < 2) {
+      const p = dt / 2;
+      const ease = 1 - Math.pow(1 - p, 2.5);
+      this.particles.scale.setScalar(0.003 + ease * 0.497);
+      this.material.size = 2.0 - ease * 1.65;
+      this.camera.position.z = 60 + ease * 40;
+    }
+    // ===== Phase 3 (5-11s): 平滑 exp 展开 =====
+    else if (dt < 8) {
+      const p = (dt - 2) / 6;
+      const val = p * 1.2;
+      this.particles.scale.setScalar(Math.exp(val) * 0.5);
+      this.material.size = 0.35;
+      this.camera.position.z = 100;
+    }
+    // ===== Phase 4 (11s+): ambient =====
+    else {
+      const breath = 1 + Math.sin(t * 0.12) * 0.01;
+      this.particles.scale.setScalar(Math.exp(1.2) * 0.5 * breath);
+      this.material.size = 0.35;
+    }
+
+    this.particles.rotation.y += 0.0005;
+    this.particles.rotation.x = Math.sin(t * 0.025) * 0.06;
+    this.renderer.render(this.scene, this.camera);
+  }
+}
+
+window.addEventListener('resize', () => {
+  if (window._cosmos) {
+    window._cosmos.camera.aspect = window.innerWidth/window.innerHeight;
+    window._cosmos.camera.updateProjectionMatrix();
+    window._cosmos.renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+});
+window._cosmos = new CosmicFusion();
+
+// ============ 滚动揭示 + 进度条 ============
+function reveal() {
+  document.querySelectorAll('.epoch').forEach(e => {
+    if (e.getBoundingClientRect().top < window.innerHeight * 0.82) e.classList.add('revealed');
+  });
+  const st = window.scrollY, dh = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progress').style.width = (dh>0? st/dh*100 : 0)+'%';
+  if (st > 80) { const a = document.getElementById('scroll-arrow'); if(a) a.style.opacity='0'; }
+}
+window.addEventListener('scroll', reveal, {passive:true});
+window.addEventListener('load', reveal);
+
+function toggleAside(btn) {
+  const ct = btn.nextElementSibling;
+  const o = ct.classList.contains('open');
+  if(o){ ct.style.maxHeight='0'; ct.classList.remove('open'); btn.classList.remove('open'); }
+  else { ct.classList.add('open'); ct.style.maxHeight=ct.scrollHeight+'px'; btn.classList.add('open'); }
+}
+</script>
+</body>
+</html>

@@ -727,6 +727,7 @@ function handleTap(x, y, target) {
     const t = hot.dataset.type;
     if (t === 'item') {
       const key = hot.dataset.key;
+      if (key === 'celestial') { window.location.href = './cosmos.html'; return; }
       if (objectData[key]) openPanel(key);
     } else if (t === 'board') {
       openBoard(hot.dataset.board);
@@ -746,6 +747,7 @@ function handleTap(x, y, target) {
     const t = hot.dataset.type;
     if (t === 'item') {
       const key = hot.dataset.key;
+      if (key === 'celestial') { window.location.href = './cosmos.html'; return; }
       if (objectData[key]) openPanel(key);
     } else if (t === 'goto-gallery' || t === 'goto-study') {
       gotoRoom(t === 'goto-gallery' ? 'gallery' : 'study');
