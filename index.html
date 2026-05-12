@@ -944,12 +944,23 @@ setTimeout(() => document.getElementById('hint').classList.add('hide'), 5000);
   setTimeout(() => screenEl.classList.add('hidden'), 8000);
 })();
 
-// ============= 注册 Service Worker（PWA离线缓存）=============
+// ============= Service Worker 暂时关闭（开发期间避免缓存问题）=============
+// 开发完毕后取消注释即可恢复
+// if ('serviceWorker' in navigator) {
+//   window.addEventListener('load', () => {
+//     navigator.serviceWorker.register('sw.js')
+//       .then(reg => console.log('SW已注册:', reg.scope))
+//       .catch(err => console.warn('SW注册失败:', err));
+//   });
+// }
+
+// 主动注销已有的 SW（清掉旧缓存）
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('SW已注册:', reg.scope))
-      .catch(err => console.warn('SW注册失败:', err));
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
+  caches.keys().then(keys => {
+    keys.forEach(k => caches.delete(k));
   });
 }
 </script>
