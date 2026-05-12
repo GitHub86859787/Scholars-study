@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#050302">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Scholar's Study</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Noto+Serif+SC:wght@300;400;500&display=swap');
@@ -933,6 +936,15 @@ setTimeout(() => document.getElementById('hint').classList.add('hide'), 5000);
   // 兜底：8秒后无论如何关闭loading screen
   setTimeout(() => screenEl.classList.add('hidden'), 8000);
 })();
+
+// ============= 注册 Service Worker（PWA离线缓存）=============
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW已注册:', reg.scope))
+      .catch(err => console.warn('SW注册失败:', err));
+  });
+}
 </script>
 </body>
 </html>
