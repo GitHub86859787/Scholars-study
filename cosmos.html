@@ -8,11 +8,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --bg:#060504; --text-primary:#e4d5ba; --text-secondary:#b8a88a;
-  --text-dim:#7a6e5a; --accent-warm:#c4854a; --line-color:#2a2118;
-  --card-bg:rgba(18,14,10,0.7); --card-border:rgba(196,133,74,0.12);
+  --bg:#060504;
+  --text-primary:#C8C0B8;        /* MLI Aluminum 箔片银 */
+  --text-secondary:#A0A8B0;      /* Titanium Blue Tint 钛蓝 */
+  --text-dim:#6A6060;             /* Merlin Inconel 镍基合金 */
+  --accent-warm:#D4A940;          /* Visor Gold 宇航员面罩金 */
+  --accent-highlight:#D8B848;     /* JWST Mirror Gold 韦伯望远镜金 */
+  --line-color:#2A2520;           /* Shuttle Tile Black 隔热瓦 */
+  --card-bg:rgba(18,14,10,0.7);
+  --card-border:rgba(212,169,64,0.1);
 }
 html { scroll-behavior:smooth; }
+
 body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','Georgia',serif; line-height:1.9; overflow-x:hidden; }
 
 /* ===== CSS 奇点发光点 ===== */
@@ -21,7 +28,7 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
   top:50%; left:50%; transform:translate(-50%,-50%);
   width:6px; height:6px; border-radius:50%;
   background:var(--accent-warm);
-  box-shadow: 0 0 20px var(--accent-warm), 0 0 60px rgba(196,133,74,0.4), 0 0 120px rgba(196,133,74,0.15);
+  box-shadow: 0 0 20px var(--accent-warm), 0 0 60px rgba(212,169,64,0.4), 0 0 120px rgba(212,169,64,0.15);
   animation: singularity-pulse 2s ease-in-out infinite;
   transition: opacity 0.5s ease, transform 1s ease;
 }
@@ -31,8 +38,8 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
   transition: opacity 0.3s ease 0.2s, transform 0.6s ease;
 }
 @keyframes singularity-pulse {
-  0%,100% { box-shadow: 0 0 20px var(--accent-warm), 0 0 60px rgba(196,133,74,0.3), 0 0 120px rgba(196,133,74,0.1); transform:translate(-50%,-50%) scale(1); }
-  50% { box-shadow: 0 0 30px var(--accent-warm), 0 0 80px rgba(196,133,74,0.5), 0 0 160px rgba(196,133,74,0.2); transform:translate(-50%,-50%) scale(1.3); }
+  0%,100% { box-shadow: 0 0 20px var(--accent-warm), 0 0 60px rgba(212,169,64,0.3), 0 0 120px rgba(212,169,64,0.1); transform:translate(-50%,-50%) scale(1); }
+  50% { box-shadow: 0 0 30px var(--accent-warm), 0 0 80px rgba(212,169,64,0.5), 0 0 160px rgba(212,169,64,0.2); transform:translate(-50%,-50%) scale(1.3); }
 }
 
 #canvas-container { position:fixed; inset:0; z-index:1; opacity:0; transition: opacity 0.8s ease; }
@@ -58,11 +65,11 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
 .epoch { position:relative; margin-bottom:90px; opacity:0; transform:translateY(50px); transition:opacity 1s ease, transform 1s ease; }
 .epoch.revealed { opacity:1; transform:translateY(0); }
 .epoch-dot { position:absolute; left:-40px; top:8px; width:10px; height:10px; border-radius:50%; border:2px solid var(--accent-warm); background:var(--bg); transition:all 0.6s ease; }
-.epoch.revealed .epoch-dot { box-shadow:0 0 14px rgba(196,133,74,0.5); background:var(--accent-warm); }
+.epoch.revealed .epoch-dot { box-shadow:0 0 14px rgba(212,169,64,0.5); background:var(--accent-warm); }
 .epoch-time { font-family:'EB Garamond',serif; font-size:12px; color:var(--text-dim); letter-spacing:3px; margin-bottom:6px; }
-.epoch-title { font-size:22px; font-weight:500; color:var(--text-primary); margin-bottom:24px; line-height:1.4; }
+.epoch-title { font-size:22px; font-weight:500; color:var(--accent-warm); margin-bottom:24px; line-height:1.4; }
 .story { font-size:15px; font-weight:300; color:var(--text-secondary); line-height:2.1; margin-bottom:24px; }
-.story b { font-weight:500; color:var(--text-primary); }
+.story b { font-weight:500; color:var(--accent-highlight); }
 .aside-toggle { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim); letter-spacing:2px; cursor:pointer; padding:8px 0; border:none; background:none; font-family:inherit; transition:color 0.3s; }
 .aside-toggle:hover { color:var(--accent-warm); }
 .aside-toggle .arr { display:inline-block; transition:transform 0.3s; font-size:10px; }
@@ -71,12 +78,12 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
 .aside-content.open { opacity:1; }
 .aside-inner { font-size:13px; color:var(--text-dim); line-height:1.9; padding:16px 20px; margin:8px 0 24px; border-left:1px solid var(--card-border); background:var(--card-bg); border-radius:0 4px 4px 0; }
 .aside-inner b { font-weight:500; color:var(--text-secondary); }
-.cards { display:flex; flex-direction:column; gap:0; margin-top:20px; padding:14px 16px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:4px; }
-.card-item { font-size:12px; color:var(--text-dim); line-height:1.65; padding:7px 0; border-bottom:1px solid rgba(196,133,74,0.06); }
-.card-item:last-child { border-bottom:none; }
-.card-item b { display:block; font-weight:500; color:var(--text-secondary); font-size:11.5px; letter-spacing:0.5px; margin-bottom:2px; }
-.back-btn { display:block; margin:60px auto 100px; padding:10px 28px; background:transparent; border:1px solid rgba(196,133,74,0.15); color:var(--text-dim); font-family:'EB Garamond',serif; font-size:12px; letter-spacing:4px; cursor:pointer; transition:all 0.3s; border-radius:20px; opacity:0.5; }
-.back-btn:hover { border-color:rgba(196,133,74,0.4); color:var(--accent-warm); opacity:0.8; }
+.cards { margin-top:20px; padding:16px 18px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:4px; }
+.card-item { font-size:12px; color:var(--text-dim); line-height:1.75; padding:6px 0; }
+.card-item + .card-item { margin-top:4px; }
+.card-item b { font-weight:500; color:var(--text-secondary); }
+.back-btn { display:block; margin:60px auto 100px; padding:10px 28px; background:transparent; border:1px solid rgba(212,169,64,0.15); color:var(--text-dim); font-family:'EB Garamond',serif; font-size:12px; letter-spacing:4px; cursor:pointer; transition:all 0.3s; border-radius:20px; opacity:0.5; }
+.back-btn:hover { border-color:rgba(212,169,64,0.4); color:var(--accent-warm); opacity:0.8; }
 @media (max-width:600px) {
   .content { padding:0 32px; }
   .timeline { padding-left:32px; }
@@ -87,7 +94,36 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
   .cards { padding:12px 14px; }
   .card-item { font-size:11.5px; }
 }
-::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(196,133,74,0.15);border-radius:3px}
+::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(212,169,64,0.15);border-radius:3px}
+
+/* ===== 翻转动画 ===== */
+.flip-body { perspective:800px; }
+.flip-inner { transform-style:preserve-3d; transition:transform 0.4s ease; }
+.flip-inner.flipping-out { transform:rotateY(90deg); }
+.flip-inner.flipping-in { animation:flip-in 0.4s ease forwards; }
+@keyframes flip-in { from{transform:rotateY(-90deg)} to{transform:rotateY(0)} }
+.flip-hint { font-size:10px; color:var(--text-dim); opacity:0.3; text-align:right; margin-top:12px; letter-spacing:1px; font-style:italic; }
+
+/* ===== B版标签颜色（暗色主题）===== */
+.tag{font-size:10px;padding:1px 5px;border-radius:4px;white-space:nowrap;font-weight:500;display:inline-block;margin-right:4px;flex-shrink:0}
+.t-event{background:rgba(200,48,48,0.2);color:#E86060}       /* Commander Stripe 指令长红 */
+.t-particle{background:rgba(232,160,48,0.15);color:#E8A030}  /* Exhaust Orange 尾气橙 */
+.t-force{background:rgba(56,56,192,0.2);color:#7878E0}       /* Engine Plume Blue 尾焰蓝 */
+.t-element{background:rgba(23,52,4,0.4);color:#97C459}       /* 保持绿 */
+.t-astro{background:rgba(128,112,160,0.2);color:#A898C0}     /* Titanium Purple 钛紫 */
+.t-earth{background:rgba(200,160,80,0.15);color:#C8A050}     /* EVA Shield Gold 舱外防护金 */
+.t-q{background:rgba(255,255,255,0.05);color:var(--text-dim)}
+.legend-b{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 14px;padding:0 0 10px;border-bottom:1px solid rgba(212,169,64,0.1)}
+.legend-b .tag{font-size:10px;padding:2px 6px}
+
+/* B版 chain 块 */
+.chain{font-size:13px;color:var(--text-secondary);margin:4px 0 8px;padding:10px 14px;background:rgba(18,14,10,0.5);border-radius:4px;line-height:1.8;border:1px solid rgba(212,169,64,0.08)}
+.chain b{font-weight:500;color:var(--accent-highlight)}
+
+/* B版 cards 里带 tag 的条目 */
+.c-tagged{font-size:12px;color:var(--text-dim);padding:4px 0;line-height:1.7;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.c-tagged b{font-weight:500;color:var(--text-secondary)}
+
 </style>
 </head>
 <body>
@@ -104,70 +140,85 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
 
 <div class="content">
 <div class="timeline">
+<div style="text-align:right;font-size:10px;color:var(--text-dim);opacity:0.3;letter-spacing:1px;font-style:italic;margin-bottom:20px;padding-right:4px">长按任意位置切换版本</div>
 
 <div class="epoch">
 <div class="epoch-dot"></div>
 <div class="epoch-time">t = 0</div>
 <div class="epoch-title">一切的开始</div>
+<div class="flip-body"><div class="flip-inner">
 <div class="story">宇宙最初的状态，物理学家叫它<b>奇点</b>——意思是：在那一刻，所有的数学公式都算不出结果，所有已知的物理规律都失效了。我们能描述的只有"它之后"发生了什么，"它本身"是什么，目前没有人知道。<br><br>那时候温度高到大约 10³² 度——比太阳核心还要热一亿亿亿倍。热到任何你知道的东西都不可能存在。所有的能量被挤在一个极小极小的范围里。<br><br>然后——没有人知道为什么——它开始<b>膨胀</b>。<br><br>"大爆炸"这个名字其实起错了。它不是一个炸弹在某个地方炸开。它是<b>空间本身</b>在变大——每一个点和每一个点之间的距离都在变大。像一壶滚烫的水倒进一个越来越大的池子里，水还是那些水，但温度降了，因为摊薄了。<br><br>温度一降，一件事就发生了：<b>粒子开始能够稳定存在</b>。之前温度太高，就算粒子短暂出现了，也会立刻被撞碎。现在温度够低了，有些粒子终于能活下来不被摧毁了。</div>
 <button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 什么是时空、场、能量</button>
 <div class="aside-content"><div class="aside-inner"><b>什么是"时空"？</b><br>时间和空间不是两样分开的东西，它们是一张布的两面。你在空间里移动得越快，你的时间就走得越慢——这不是比喻，是爱因斯坦用实验验证过的事实。<br><br><b>什么是"场"？</b><br>想象一片无边无际的海。海面上局部鼓起来的一个浪包 = 粒子。所以"场"是那片海本身。粒子不是独立的小球，它是场的一部分局部震动起来了。<br><br><b>什么是"能量"？</b><br>能量是"让事情发生的能力"。热、光、运动——只是能量的不同表现形式，可以互相转换，但总量不变。</div></div>
 <div class="cards"><div class="card-item"><b>原始状态</b>所有能量挤在极小范围，温度高到粒子无法存在</div><div class="card-item"><b>宇宙大爆炸</b>不是炸弹，是空间本身在变大</div><div class="card-item"><b>为什么宇宙不为零</b>"什么都没有"反而是最不自洽的状态</div></div>
-</div>
+
+</div></div></div>
 
 <div class="epoch">
 <div class="epoch-dot"></div>
 <div class="epoch-time">t &lt; 3 分钟</div>
 <div class="epoch-title">粒子时代</div>
+<div class="flip-body"><div class="flip-inner">
 <div class="story">温度继续降。<b>夸克</b>第一次能稳定地组合在一起了。三个夸克被<b>强力</b>绑在一起，形成<b>质子</b>或<b>中子</b>。<br><br>质子带正电，中子不带电。质子的数量决定了一个原子是什么元素：1个 = 氢，6个 = 碳，26个 = 铁，92个 = 铀。<b>质子数 = 元素的身份证号</b>。<br><br>还有<b>电子</b>——比质子轻得多，带负电，到处散着。<b>光子</b>——光的最小单位。<b>中微子</b>——极其轻，能直接穿过整个地球。<br><br>宇宙诞生 3 分钟时，质子和中子开始组合——氢核、氦核、少量锂核。宇宙变成了一锅<b>"核汤"</b>。</div>
 <button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 四种力与质量</button>
 <div class="aside-content"><div class="aside-inner"><b>四种力：</b><br>① <b>强力</b>把夸克绑成质子中子。力最强，只管原子核内部。<br>② <b>电磁力</b>控制电荷、光、化学反应。日常几乎所有现象都是它。<br>③ <b>弱力</b>让粒子变身，核聚变和放射性衰变需要它。<br>④ <b>引力</b>质量让时空弯曲。力最弱但管最远。<br><br><b>质量</b> = 一个东西有多难推动。越大越难推，也越能让时空弯曲。</div></div>
 <div class="cards"><div class="card-item"><b>夸克</b>最基本的砖头，三个绑一起 = 质子或中子</div><div class="card-item"><b>质子</b>带正电，质子数 = 元素身份证号</div><div class="card-item"><b>中子</b>不带电，帮质子们待在一起</div><div class="card-item"><b>电子·光子·中微子</b>到处飞的三种轻粒子</div><div class="card-item"><b>核汤</b>原子核 + 电子 + 光子散着飘，还没组装成原子</div></div>
-</div>
+
+</div></div></div>
 
 <div class="epoch">
 <div class="epoch-dot"></div>
 <div class="epoch-time">~38 万年</div>
 <div class="epoch-title">宇宙变透明</div>
+<div class="flip-body"><div class="flip-inner">
 <div class="story">38 万年里，宇宙一直是一片"白雾"——光子不停地撞电子，走不了直线。<br><br>终于冷到约 3000 度。光子不够力气把电子撞飞了。电子被原子核吸住——<b>第一批完整的原子诞生</b>。光子突然可以自由飞行。宇宙从"白雾"变成<b>透明</b>。<br><br>那一刻释放出来的光子今天还在飞。波长被拉长成了微波——<b>宇宙微波背景辐射</b>，宇宙婴儿时期的"照片"。</div>
 <button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 暗物质</button>
 <div class="aside-content"><div class="aside-inner">星系转得太快——能看见的物质的引力不够。说明有看不见的东西在提供额外引力。它占宇宙总质量的 85%。<br><br>它先聚成"引力坑"，普通物质掉进去才形成恒星和星系。<b>宇宙先长骨架（暗物质），再长肉（普通物质）</b>。</div></div>
 <div class="cards"><div class="card-item"><b>宇宙变透明</b>电子被接住 → 光子自由 → 白雾消散</div><div class="card-item"><b>宇宙微波背景辐射</b>38万年前的光，今天还在飞</div><div class="card-item"><b>暗物质</b>看不见但有引力，宇宙结构的骨架</div></div>
-</div>
+
+</div></div></div>
 
 <div class="epoch">
 <div class="epoch-dot"></div>
 <div class="epoch-time">~1 亿年</div>
 <div class="epoch-title">第一代恒星 — 元素工厂</div>
+<div class="flip-body"><div class="flip-inner">
 <div class="story">黑暗时期。没有恒星，没有光源，到处是氢和氦。<br><br>但宇宙不均匀。密一点的地方引力强一点，拉来更多气体——正反馈。当温度到约一千万度——<b>核聚变点燃</b>。第一代恒星诞生。<br><br>它们极端巨大，几十到上百个太阳质量，只活<b>几百万年</b>。核心是元素锻造厂：氢→氦→碳→氧→硅→铁。铁是终点——之后聚变要吸收能量。<br><br>铁堆积，核心塌缩，不到一秒——反弹——<b>超新星爆炸</b>。瞬间造出铁到铀的所有元素，炸进宇宙。<br><br><b>你身体里的碳、血液里的铁、骨头里的钙——全是某颗恒星爆炸时喷出来的。</b></div>
 <div class="cards"><div class="card-item"><b>核聚变</b>轻核合成重核，少掉的质量变能量</div><div class="card-item"><b>第一代恒星</b>纯氢氦，超大质量，内部锻造氢到铁</div><div class="card-item"><b>超新星爆炸</b>铁核塌缩 → 反弹 → 炸出 26-92 号元素</div></div>
-</div>
+
+</div></div></div>
 
 <div class="epoch">
 <div class="epoch-dot"></div>
 <div class="epoch-time">~2 亿 – 10 亿年</div>
 <div class="epoch-title">第二代恒星 → 星系成型</div>
+<div class="flip-body"><div class="flip-inner">
 <div class="story">爆炸后宇宙有了重元素。重元素帮气体散热——相当于装了散热器。气体能降温、碎裂成小块，形成<b>大量大小不一的恒星</b>。<br><br>大量恒星 + 暗物质骨架 + 气体 = <b>星系</b>。暗物质做骨架，气体做肌肉，恒星做灯光，黑洞做心脏。</div>
 <button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 恒星死后变什么</button>
 <div class="aside-content"><div class="aside-inner"><b>小恒星</b>（&lt;8太阳质量）→ 外层吹掉 → 核心变<b>白矮星</b><br><b>大恒星</b>（8-25太阳质量）→ 超新星 → 核心变<b>中子星</b><br><b>极大恒星</b>（&gt;25太阳质量）→ 核心变<b>黑洞</b></div></div>
 <div class="cards"><div class="card-item"><b>第二代恒星</b>有重元素 → 能散热 → 大量小恒星形成</div><div class="card-item"><b>星系</b>暗物质骨架 + 恒星 + 气体 + 黑洞心脏</div></div>
-</div>
+
+</div></div></div>
 
 <div class="epoch">
 <div class="epoch-dot"></div>
 <div class="epoch-time">~92 亿年</div>
 <div class="epoch-title">太阳系诞生</div>
+<div class="flip-body"><div class="flip-inner">
 <div class="story">某颗恒星爆炸，冲击波挤压附近的气体和尘埃，触发坍缩。角动量守恒使它们转成扁平圆盘。中心温度达到核聚变——<b>太阳点燃</b>。<br><br>距太阳近的地方太热，只有岩石和金属能存在——形成<b>水星、金星、地球、火星</b>。远处冷，冰和气体能留下——形成<b>木星、土星等气体巨行星</b>。</div>
 <div class="cards"><div class="card-item"><b>太阳</b>气体坍缩 → 旋转成盘 → 核心点燃</div><div class="card-item"><b>冰线</b>分割了岩石行星和气体行星的边界</div></div>
-</div>
+
+</div></div></div>
 
 <div class="epoch">
 <div class="epoch-dot"></div>
 <div class="epoch-time">~92 亿 – 96 亿年</div>
 <div class="epoch-title">地球的诞生与演化</div>
+<div class="flip-body"><div class="flip-inner">
 <div class="story">早期太阳系像台球桌——到处碰撞。一个火星大小的天体<b>Theia</b>撞上原始地球，整颗星熔化成岩浆球。碎片聚集成<b>月球</b>。<br><br>之后铁等重金属<b>下沉到核心</b>，释放的势能让地球更热。形成分层结构：铁核 → 地幔 → 地壳。<br><br>地幔极热产生<b>对流</b>——像锅里煮汤。这个对流后来驱动了<b>板块运动</b>。<br><br>火山喷发释放水汽、二氧化碳——形成原始<b>无氧大气</b>。温度终于降到 100°C 以下，千年暴雨落下，积成了<b>最早的海洋</b>。<br><br>闪电、紫外线、液态水——化学汤正在沸腾。<b>生命即将破壳。</b></div>
 <div class="cards"><div class="card-item"><b>Theia 碰撞</b>全星熔化，碎片变月球</div><div class="card-item"><b>铁下沉</b>重的沉底，势能变热，形成地核</div><div class="card-item"><b>对流</b>热的上升冷的下沉，驱动板块运动</div><div class="card-item"><b>放气</b>岩石里的气体被烤出来 → 原始大气</div><div class="card-item"><b>海洋</b>水蒸气反复蒸发-凝结，最终积成海</div><div class="card-item"><b>舞台就绪</b>闪电 + 紫外线给化学汤注入能量</div></div>
-</div>
+
+</div></div></div>
 
 </div>
 <button class="back-btn" onclick="window.location.href='./index.html'">← 返回研究室</button>
@@ -515,6 +566,155 @@ CosmicFusion.prototype.triggerFlash = function() {
   _origFlash.call(this);
   if (window._audio) window._audio.triggerBigBang();
 };
+
+// ============ A/B 翻转系统 ============
+// B 版内容（笔记原文风格）
+const bContent = {
+  0: {
+    title: '奇点与暴胀',
+    body: `<div class="chain">宇宙最初极热，温度高到约 10³² K，热到任何粒子都无法存在。所有能量被挤在极小空间里，<b>浓到爆</b>。时空像被压到极限的橡皮布一样扭曲、变形。这就是<b>奇点</b>，在那一刻所有数学模型都崩溃。<br><br>然后——没人知道为什么——它开始<b>膨胀</b>。原始奇点被突然拉开 → 空间疯狂变大 → 能量被摊开变稀 → 温度暴降。就像热水倒进一个巨大盆里瞬间不那么烫了。粒子开始能存在。</div>
+<div class="cards">
+<div class="c-tagged"><span class="tag t-event">核心</span><b>原始状态</b> 10³² K，物理规律尚未分化的统一状态</div>
+<div class="c-tagged"><span class="tag t-event">核心</span><b>宇宙大爆炸</b> 名字起错了，实际是膨胀</div>
+<div class="c-tagged"><span class="tag t-event">核心</span><b>宇宙新生</b> 时空结构 + 四种力 + 粒子家族。宇宙最底层只有一个东西：场</div>
+<div class="c-tagged"><span class="tag t-q">概念</span><b>时空</b> 不是物体，是一套"规则背景"</div>
+<div class="c-tagged"><span class="tag t-q">概念</span><b>能量</b> 一张万能银行卡，热能、光能、电能、动能都能互换</div>
+<div class="c-tagged"><span class="tag t-q">概念</span><b>为什么宇宙不为零</b> "存在比不存在更自洽"</div>
+</div>`
+  },
+  1: {
+    title: '粒子时代',
+    body: `<div class="chain">温度下降后，夸克第一次能活过"湮灭循环"，开始组合成质子和中子——<b>强相互作用第一次真正发挥作用</b>。<br><br>质子＋中子继续组合 → 形成最早的原子核（氢核、氦核）。宇宙变成一锅<b>"核汤"</b>，这是第一次真正稳定的物质结构出现。</div>
+<div class="cards">
+<div class="c-tagged"><span class="tag t-particle">粒子</span><b>夸克</b> 三条永不分开的"绳子波纹"，强作用力像橡皮筋越拉越紧</div>
+<div class="c-tagged"><span class="tag t-particle">粒子</span><b>质子</b> 带正电、有质量，决定是什么元素</div>
+<div class="c-tagged"><span class="tag t-particle">粒子</span><b>中子</b> 不带电，保持原子核稳定</div>
+<div class="c-tagged"><span class="tag t-particle">粒子</span><b>电子</b> 像自由的小雾滴一样乱飞</div>
+<div class="c-tagged"><span class="tag t-particle">粒子</span><b>光子</b> 电磁场里跳出来的能量子弹，永远光速</div>
+<div class="c-tagged"><span class="tag t-particle">粒子</span><b>中微子</b> 透明的小幽灵粒子，谁都碰不到</div>
+<div class="c-tagged"><span class="tag t-force">力</span><b>引力</b> 有质量的东西让时空下陷</div>
+<div class="c-tagged"><span class="tag t-force">力</span><b>电磁力</b> 你能看到的一切物质现象的核心</div>
+<div class="c-tagged"><span class="tag t-force">力</span><b>弱力</b> 让粒子"改变身份"的作用力</div>
+<div class="c-tagged"><span class="tag t-force">力</span><b>强力</b> 把夸克黏在一起的橡皮筋</div>
+</div>`
+  },
+  2: {
+    title: '宇宙变透明',
+    body: `<div class="chain">宇宙刚出生像一锅<b>沸腾小米粥</b>：光子像滚烫的水把自由电子搅得到处乱飞，让宇宙变成一片白雾。<br><br>当宇宙膨胀变冷后，光子变成软弹，电子被原子核接住形成原子，宇宙瞬间从"白雾"变成<b>透明</b>，光子自由飞行直到今天——那些光就是<b>宇宙微波背景辐射</b>。<br><br>望远镜 = 时间机器。</div>
+<div class="cards">
+<div class="c-tagged"><span class="tag t-event">核心</span><b>Cosmic Dawn</b> 氢原子、氦原子正式出现，宇宙第一次变透明</div>
+<div class="c-tagged"><span class="tag t-particle">粒子</span><b>原子</b> 原子核+电子，第一次真正完整的物质单位</div>
+<div class="c-tagged"><span class="tag t-astro">天体</span><b>暗物质</b> 不发光但有质量，占星系质量 85% 以上</div>
+</div>`
+  },
+  3: {
+    title: '暗物质骨架 → 第一代恒星',
+    body: `<div class="chain">宇宙不是完全均匀——带着<b>十万分之一的密度波动</b>。这一点点差距决定了整个宇宙的命运。暗物质先聚成<b>"引力坑"</b>——像房子的钢筋骨架。<br><br>Pop III 恒星：成分极单纯（几乎只有氢+氦），随随便便几十个太阳质量，只活<b>几百万年</b>。内部是<b>"元素锻造工厂"</b>：氢→氦→碳→氧→硅→铁。铁无法释放能量 → 核心塌陷 → <b>超新星爆炸</b>。<br><br>你、我、地球都来自它们的尸体。</div>
+<div class="cards">
+<div class="c-tagged"><span class="tag t-astro">天体</span><b>暗物质晕</b> 宇宙先长骨架（暗物质），再长肉（普通物质）</div>
+<div class="c-tagged"><span class="tag t-astro">天体</span><b>Pop III 恒星</b> 零金属，寿命极短，内部核聚变走到铁</div>
+<div class="c-tagged"><span class="tag t-event">核心</span><b>核聚变</b> 系统能量变低→多出来的能量必须离开</div>
+<div class="c-tagged"><span class="tag t-event">核心</span><b>92种元素</b> 1-26号在恒星内，26-92号在爆炸阶段</div>
+</div>`
+  },
+  4: {
+    title: '第二代恒星 → 星系成型',
+    body: `<div class="chain">最核心的底层逻辑：<b>重元素 = 冷却剂</b>。冷却效率高 = 气体更容易塌缩 = 恒星更容易形成 = 尺寸更小、更稳定。<br><br>散热越快→碎裂越多→一块气体可以碎成几十、上百颗小恒星。<br><br>星系 = <b>暗物质做骨架 + 气体做肌肉 + 恒星做灯光 + 黑洞做心脏</b>。</div>
+<div class="cards">
+<div class="c-tagged"><span class="tag t-astro">天体</span><b>Pop II 恒星</b> 质量较小→寿命更长→稳定性更高</div>
+<div class="c-tagged"><span class="tag t-astro">天体</span><b>星系诞生</b> 从均匀到"网状结构"，星系合并而不是独自成长</div>
+</div>`
+  },
+  5: {
+    title: '太阳系诞生',
+    body: `<div class="chain">星云坍缩。角动量守恒——像花样滑冰收紧手臂时自转加速。雾被甩平形成<b>"宇宙煎饼"</b>。中心是太阳，盘里是未来行星的材料。<br><br><b>尘埃靠静电粘→卵石靠碰撞长→小行星靠引力吞→行星靠互相撞→太阳靠核聚变稳→内岩外气靠温度分区。</b></div>
+<div class="cards">
+<div class="c-tagged"><span class="tag t-astro">天体</span><b>太阳系</b> 角动量守恒、冰线划分、吸积链条</div>
+<div class="c-tagged"><span class="tag t-q">概念</span><b>不是巧合</b> 26个元素→组合爆炸→某些分子碰巧能自我复制→自然选择开始</div>
+</div>`
+  },
+  6: {
+    title: '地球形成与早期演化',
+    body: `<div class="chain">七个环节：太阳形成→尘埃吸积成地球→碰撞释放巨大能量→地球熔化→铁下沉到中心→地幔对流形成→地壳冷却固化→大气和海洋形成。<br><br>Theia 撞击能量是太阳照地球一年的<b>一百万倍</b>。铁比岩石重，像苹果往下沉——沉到最中心就停了。<br><br>地球内部岩石像加热的湿海绵——<b>放气</b>——冒出水蒸气、CO₂、N₂。冷却后水蒸气凝结成雨，积累成海洋。<br><br>闪电 + 紫外线 + 液态水。<b>生命的舞台准备好了。</b></div>
+<div class="cards">
+<div class="c-tagged"><span class="tag t-earth">地球</span><b>地质形成</b> 七环节因果链，本质是重力势能</div>
+<div class="c-tagged"><span class="tag t-earth">地球</span><b>铁下沉</b> 沉到最底部→势能释放完→加热停止</div>
+<div class="c-tagged"><span class="tag t-earth">地球</span><b>对流</b> 锅里煮汤：热的上升冷的下沉</div>
+<div class="c-tagged"><span class="tag t-earth">地球</span><b>放气</b> 加热的湿海绵，提供早期大气</div>
+<div class="c-tagged"><span class="tag t-earth">地球</span><b>海洋</b> 蒸发→凝结→再蒸发 = 搬运热量的循环</div>
+</div>`
+  }
+};
+
+// 全局翻转状态
+let globalSide = 'a';
+const savedA = {};
+
+// 长按翻转（任意位置长按 → 全部章节一起翻）
+let flipTimer = null;
+
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest('.aside-toggle') || e.target.closest('.aside-content') || e.target.closest('.back-btn')) return;
+  flipTimer = setTimeout(() => { doFlipAll(); flipTimer = null; }, 600);
+}, { passive: true });
+
+document.addEventListener('touchmove', () => {
+  if (flipTimer) { clearTimeout(flipTimer); flipTimer = null; }
+}, { passive: true });
+
+document.addEventListener('touchend', () => {
+  if (flipTimer) { clearTimeout(flipTimer); flipTimer = null; }
+}, { passive: true });
+
+// 鼠标长按（桌面端）
+document.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.aside-toggle') || e.target.closest('.aside-content') || e.target.closest('.back-btn')) return;
+  flipTimer = setTimeout(() => { doFlipAll(); flipTimer = null; }, 600);
+});
+document.addEventListener('mouseup', () => {
+  if (flipTimer) { clearTimeout(flipTimer); flipTimer = null; }
+});
+
+function doFlipAll() {
+  const epochs = document.querySelectorAll('.epoch');
+  const nextSide = globalSide === 'a' ? 'b' : 'a';
+
+  // 所有章节同时翻出去
+  epochs.forEach(epoch => {
+    const inner = epoch.querySelector('.flip-inner');
+    if (inner) inner.classList.add('flipping-out');
+  });
+
+  // 400ms 后（转到 90° 不可见时）切换内容
+  setTimeout(() => {
+    epochs.forEach((epoch, idx) => {
+      const inner = epoch.querySelector('.flip-inner');
+      if (!inner || !bContent[idx]) return;
+
+      if (!savedA[idx]) {
+        savedA[idx] = { body: inner.innerHTML, title: epoch.querySelector('.epoch-title').textContent };
+      }
+
+      if (nextSide === 'b') {
+        inner.innerHTML = bContent[idx].body;
+        epoch.querySelector('.epoch-title').textContent = bContent[idx].title;
+      } else {
+        inner.innerHTML = savedA[idx].body;
+        epoch.querySelector('.epoch-title').textContent = savedA[idx].title;
+      }
+
+      // 翻回来
+      inner.classList.remove('flipping-out');
+      inner.classList.add('flipping-in');
+      setTimeout(() => inner.classList.remove('flipping-in'), 400);
+    });
+
+    globalSide = nextSide;
+  }, 400);
+
+  if (navigator.vibrate) navigator.vibrate(30);
+}
+
 </script>
 </body>
 </html>
