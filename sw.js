@@ -1,10 +1,11 @@
 // Scholar's Study Service Worker
 // 每次修改文件后，把版本号往上加（v1 → v2 → v3...）强制刷新缓存
-const CACHE_NAME = 'scholars-study-v1';
+const CACHE_NAME = 'scholars-study-v3';
 
 const ASSETS = [
   "./",
   "./index.html",
+  "./cosmos.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
