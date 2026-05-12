@@ -71,13 +71,22 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
 .aside-content.open { opacity:1; }
 .aside-inner { font-size:13px; color:var(--text-dim); line-height:1.9; padding:16px 20px; margin:8px 0 24px; border-left:1px solid var(--card-border); background:var(--card-bg); border-radius:0 4px 4px 0; }
 .aside-inner b { font-weight:500; color:var(--text-secondary); }
-.cards { display:flex; flex-direction:column; gap:2px; margin-top:20px; padding:16px 20px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:4px; }
-.card-item { font-size:13px; color:var(--text-dim); line-height:1.7; padding:4px 0; display:flex; align-items:baseline; gap:10px; }
-.card-item::before { content:''; width:3px; height:3px; border-radius:50%; background:var(--accent-warm); flex-shrink:0; margin-top:9px; opacity:0.5; }
-.card-item b { font-weight:500; color:var(--text-secondary); }
+.cards { display:flex; flex-direction:column; gap:2px; margin-top:20px; padding:14px 16px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:4px; }
+.card-item { font-size:12px; color:var(--text-dim); line-height:1.65; padding:3px 0; display:flex; align-items:baseline; gap:8px; }
+.card-item::before { content:''; width:2.5px; height:2.5px; border-radius:50%; background:var(--accent-warm); flex-shrink:0; margin-top:8px; opacity:0.5; }
+.card-item b { font-weight:500; color:var(--text-secondary); font-size:12px; }
 .back-btn { display:block; margin:80px auto 120px; padding:14px 36px; background:transparent; border:1px solid var(--line-color); color:var(--text-dim); font-family:'EB Garamond',serif; font-size:14px; letter-spacing:3px; cursor:pointer; transition:all 0.3s; border-radius:2px; }
 .back-btn:hover { border-color:var(--accent-warm); color:var(--accent-warm); }
-@media (max-width:600px) { .timeline{padding-left:32px} .epoch-dot{left:-28px} .epoch-title{font-size:18px} .story{font-size:14px} }
+@media (max-width:600px) {
+  .content { padding:0 32px; }
+  .timeline { padding-left:32px; }
+  .epoch-dot { left:-28px; }
+  .epoch-title { font-size:18px; }
+  .story { font-size:14px; }
+  .aside-inner { font-size:12px; padding:14px 16px; }
+  .cards { padding:12px 14px; }
+  .card-item { font-size:11.5px; }
+}
 ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(196,133,74,0.15);border-radius:3px}
 </style>
 </head>
@@ -201,15 +210,16 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
 // 生成圆形发光纹理（解决方块问题）
 function makeStarTexture() {
   const c = document.createElement('canvas');
-  c.width = 32; c.height = 32;
+  c.width = 64; c.height = 64;
   const ctx = c.getContext('2d');
-  const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
   g.addColorStop(0, 'rgba(255,255,255,1)');
-  g.addColorStop(0.3, 'rgba(255,255,255,0.6)');
-  g.addColorStop(0.7, 'rgba(255,255,255,0.15)');
+  g.addColorStop(0.15, 'rgba(255,255,255,0.8)');
+  g.addColorStop(0.4, 'rgba(255,255,255,0.3)');
+  g.addColorStop(0.7, 'rgba(255,255,255,0.08)');
   g.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 32, 32);
+  ctx.fillRect(0, 0, 64, 64);
   return new THREE.CanvasTexture(c);
 }
 
@@ -221,7 +231,7 @@ class CosmicFusion {
 
     this.renderer = new THREE.WebGLRenderer({ antialias:true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     document.getElementById('canvas-container').appendChild(this.renderer.domElement);
 
@@ -361,6 +371,150 @@ function toggleAside(btn) {
   if(o){ ct.style.maxHeight='0'; ct.classList.remove('open'); btn.classList.remove('open'); }
   else { ct.classList.add('open'); ct.style.maxHeight=ct.scrollHeight+'px'; btn.classList.add('open'); }
 }
+
+// ============ 宇宙音效（Web Audio 合成，无需外部文件）============
+class CosmicAudio {
+  constructor() {
+    this.ctx = null;
+    this.started = false;
+    this.bigBangFired = false;
+    // 手机需要用户交互才能启动 AudioContext
+    const start = () => { if (!this.started) this.init(); };
+    document.addEventListener('touchstart', start, { once:true });
+    document.addEventListener('click', start, { once:true });
+    document.addEventListener('scroll', start, { once:true });
+  }
+
+  init() {
+    this.started = true;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.ctx.resume();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0.6;
+    this.masterGain.connect(this.ctx.destination);
+    this.startAmbient();
+    // 如果进入页面时奇点阶段已过，直接触发大爆炸音
+    if (window._cosmos && window._cosmos.flashed) {
+      this.triggerBigBang();
+    }
+  }
+
+  // ===== 环境低频底噪：两个微调谐振荡器 + 滤波噪声 =====
+  startAmbient() {
+    const ctx = this.ctx;
+
+    // 低频 drone：两个 sine 稍微错开频率 → 产生缓慢 beating
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.value = 55;  // A1
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.value = 58;  // 微微错开 → 3Hz beating
+
+    const droneGain = ctx.createGain();
+    droneGain.gain.value = 0;
+    // 淡入（3 秒从 0 到 0.12）
+    droneGain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 3);
+
+    osc1.connect(droneGain);
+    osc2.connect(droneGain);
+    droneGain.connect(this.masterGain);
+    osc1.start();
+    osc2.start();
+
+    // 极低频 sub bass（体感低音）
+    const sub = ctx.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.value = 32;
+    const subGain = ctx.createGain();
+    subGain.gain.value = 0;
+    subGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 4);
+    sub.connect(subGain);
+    subGain.connect(this.masterGain);
+    sub.start();
+
+    // 滤波白噪声 → "宇宙风" 质感
+    const bufferSize = ctx.sampleRate * 4;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const noiseData = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      noiseData[i] = Math.random() * 2 - 1;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    noise.loop = true;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.value = 200;
+    noiseFilter.Q.value = 1;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0;
+    noiseGain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 5);
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    noise.start();
+
+    this.droneGain = droneGain;
+    this.noiseGain = noiseGain;
+  }
+
+  // ===== 大爆炸音效：低频冲击 + 噪声爆发 + 回声衰减 =====
+  triggerBigBang() {
+    if (this.bigBangFired || !this.ctx) return;
+    this.bigBangFired = true;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    // 1. 低频冲击（深沉的"轰"）
+    const boom = ctx.createOscillator();
+    boom.type = 'sine';
+    boom.frequency.setValueAtTime(80, now);
+    boom.frequency.exponentialRampToValueAtTime(25, now + 1.5); // 频率下滑
+    const boomGain = ctx.createGain();
+    boomGain.gain.setValueAtTime(0.5, now);
+    boomGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5); // 2.5 秒衰减
+    boom.connect(boomGain);
+    boomGain.connect(this.masterGain);
+    boom.start(now);
+    boom.stop(now + 3);
+
+    // 2. 噪声爆发（"嘶—"）
+    const burstLen = ctx.sampleRate * 3;
+    const burstBuf = ctx.createBuffer(1, burstLen, ctx.sampleRate);
+    const bd = burstBuf.getChannelData(0);
+    for (let i = 0; i < burstLen; i++) {
+      bd[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.6));
+    }
+    const burst = ctx.createBufferSource();
+    burst.buffer = burstBuf;
+    const burstFilter = ctx.createBiquadFilter();
+    burstFilter.type = 'lowpass';
+    burstFilter.frequency.setValueAtTime(800, now);
+    burstFilter.frequency.exponentialRampToValueAtTime(100, now + 2);
+    const burstGain = ctx.createGain();
+    burstGain.gain.setValueAtTime(0.35, now);
+    burstGain.gain.exponentialRampToValueAtTime(0.001, now + 3);
+    burst.connect(burstFilter);
+    burstFilter.connect(burstGain);
+    burstGain.connect(this.masterGain);
+    burst.start(now);
+
+    // 3. 大爆炸后环境音量提升（宇宙"醒来"）
+    if (this.droneGain) {
+      this.droneGain.gain.linearRampToValueAtTime(0.18, now + 4);
+    }
+  }
+}
+
+window._audio = new CosmicAudio();
+
+// 在暴胀闪光时同步触发大爆炸音效
+const _origFlash = CosmicFusion.prototype.triggerFlash;
+CosmicFusion.prototype.triggerFlash = function() {
+  _origFlash.call(this);
+  if (window._audio) window._audio.triggerBigBang();
+};
 </script>
 </body>
 </html>
