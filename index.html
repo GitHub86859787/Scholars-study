@@ -17,7 +17,8 @@ html, body { width:100%; height:100%; background:#050302; overflow:hidden; font-
 .room.hidden { opacity:0; pointer-events:none; }
 
 .layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; will-change:transform; }
-.layer img { width:100%; height:100%; display:block; image-rendering:pixelated; image-rendering:crisp-edges; }
+.layer img { width:100%; height:100%; display:block; image-rendering:pixelated; image-rendering:crisp-edges; opacity:0; transition:opacity 0.5s ease; }
+.layer img.loaded { opacity:1; }
 
 /* ============================================
    STUDY 主厅景别
@@ -120,9 +121,32 @@ html, body { width:100%; height:100%; background:#050302; overflow:hidden; font-
 
 #toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:rgba(20,14,8,0.92); color:#d4b87a; font-size:12px; letter-spacing:1px; padding:8px 16px; border-radius:20px; border:1px solid rgba(212,184,122,0.25); font-style:italic; opacity:0; pointer-events:none; transition:opacity 0.3s; z-index:350; white-space:nowrap; }
 #toast.show { opacity:1; }
+
+/* ============= LOADING SCREEN ============= */
+#loadingScreen {
+  position:fixed; inset:0; background:#050302;
+  z-index:9999;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  color:#d4b87a;
+  font-family:'Crimson Pro','Noto Serif SC',serif;
+  transition:opacity 0.8s ease;
+}
+#loadingScreen.hidden { opacity:0; pointer-events:none; }
+#loadingScreen .lt-title { font-size:24px; letter-spacing:6px; margin-bottom:14px; font-style:italic; font-weight:300; }
+#loadingScreen .lt-sub { font-size:11px; letter-spacing:4px; opacity:0.5; margin-bottom:40px; font-style:italic; }
+#loadingScreen .lt-bar { width:160px; height:1px; background:rgba(212,184,122,0.15); overflow:hidden; }
+#loadingFill { width:0%; height:100%; background:rgba(212,184,122,0.85); transition:width 0.3s ease; }
+#loadingScreen .lt-progress { font-size:10px; letter-spacing:3px; opacity:0.35; margin-top:14px; font-variant-numeric:tabular-nums; }
 </style>
 </head>
 <body>
+<div id="loadingScreen">
+  <div class="lt-title">Scholar's Study</div>
+  <div class="lt-sub">· unfolding ·</div>
+  <div class="lt-bar"><div id="loadingFill"></div></div>
+  <div class="lt-progress" id="loadingProgress">0 / 47</div>
+</div>
 <div id="app">
 
 <!-- ===== STUDY ===== -->
@@ -872,6 +896,43 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 
 applyTransform();
 setTimeout(() => document.getElementById('hint').classList.add('hide'), 5000);
+
+// ============= LOADING SCREEN: 追踪所有layer图片加载进度 =============
+(function() {
+  const layerImgs = document.querySelectorAll('.layer img');
+  const total = layerImgs.length;
+  let loaded = 0;
+  const progressEl = document.getElementById('loadingProgress');
+  const fillEl = document.getElementById('loadingFill');
+  const screenEl = document.getElementById('loadingScreen');
+
+  progressEl.textContent = '0 / ' + total;
+
+  function markLoaded(img) {
+    if (img._counted) return;
+    img._counted = true;
+    img.classList.add('loaded');
+    loaded++;
+    progressEl.textContent = loaded + ' / ' + total;
+    fillEl.style.width = (loaded / total * 100) + '%';
+    if (loaded >= total) {
+      // 全部加载完，淡出loading screen
+      setTimeout(() => screenEl.classList.add('hidden'), 400);
+    }
+  }
+
+  layerImgs.forEach(img => {
+    if (img.complete && img.naturalWidth > 0) {
+      markLoaded(img);
+    } else {
+      img.addEventListener('load', () => markLoaded(img));
+      img.addEventListener('error', () => markLoaded(img)); // 出错也算，避免卡死
+    }
+  });
+
+  // 兜底：8秒后无论如何关闭loading screen
+  setTimeout(() => screenEl.classList.add('hidden'), 8000);
+})();
 </script>
 </body>
 </html>
