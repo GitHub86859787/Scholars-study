@@ -854,6 +854,11 @@ function openBoard(boardKey) {
       ho.style.cssText = `left:${x}px;top:${y}px;width:${hs.w*scaleX}px;height:${hs.h*scaleY}px;`;
     }
     ho.addEventListener('click', () => {
+      // 宇宙相关看板入口 → 跳转精华页
+      if (['board_cosmos','board_stars','board_elements'].includes(hs.key)) {
+        window.location.href = './cosmos.html';
+        return;
+      }
       if (objectData[hs.key]) openPanel(hs.key);
     });
     boardCanvas.appendChild(ho);
