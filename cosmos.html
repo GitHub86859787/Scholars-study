@@ -96,13 +96,26 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
 }
 ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(212,169,64,0.15);border-radius:3px}
 
-/* ===== 翻转动画 ===== */
-.flip-body { perspective:800px; }
-.flip-inner { transform-style:preserve-3d; transition:transform 0.4s ease; }
-.flip-inner.flipping-out { transform:rotateY(90deg); }
-.flip-inner.flipping-in { animation:flip-in 0.4s ease forwards; }
-@keyframes flip-in { from{transform:rotateY(-90deg)} to{transform:rotateY(0)} }
-.flip-hint { font-size:10px; color:var(--text-dim); opacity:0.3; text-align:right; margin-top:12px; letter-spacing:1px; font-style:italic; }
+/* ===== 整面墙翻转（物理感）===== */
+.timeline { perspective:2000px; }
+.timeline-inner {
+  transform-style:preserve-3d;
+  transform-origin:center center;
+}
+.timeline-inner.wall-out {
+  animation: wallOut 0.6s ease-in forwards;
+}
+.timeline-inner.wall-in {
+  animation: wallIn 0.6s ease-out forwards;
+}
+@keyframes wallOut {
+  0%   { transform:scaleX(1); opacity:1; }
+  100% { transform:scaleX(0); opacity:0; }
+}
+@keyframes wallIn {
+  0%   { transform:scaleX(0); opacity:0; }
+  100% { transform:scaleX(1); opacity:1; }
+}
 
 /* ===== B版标签颜色（暗色主题）===== */
 .tag{font-size:10px;padding:1px 5px;border-radius:4px;white-space:nowrap;font-weight:500;display:inline-block;margin-right:4px;flex-shrink:0}
@@ -141,86 +154,413 @@ body { background:#000; color:var(--text-primary); font-family:'Noto Serif SC','
 <div class="content">
 <div class="timeline">
 <div style="text-align:right;font-size:10px;color:var(--text-dim);opacity:0.3;letter-spacing:1px;font-style:italic;margin-bottom:20px;padding-right:4px">长按任意位置切换版本</div>
+<div class="timeline-inner" id="timelineInner">
 
 <div class="epoch">
-<div class="epoch-dot"></div>
+<div class="epoch-dot" style="border-color:#D4A940"></div>
 <div class="epoch-time">t = 0</div>
-<div class="epoch-title">一切的开始</div>
+<div class="epoch-title">宇宙起源</div>
 <div class="flip-body"><div class="flip-inner">
-<div class="story">宇宙最初的状态，物理学家叫它<b>奇点</b>——意思是：在那一刻，所有的数学公式都算不出结果，所有已知的物理规律都失效了。我们能描述的只有"它之后"发生了什么，"它本身"是什么，目前没有人知道。<br><br>那时候温度高到大约 10³² 度——比太阳核心还要热一亿亿亿倍。热到任何你知道的东西都不可能存在。所有的能量被挤在一个极小极小的范围里。<br><br>然后——没有人知道为什么——它开始<b>膨胀</b>。<br><br>"大爆炸"这个名字其实起错了。它不是一个炸弹在某个地方炸开。它是<b>空间本身</b>在变大——每一个点和每一个点之间的距离都在变大。像一壶滚烫的水倒进一个越来越大的池子里，水还是那些水，但温度降了，因为摊薄了。<br><br>温度一降，一件事就发生了：<b>粒子开始能够稳定存在</b>。之前温度太高，就算粒子短暂出现了，也会立刻被撞碎。现在温度够低了，有些粒子终于能活下来不被摧毁了。</div>
-<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 什么是时空、场、能量</button>
-<div class="aside-content"><div class="aside-inner"><b>什么是"时空"？</b><br>时间和空间不是两样分开的东西，它们是一张布的两面。你在空间里移动得越快，你的时间就走得越慢——这不是比喻，是爱因斯坦用实验验证过的事实。<br><br><b>什么是"场"？</b><br>想象一片无边无际的海。海面上局部鼓起来的一个浪包 = 粒子。所以"场"是那片海本身。粒子不是独立的小球，它是场的一部分局部震动起来了。<br><br><b>什么是"能量"？</b><br>能量是"让事情发生的能力"。热、光、运动——只是能量的不同表现形式，可以互相转换，但总量不变。</div></div>
-<div class="cards"><div class="card-item"><b>原始状态</b>所有能量挤在极小范围，温度高到粒子无法存在</div><div class="card-item"><b>宇宙大爆炸</b>不是炸弹，是空间本身在变大</div><div class="card-item"><b>为什么宇宙不为零</b>"什么都没有"反而是最不自洽的状态</div></div>
+<div class="story">宇宙是一个由<b>能量 → 粒子 → 原子 → 恒星 → 元素 → 生命</b>的连续演化系统。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 培养物理思维</button>
+<div class="aside-content"><div class="aside-inner">① 把"物质世界直觉"替换为"关系世界直觉"
 
+物理的核心不是"东西是什么"，而是<b>"东西如何相互作用"</b>。
+微观世界不是由"物体"组成，而是由<b>相互作用的模式</b>组成。
+
+你要从"形状思维"切换成"关系思维"。
+
+<b>物理不是在讲东西，而是在讲关系。</b></div></div>
 </div></div></div>
 
 <div class="epoch">
-<div class="epoch-dot"></div>
-<div class="epoch-time">t &lt; 3 分钟</div>
-<div class="epoch-title">粒子时代</div>
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">t = 0 · 奇点</div>
+<div class="epoch-title">原始状态</div>
 <div class="flip-body"><div class="flip-inner">
-<div class="story">温度继续降。<b>夸克</b>第一次能稳定地组合在一起了。三个夸克被<b>强力</b>绑在一起，形成<b>质子</b>或<b>中子</b>。<br><br>质子带正电，中子不带电。质子的数量决定了一个原子是什么元素：1个 = 氢，6个 = 碳，26个 = 铁，92个 = 铀。<b>质子数 = 元素的身份证号</b>。<br><br>还有<b>电子</b>——比质子轻得多，带负电，到处散着。<b>光子</b>——光的最小单位。<b>中微子</b>——极其轻，能直接穿过整个地球。<br><br>宇宙诞生 3 分钟时，质子和中子开始组合——氢核、氦核、少量锂核。宇宙变成了一锅<b>"核汤"</b>。</div>
-<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 四种力与质量</button>
-<div class="aside-content"><div class="aside-inner"><b>四种力：</b><br>① <b>强力</b>把夸克绑成质子中子。力最强，只管原子核内部。<br>② <b>电磁力</b>控制电荷、光、化学反应。日常几乎所有现象都是它。<br>③ <b>弱力</b>让粒子变身，核聚变和放射性衰变需要它。<br>④ <b>引力</b>质量让时空弯曲。力最弱但管最远。<br><br><b>质量</b> = 一个东西有多难推动。越大越难推，也越能让时空弯曲。</div></div>
-<div class="cards"><div class="card-item"><b>夸克</b>最基本的砖头，三个绑一起 = 质子或中子</div><div class="card-item"><b>质子</b>带正电，质子数 = 元素身份证号</div><div class="card-item"><b>中子</b>不带电，帮质子们待在一起</div><div class="card-item"><b>电子·光子·中微子</b>到处飞的三种轻粒子</div><div class="card-item"><b>核汤</b>原子核 + 电子 + 光子散着飘，还没组装成原子</div></div>
+<div class="story">① 宇宙最初极热，温度高到约 10³² K（比恒星核心高 10²⁶ 倍），热到任何粒子都无法存在。
+② 宇宙最初还处于极高能量密度，所有能量被挤在极小空间里。
+③ 极度弯曲的时空——因为能量太集中，时空像被压到极限的橡皮布一样扭曲、变形，连时间和空间的概念都几乎失效。
+④ 没有任何粒子能稳定存在、物理规律（如强弱电力）尚未分化的统一状态。
 
+以上是宇宙原始状态的核心全部特征，再往前就已超出现有物理能解释范围。
+
+宇宙的原始状态被称为<b>奇点</b>，因为在那一刻所有数学模型都崩溃、没有任何已知物理能描述它。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 时空</button>
+<div class="aside-content"><div class="aside-inner">时间+空间。时空不是一个物体，不是空气，不是空间，不是时间，它是一套<b>"规则背景"</b>。它决定"东西之间的距离、运动方式、引力是如何弯曲路径的"，等于是宇宙所有物理规律的坐标系和几何骨架。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 为什么宇宙不为零</button>
+<div class="aside-content"><div class="aside-inner">宇宙的一切都是为了最低能量运行为底层核心，那为什么宇宙不一切为0什么都没有才是最低不是吗？
+
+"什么都没有"反而最不自洽——它不允许时间、空间、波动、任何规律。量子力学里"完全的零"本身就是不稳定的。</div></div>
 </div></div></div>
 
 <div class="epoch">
-<div class="epoch-dot"></div>
-<div class="epoch-time">~38 万年</div>
-<div class="epoch-title">宇宙变透明</div>
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">t = 0 起</div>
+<div class="epoch-title">宇宙大爆炸</div>
 <div class="flip-body"><div class="flip-inner">
-<div class="story">38 万年里，宇宙一直是一片"白雾"——光子不停地撞电子，走不了直线。<br><br>终于冷到约 3000 度。光子不够力气把电子撞飞了。电子被原子核吸住——<b>第一批完整的原子诞生</b>。光子突然可以自由飞行。宇宙从"白雾"变成<b>透明</b>。<br><br>那一刻释放出来的光子今天还在飞。波长被拉长成了微波——<b>宇宙微波背景辐射</b>，宇宙婴儿时期的"照片"。</div>
+<div class="story">不是一个炸弹在某个地方炸开，而是<b>空间本身在变大</b>——每个点和每个点之间的距离都在变大。
+
+原始奇点被拉开 → 空间疯狂变大 → 能量被摊开变稀 → 温度暴降 → 粒子开始能稳定存在 → 宇宙从混沌变成可演化的世界。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 能量</button>
+<div class="aside-content"><div class="aside-inner">在所有自然系统中，只要粒子或系统进入一个更低能量、更稳定的状态，它必须把"多余能量"排出去，才能完成重组。
+
+<b>能量重组 = 结构变化 + 排出能量
+能量释放 = 重组完成的"副作用"</b></div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 光与望远镜——时间机器</button>
+<div class="aside-content"><div class="aside-inner">想象你在深夜一个山谷里大喊：声音往四面八方扩散。如果远方刚好有一个人，他有足够敏锐的耳朵，而且声音没被山挡住，过了一段时间他就听见你喊的内容。
+
+光子就是"不会停的声音"
+宇宙就是"几乎无穷大的山谷"
+望远镜是"超级敏锐的耳朵"
+
+所以对方听到的（看到的）是你"很久以前的样子"。
+
+<b>望远镜 = 时间机器</b>
+它让你看到星系、恒星、宇宙过去的样子，而不是现在。
+
+1 亿光年外发出的消息 → 跑 1 亿年才到你这里
+200 亿光年外发出的消息 → 还在路上</div></div>
+</div></div></div>
+
+<div class="epoch">
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">t &lt; 3 分钟 · 粒子时代</div>
+<div class="epoch-title">宇宙新生</div>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">"宇宙开场四件套"就是：
+① <b>时空结构</b>本身
+② <b>四种基本相互作用</b>（引力、电磁力、弱力、强力）
+③ 一整套<b>粒子家族</b>（大量短命粒子＋最终稳定下来的夸克、电子、光子、中微子）
+
+四件套的关系就像一块巨大的二维布料正在震动：时空是这块布的材质本身、各种场是布料上持续存在的纹理和张力、四种力是布被拉扯和反馈的规则、粒子是布面被张力激起后出现的"结点和波包"。
+
+<b>宇宙最底层只有一个东西：场。</b>
+时空是场的几何结构，力是场的互动规则，粒子是场的激发波包。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 夸克</button>
+<div class="aside-content"><div class="aside-inner">夸克是组成质子、中子等所有"有质量的普通物质"的最基本砖头。
+
+三条有波纹的线 ＝ 三条夸克的"场波动"（真实物理中它们不是小球，而是量子场的激发）。波纹为什么连在一起？＝ 因为强作用力像橡皮筋一样，越拉越紧，三条永不分开。
+
+夸克就像三条永不分开的"绳子波纹"，三条绳纹缠在一起形成一个稳定的球（质子/中子），它们任何一条都无法被单独抽出来，不然绳子会自己生出新的波纹补上。
+
+温度下降后，夸克第一次能活过"湮灭循环"，开始<b>组合成质子和中子</b>（强相互作用第一次真正发挥作用）。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 质子</button>
+<div class="aside-content"><div class="aside-inner">质子带正电。质子＋中子继续组合 → 形成最早的原子核（氢核、氦核）。宇宙变成一锅"核汤"（约 3 分钟时），这是第一次真正稳定的物质结构出现。
+
+<b>质子数 = 元素的身份证号</b>：1个质子 = 氢，6个 = 碳，26个 = 铁，92个 = 铀。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 中子</button>
+<div class="aside-content"><div class="aside-inner">中子不带电，住在原子核内部。作用：帮质子们待在一起不散架——质子都带正电正正相斥，中子在中间缓冲稳定作用。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 电子</button>
+<div class="aside-content"><div class="aside-inner">比质子轻1836倍，带负电。这时候宇宙太热，电子到处乱飞没有归属。高能光子不停撞击它们→光走不了直线→宇宙像浓雾。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 光子</button>
+<div class="aside-content"><div class="aside-inner">光子是电磁相互作用的"能量信使"，只要有带电粒子的结构发生变化，系统通过发射光子来"丢掉多余能量"，是最自然、最低成本、最有效率的释放方式。
+
+光子本质是一段"电磁场的震动"，它永远以光速直线传播，不会故意去撞任何东西。
+
+光子 = 电磁场里"啪"一下跳出来的一颗能量子弹，它不是由物质做的，但能量是真实的，射出去永远光速。
+
+<b>光子是原子之间发生任何"关系"的唯一媒介，没有光子，原子之间永远互不感知、互不作用。</b></div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 中微子</button>
+<div class="aside-content"><div class="aside-inner">中微子是极其轻、几乎不与任何东西作用的幽灵粒子，宇宙中数量巨大但几乎无法被探测。
+
+它比电子还"飘"，几乎不跟任何东西互动，所以它像宇宙汤里"透明的小幽灵粒子"，一路穿过去，谁都碰不到它、它也不理谁。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 原子结构 · 电子轨道"房子模型"</button>
+<div class="aside-content"><div class="aside-inner">原子 = <b>原子核</b>（质子[正电] + 中子[稳定作用]）+ <b>核外电子</b>（统）。原子整体是电中性的（正负相等）。
+
+电子不是随便围着核转——它们住在不同层级的"房间"里，每层能住的数量有限：
+
+<b>第1层</b>：只有 1S（一间双人房，最多住2个电子）
+<b>第2层</b>：2S（双人房）+ 2P（三间房：2Px、2Py、2Pz，共住6个）
+<b>第3层</b>：3S（双人房）+ 3P（三间房）+ 3d（五间房，共住10个）
+<b>第4层</b>：4S + 4P + 4d + 4f（七间房，共住14个）
+<b>第5层</b>：5S + 5P + 5D + 5f ......
+
+层数越高 = 房子越大 = 离核越远 = 电子被束缚越弱。
+
+<b>外层电子住了几个、还差几个才住满</b>——这就决定了元素的"性格"：想丢电子（外向活泼）、想抢电子（攻击性强）、已经满了（高冷惰性）、正好一半（爱共享、能搭网络）。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 四种力</button>
+<div class="aside-content"><div class="aside-inner"><b>强力（强场）</b>——把夸克绑成质子中子。最强但只管原子核内部。
+<b>电磁力（电磁场）</b>——管电荷吸斥、光的传播、化学反应。日常几乎一切现象都是它。
+<b>弱力（弱场）</b>——让粒子变身（中子↔质子）。核聚变和衰变需要它。
+<b>引力（引力场）</b>——有质量→时空弯曲→其他东西沿弯曲路径走。最弱但管最远，控制星系和黑洞。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 氢核、氦核 · 少量锂核</button>
+<div class="aside-content"><div class="aside-inner">氢核＝1 个质子；氦核＝2 个质子＋2 个中子，它们是在宇宙冷却到可以让强力"把粒子黏住"时生出来的最初原子核心。氢核、氦核只是两种最早出现的原子核，但"原子核"不只有这两种。还有少量锂核。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 核聚变——质子-质子链反应</button>
+<div class="aside-content"><div class="aside-inner">原理：<b>能量重组 = 结构变化 + 排出能量</b>。任何结构在重新组合后，只要系统能量变低，多出来的能量必须离开系统，否则系统无法稳定。
+
+<b>但首先——质子都带正电，为什么能撞到一起？</b>
+
+这是两种力的距离博弈：
+· <b>电磁力（排斥）</b>——管得远。两个质子还离得很远的时候，正正相斥就已经在推它们分开了。
+· <b>强力（吸引）</b>——只管极近距离（原子核内部那么小的范围，~1飞米）。但一旦进入这个范围，强力比电磁力强100倍，瞬间把质子"锁死"在一起。
+
+所以关键就是：<b>怎么让质子突破电磁排斥、靠到强力能起作用的距离？</b>
+答案：<b>极高温（千万K）+ 极高压</b>。温度够高→质子动得够快；压力够大→质子被挤得够近。快到、近到能闯过电磁排斥的"围墙"→进入强力范围→被锁住→聚变完成。
+
+恒星内部实际发生的步骤（质子-质子链）：
+
+<b>第一步</b>：质子 + 质子 → <b>氘核</b>（氢-2核：1个质子+1个中子）+ 正电子 + 中微子
+其中一个质子通过弱力变成了中子。
+
+<b>第二步</b>：氘核 + 质子 → <b>氦-3核</b>（2个质子+1个中子）+ 光子（γ）释放
+
+<b>第三步</b>：两组氦-3核相撞 → <b>氦-4核</b>（2个质子+2个中子）+ 2个多余的质子被弹出
+
+整个过程：4个氢核 → 1个氦-4核。氦-4核比4个氢核加起来<b>稍微轻一点</b>——少掉的质量变成了能量，以光子（γ）释放出去。
+
+需要<b>极高温（千万K）+ 极高压</b>才能让质子克服正电排斥撞在一起。这就是恒星发光发热的原理。</div></div>
+</div></div></div>
+
+<div class="epoch">
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">~38 万年 → ~1 亿年</div>
+<div class="epoch-title">Cosmic Dawn（宇宙黎明）</div>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">③ 宇宙冷到光子不再疯狂撞飞电子，于是电子第一次能被原子核牢牢吸住、形成真正的<b>原子</b>。
+
+宇宙再降温到约 380,000 年时，电子不再被光子撞飞，于是氢原子、氦原子正式出现，<b>宇宙第一次变透明</b>（你今天还能看到那光，就是宇宙微波背景辐射）。
+
+宇宙刚出生像一锅沸腾小米粥：光子像滚烫的水把自由电子搅得到处乱飞，让宇宙变成一片白雾；当宇宙膨胀变冷后，光子变成软弹，电子被原子核接住形成原子，宇宙瞬间从"白雾"变成透明，光子自由飞行直到今天，那些光就是宇宙微波背景。
+
+④ 引力开始主导 → 1亿年的时候，气体团聚形成恒星、星系。原子云在引力作用下坍缩，点燃核聚变，<b>第一批恒星诞生</b>，宇宙由此拥有了结构、光、化学元素和接下来所有故事的基础。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 从均匀气体到第一颗恒星——怎么点着的？</button>
+<div class="aside-content"><div class="aside-inner">宇宙原始气体（75%氢 + 25%氦）一开始几乎完全均匀。但有些地方物质<b>稍微密一点</b>（只多了十万分之一），这些微小差别来自量子涨落被宇宙暴胀拉大。
+
+引力的<b>正反馈</b>：稍密 → 引力更强 → 拉来更多 → 更密 → 引力更强...... 反过来：稍疏 → 引力更弱 → 留不住 → 更疏。要么更密，要么更疏——没有中间状态。
+
+气体云塌缩过程：
+电离气体团 → 温度降下来后原子形成 → 引力继续压缩 → 核心越来越小越来越密 → 变成等离子体 → 温度升到<b>~千万K</b> → <b>核聚变点燃</b>。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 恒星 = 引力 vs 热压的平衡</button>
+<div class="aside-content"><div class="aside-inner">恒星不是一个"死的球"，它是两股力<b>对抗平衡</b>的产物：
+
+🔵 <b>引力</b>——往内压（想把一切压到中心）
+🔴 <b>热压/辐射压</b>——往外撑（核聚变产生的能量把物质往外推）
+
+两者平衡 = 恒星稳定发光。
+
+一旦核聚变停止（燃料烧到铁）→ 热压消失 → <b>引力赢</b> → 核心塌缩 → 超新星爆炸。
+
+这就是理解恒星一切行为的钥匙——诞生、发光、死亡全是这两股力的博弈。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 原子云 vs 分子云——为什么冷却是关键</button>
+<div class="aside-content"><div class="aside-inner"><b>原子云</b>：主体为氢原子 + 少量电离气体。宇宙早期没有金属，冷却效率极差，有时甚至冷却不下来。温度越高 → 原子热运动越快 → 不容易被引力拉在一起。
+
+<b>分子云</b>：主体为氢气分子（H₂，70-80%）+ 氦（20-25%）+ 尘埃（<1%）。有重元素和尘埃当"散热器" → 冷却效率高 → 温度降得下来 → 引力能够胜出 → 塌缩 → 形成恒星。
+
+<b>冷 = 能塌缩 = 能造星</b>。第一代恒星只有原子云可用（没有金属散热），所以只能形成超大质量怪物。第二代有了重元素，分子云能高效冷却→碎裂成大量小恒星。</div></div>
 <button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 暗物质</button>
-<div class="aside-content"><div class="aside-inner">星系转得太快——能看见的物质的引力不够。说明有看不见的东西在提供额外引力。它占宇宙总质量的 85%。<br><br>它先聚成"引力坑"，普通物质掉进去才形成恒星和星系。<b>宇宙先长骨架（暗物质），再长肉（普通物质）</b>。</div></div>
-<div class="cards"><div class="card-item"><b>宇宙变透明</b>电子被接住 → 光子自由 → 白雾消散</div><div class="card-item"><b>宇宙微波背景辐射</b>38万年前的光，今天还在飞</div><div class="card-item"><b>暗物质</b>看不见但有引力，宇宙结构的骨架</div></div>
+<div class="aside-content"><div class="aside-inner">暗物质第一次出现是什么时候？
 
+🕐 时间点：大爆炸后的一微秒以内（10⁻⁶ 秒内）
+
+科学家推测：暗物质极有可能是在宇宙刚刚从大爆炸中膨胀出来的头几微秒里形成的。也就是：<b>"它甚至比普通物质还早"！</b>
+
+不发光、不反射光，但有质量所以有引力。占宇宙总质量的85%。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 暗能量</button>
+<div class="aside-content"><div class="aside-inner">宇宙膨胀在加速。推动加速的东西叫暗能量，占宇宙总能量的~68%。是什么？完全不知道。
+宇宙组成：68%暗能量 + 27%暗物质 + <b>5%普通物质</b>（你、地球、所有恒星全在这5%里）。</div></div>
 </div></div></div>
 
 <div class="epoch">
-<div class="epoch-dot"></div>
-<div class="epoch-time">~1 亿年</div>
-<div class="epoch-title">第一代恒星 — 元素工厂</div>
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">~1–2 亿年</div>
+<div class="epoch-title">第一代恒星 Pop III</div>
 <div class="flip-body"><div class="flip-inner">
-<div class="story">黑暗时期。没有恒星，没有光源，到处是氢和氦。<br><br>但宇宙不均匀。密一点的地方引力强一点，拉来更多气体——正反馈。当温度到约一千万度——<b>核聚变点燃</b>。第一代恒星诞生。<br><br>它们极端巨大，几十到上百个太阳质量，只活<b>几百万年</b>。核心是元素锻造厂：氢→氦→碳→氧→硅→铁。铁是终点——之后聚变要吸收能量。<br><br>铁堆积，核心塌缩，不到一秒——反弹——<b>超新星爆炸</b>。瞬间造出铁到铀的所有元素，炸进宇宙。<br><br><b>你身体里的碳、血液里的铁、骨头里的钙——全是某颗恒星爆炸时喷出来的。</b></div>
-<div class="cards"><div class="card-item"><b>核聚变</b>轻核合成重核，少掉的质量变能量</div><div class="card-item"><b>第一代恒星</b>纯氢氦，超大质量，内部锻造氢到铁</div><div class="card-item"><b>超新星爆炸</b>铁核塌缩 → 反弹 → 炸出 26-92 号元素</div></div>
+<div class="story">第一代恒星诞生时间：宇宙年龄约 1 亿年（1×10⁸ 年）。数量不只一颗，而是<b>1000 万 ～ 10 亿颗</b> Pop III 恒星。Pop III 恒星寿命极短，只活 200 万～500 万年。
 
+它们成分极单纯：几乎只有氢 + 氦。大爆炸只给宇宙留下：氢、氦、微量锂。没有碳、氧、铁、硅这些"金属"元素。所以第一代恒星叫 Pop III（第三星族），几乎"零金属"。
+
+<b>质量极大</b>：冷却手段只有"氢分子冷却"，效率很差。气体冷却不下来就不能分裂成很多小块 → 只好形成少数几个超大块。结果就是：一颗星随随便便几十个太阳质量，很多可能上百个太阳质量。
+
+<b>寿命极短</b>：越大质量的恒星，核心压得越狠，核聚变越暴躁。这种怪物级恒星一般只活几百万年，比太阳（百亿年级别）快进一百倍以上。
+
+<b>内部核聚变更"暴力"</b>：一开始跟普通恒星一样烧氢 → 氦。但质量太大 → 温度极高 → 核聚变能走到很后面：氢 → 氦 → 碳 → 氧 → 硅 → 铁。也就是说，它们内部就是一个<b>"元素锻造工厂"</b>。
+
+宇宙自己通过核聚变自动扫描了所有可能的核结构。凡是能量更低的结构 → 自然留下。能量高、不稳定的结构 → 自然消失。最终留下的稳定"核模型"就是：<b>1～26号的核基态模型</b>（氢到铁）。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 产生了92元素</button>
+<div class="aside-content"><div class="aside-inner">① 宇宙只有氢、氦、微量锂
+② 气体冷却差 → 第一批恒星巨大
+③ 超大质量 → 核聚变走到铁
+④ <b>铁无法释放能量 → 恒星核心塌陷</b>
+⑤ 超新星爆炸（core-collapse supernova）
+
+26–92 号元素的诞生，不是在恒星稳定阶段，而是在<b>爆炸阶段</b>。
+
+Pop III 恒星的生命目的只有两个核心功能：启动宇宙第一轮核合成，把氢氦变成重元素（C、O、Si、Fe 等）。通过超新星爆炸把这些重元素释放到星际介质，使宇宙从"金属为零"跨入"化学可演化"的时代。
+
+超新星爆炸不是简单"死掉了"，而是<b>完成任务、把成果交给宇宙的节点</b>。所以，它被形容成"毕业典礼"。
+
+因果链条：超新星后 → 重元素出现 → 气体变好冷却 → 出现化学结构 → 出现分子 → 出现尘埃 → 出现固体 → 出现行星。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 衰变</button>
+<div class="aside-content"><div class="aside-inner">超新星造出的重元素里有些原子核太大太不稳定→自己"掉零件"变成更轻更稳定的核→放出能量。地球内部到现在还有放射性元素在衰变放热。</div></div>
 </div></div></div>
 
 <div class="epoch">
-<div class="epoch-dot"></div>
-<div class="epoch-time">~2 亿 – 10 亿年</div>
-<div class="epoch-title">第二代恒星 → 星系成型</div>
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">~2–5 亿年</div>
+<div class="epoch-title">星系雏形</div>
 <div class="flip-body"><div class="flip-inner">
-<div class="story">爆炸后宇宙有了重元素。重元素帮气体散热——相当于装了散热器。气体能降温、碎裂成小块，形成<b>大量大小不一的恒星</b>。<br><br>大量恒星 + 暗物质骨架 + 气体 = <b>星系</b>。暗物质做骨架，气体做肌肉，恒星做灯光，黑洞做心脏。</div>
-<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 恒星死后变什么</button>
-<div class="aside-content"><div class="aside-inner"><b>小恒星</b>（&lt;8太阳质量）→ 外层吹掉 → 核心变<b>白矮星</b><br><b>大恒星</b>（8-25太阳质量）→ 超新星 → 核心变<b>中子星</b><br><b>极大恒星</b>（&gt;25太阳质量）→ 核心变<b>黑洞</b></div></div>
-<div class="cards"><div class="card-item"><b>第二代恒星</b>有重元素 → 能散热 → 大量小恒星形成</div><div class="card-item"><b>星系</b>暗物质骨架 + 恒星 + 气体 + 黑洞心脏</div></div>
+<div class="story"><b>① 星系的根基是"引力骨架"（暗物质晕）</b>
 
+星系的真正"架子"不是恒星，而是暗物质。暗物质占星系质量的 85% 以上。人类看不见，但它产生引力。
+
+第一代恒星之前，暗物质已经在宇宙中形成大量"引力坑"（Halo），像一个个看不见的巨大重力盆地。第一代恒星都诞生在这些暗物质盆地里。爆炸后的遗迹——黑洞、中子星、重元素——全部依旧被困在暗物质盆地里。
+
+暗物质 = 房子的钢筋骨架
+恒星/气体 = 后来填进去的砖头、水泥
+
+<b>② 第一代恒星死后，宇宙第一次有了"重元素尘埃" → 冷却效率暴涨</b>
+
+宇宙被第一次"重金属污染"：碳、氧、氮、硅、铁、镁……这些元素使气体有了新的冷却通道：金属原子的电子层可以吸收能量，并通过辐射把能量带走。
+
+冷却意味着：气体能降温 → 压强下降 → 更容易塌陷 → 气体第一次可以"碎裂"成许多小团。
+
+<b>星系需要"很多小恒星"，而不是几个巨怪。</b>
+
+<b>③ 气体在暗物质晕里 → 塌缩成"星系原始云团"</b>
+
+大量气体从四面八方向中心掉 → 越撞越密 → 云球内部继续碎裂 → 形成成千上万颗第二代恒星（Pop II）。
+
+这就是<b>星系的雏形</b>。它不是几颗星，而是：一整个巨大恒星群 + 气体云团 + 暗物质晕。</div>
 </div></div></div>
 
 <div class="epoch">
-<div class="epoch-dot"></div>
-<div class="epoch-time">~92 亿年</div>
-<div class="epoch-title">太阳系诞生</div>
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">~2–10 亿年</div>
+<div class="epoch-title">第二代恒星 Pop II</div>
 <div class="flip-body"><div class="flip-inner">
-<div class="story">某颗恒星爆炸，冲击波挤压附近的气体和尘埃，触发坍缩。角动量守恒使它们转成扁平圆盘。中心温度达到核聚变——<b>太阳点燃</b>。<br><br>距太阳近的地方太热，只有岩石和金属能存在——形成<b>水星、金星、地球、火星</b>。远处冷，冰和气体能留下——形成<b>木星、土星等气体巨行星</b>。</div>
-<div class="cards"><div class="card-item"><b>太阳</b>气体坍缩 → 旋转成盘 → 核心点燃</div><div class="card-item"><b>冰线</b>分割了岩石行星和气体行星的边界</div></div>
+<div class="story">最核心的底层逻辑是：<b>重元素 = 冷却剂</b>
+冷却效率高 = 气体更容易塌缩 = 恒星更容易形成 = 恒星尺寸更小、更稳定
 
+<b>① 超新星遗迹泡泡</b>
+第一代恒星爆炸后，留下许多冲击波扩展出来的大泡泡。泡泡内部：气体被吹散、边缘密度变高、重元素大量混入。这些泡泡互相交叠，形成蜂窝状结构。
+
+<b>② 泡泡的密度边缘 = 新恒星的发源地</b>
+引力强不强主要看密度。边缘区域被压得很密 → 引力重新变得"有话语权"。重元素多 → 冷却快 → 温度低 → 更容易塌缩。
+
+<b>③ 散热越快，碎裂越多</b>
+第一代只能形成超级大恒星。第二代因为重元素存在，气体可以一边塌缩、一边散热。一块气体可以碎成几十、上百颗小恒星。一个星团有几百颗几千颗星，就是这么来的。
+
+<b>④ 恒星怎么死？</b>
+质量 > 8个太阳 → 超新星爆炸 → 中子星 or 黑洞
+0.5～8个太阳 → 红巨星 → 白矮星
+< 0.5个太阳 → 慢慢熄灭（寿命数千亿年，到现在都还没死）
+
+第一代 = 清一色巨兽
+第二代 = 大小参差不齐，有巨兽也有小星星</div>
 </div></div></div>
 
 <div class="epoch">
-<div class="epoch-dot"></div>
-<div class="epoch-time">~92 亿 – 96 亿年</div>
-<div class="epoch-title">地球的诞生与演化</div>
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">~5–13 亿年</div>
+<div class="epoch-title">星系诞生</div>
 <div class="flip-body"><div class="flip-inner">
-<div class="story">早期太阳系像台球桌——到处碰撞。一个火星大小的天体<b>Theia</b>撞上原始地球，整颗星熔化成岩浆球。碎片聚集成<b>月球</b>。<br><br>之后铁等重金属<b>下沉到核心</b>，释放的势能让地球更热。形成分层结构：铁核 → 地幔 → 地壳。<br><br>地幔极热产生<b>对流</b>——像锅里煮汤。这个对流后来驱动了<b>板块运动</b>。<br><br>火山喷发释放水汽、二氧化碳——形成原始<b>无氧大气</b>。温度终于降到 100°C 以下，千年暴雨落下，积成了<b>最早的海洋</b>。<br><br>闪电、紫外线、液态水——化学汤正在沸腾。<b>生命即将破壳。</b></div>
-<div class="cards"><div class="card-item"><b>Theia 碰撞</b>全星熔化，碎片变月球</div><div class="card-item"><b>铁下沉</b>重的沉底，势能变热，形成地核</div><div class="card-item"><b>对流</b>热的上升冷的下沉，驱动板块运动</div><div class="card-item"><b>放气</b>岩石里的气体被烤出来 → 原始大气</div><div class="card-item"><b>海洋</b>水蒸气反复蒸发-凝结，最终积成海</div><div class="card-item"><b>舞台就绪</b>闪电 + 紫外线给化学汤注入能量</div></div>
+<div class="story">星系，本质上就是"长在暗物质引力井里的一团可见物质"。
+<b>星系＝暗物质做骨架 + 气体做肌肉 + 恒星做灯光 + 黑洞做心脏。</b>
 
+① 宇宙原本几乎完全均匀（微小波动 ~10⁻⁵）——来自量子涨落被暴胀拉大，只有0.001%的密度差别，但它就是一切结构的种子。
+② 暗物质开始先聚集 → 形成"暗物质井"——全宇宙最早能塌缩的东西，最坚固的引力骨架。宇宙是先长骨架（暗物质），再长肉（普通物质）。
+③ 普通物质（氢氦气体）被暗物质井吸进去 → 星系雏形
+④ 气体云塌缩 → 第一代恒星点亮
+⑤ 第一代爆炸 → 喷出金属 → 冷却效率飙升 → 第一次能产生正常大小的恒星
+⑥ 第二代恒星大量出生 → 星系变亮 → 出现旋涡星系、椭圆星系
+⑦ 星系互相合并 → 变大、形状改变、黑洞长大
+⑧ 宇宙大尺度结构：星系 → 星系团 → 超星系团 → 宇宙网状结构（暗物质骨架拉成的巨大蜘蛛网）
+⑨ 每个星系内部形成行星系</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 银河系的诞生</button>
+<div class="aside-content"><div class="aside-inner"><b>银河系不是一次生成的，而是不断吞噬、合并、重塑而成的"宇宙大怪兽"。</b>
+
+① ~2亿年：宇宙黑暗时代，暗物质悄悄聚集
+② ~2-3亿年：暗物质坑形成银河系"骨架"
+③ ~3亿年：第一批气体掉入 → "银河系雏形"
+④ ~3-4亿年：Pop III 点亮银河系
+⑤ ~5亿年：Pop II 出现 → 第一次拥有一整群恒星
+⑥ ~5-10亿年：不断合并小星系（"吞并狂魔"）
+⑦ ~10亿年：第一次形成盘面
+⑧ ~20-30亿年：结构成熟（核球、盘面、旋臂、暗物质晕、中央黑洞）
+⑨ ~45亿年前：太阳诞生，属于 Population I（星族一）——金属含量更高、寿命长、适合行星和生命</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 星系五大组成</button>
+<div class="aside-content"><div class="aside-inner"><b>①中心黑洞</b>（超大质量）
+<b>②暗物质</b>（占星系总质量85-90%，看不见但提供引力骨架）
+<b>③恒星</b> → 恒星 + 星团
+<b>④旋臂结构</b>（类似恒星的"高速公路" = 气体密集区域，恒星在这里密集诞生）
+<b>⑤星际介质</b>：
+　· 氢和氦气体
+　· 金属元素（气体态）
+　· 尘埃（金属固体微粒）</div></div>
 </div></div></div>
 
-</div>
+<div class="epoch">
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">~90.5 亿年（46 亿年前）</div>
+<div class="epoch-title">太阳系诞生 行星系统</div>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">一个含有重元素的星云在引力下塌缩→中心温度极高→核聚变点燃→太阳开始发光。
+
+盘里的尘埃先靠静电粘（像毛衣粘灰尘）→变大后靠碰撞卡住→再大后引力起作用→正反馈→撞出行星。
+
+太阳附近太热→冰全蒸发→只剩岩石铁→<b>岩石行星</b>（水金地火）。远离太阳够冷→冰大量存在→冰+岩石核心抓住氢氦→<b>气体巨行星</b>（木土）。分隔线 = <b>冰线</b>。
+
+冰线外没能聚成大行星的冰和岩石碎块→<b>彗星</b>。后来撞击地球时带来了水和气体。
+
+想象宇宙是一个大厨房：你有面粉（尘埃粒子）、砂糖（铁颗粒）、水（冰）、黏合剂（碳粉、有机物）。一开始它们是分开的、小小的。但混在一起，揉成团，放进锅里（原行星盘），慢慢烘烤（引力压缩），就能"烤出一个行星"。
+
+<b>核心答案是：这不是"巧合"，也不是"宇宙选择了地球"。这是物理和化学的必然结果。</b></div>
+</div></div></div>
+
+<div class="epoch">
+<div class="epoch-dot" style="border-color:#D4A940"></div>
+<div class="epoch-time">~45.4 亿年前</div>
+<div class="epoch-title">🌏 地球的地质形成、演化</div>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">时间：宇宙大爆炸后 <b>90.5 亿年</b>
+
+一个星云坍缩，在星云坍缩的中心，温度和压力变得极其巨大。核聚变开始了。氢原子的核开始融合成氦。这释放了巨大的能量——太阳开始发光。太阳的热和光是所有后续过程的<b>能量来源</b>。没有太阳，就没有地球。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 太阳形成</button>
+<div class="aside-content"><div class="aside-inner">时间：宇宙大爆炸后 <b>90.5 亿年</b>
+
+一个星云坍缩，在星云坍缩的中心，温度和压力变得极其巨大。核聚变开始了。氢原子的核开始融合成氦。这释放了巨大的能量——太阳开始发光。太阳的热和光是所有后续过程的<b>能量来源</b>。没有太阳，就没有地球。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 地球通过吸积形成</button>
+<div class="aside-content"><div class="aside-inner">时间：太阳形成后的 <b>0 - 5000 万年</b>
+
+尘埃吸积 → 微行星形成 → 微行星相互碰撞 → 融合成更大的物体 → 大物体吃小物体 → 约 5000 万年后，地球基本形成。
+
+每次碰撞，运动能转化为热。碰撞频率非常高，地球内部温度达到数千开尔文。
+
+地球此时的成分是铁（32%）、氧（30%）、硅（15%）、镁（14%）。但分布不均匀——它们混合在一起，没有分层。地球在此时是一个<b>炙热的、均质的、混乱的球</b>。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 大碰撞与月球诞生</button>
+<div class="aside-content"><div class="aside-inner">时间：太阳形成后约 <b>1.1 亿年</b>
+
+一个火星大小的天体 <b>Theia</b> 与地球发生正面碰撞。能量释放 ≈ 10³⁰ 焦耳（太阳照地球一年的能量的一百万倍）。
+
+结果：<b>整个地球被彻底熔化</b>。从中心到表面，整个地球都变成了岩浆球。温度达到 4000-5000 K。
+
+碰撞喷出的物质形成了<b>月球</b>。月球初始轨道距离地球仅 1.6 万公里（现在是 38 万公里，在逐渐远离）。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 密度分层 · 铁下沉</button>
+<div class="aside-content"><div class="aside-inner">全熔后铁往下沉（铁比岩石重）→ 地球分层：铁核心 + 岩石地幔 + 地壳。
+
+<b>铁下沉到中心时，地心的温度和压力都变得极高，足以让铁停留在那里。一旦所有的铁都聚集到中心，重力势能释放完了，这个加热过程就停止了。</b></div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 对流 · 散热</button>
+<div class="aside-content"><div class="aside-inner">内部极热外面冷→热的密度小往上浮→冷的密度大往下沉→<b>对流</b>循环，就像锅里煮汤。
+
+为什么地幔能"流动"即使它是固体？因为时间尺度不同——几百万年持续的压力和热量下，固体岩石缓慢变形流动。
+
+随着时间推移，地球表面不断向太空辐射热。最终这些热能以热辐射向太空散逸。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 🧪 放气（outgassing）→ 大气海洋</button>
+<div class="aside-content"><div class="aside-inner">这些分子在早期被困在矿物晶体内部。高温把它们"烤"出来→通过火山和裂缝释放→加上彗星带来的冰和气体→第一层大气。
+
+<b>完全没有氧气</b>——主要是 H₂O、CO₂、N₂、H₂S。
+
+继续降温→水蒸气凝结成雨→最初的雨落在炙热地面蒸发→但每次蒸发带走热→地表越来越凉→终于有水留住→积累成<b>最早的海洋</b>。
+
+能量源在不断输入：太阳的紫外线直射海里（没臭氧层挡），闪电不断劈入海洋。
+
+固体地壳 + 液态海洋 + 气体大气 + 持续能量输入 = <b>生命的舞台准备好了</b>。</div></div>
+</div></div></div>
+
+
+</div><!-- /timeline-inner -->
+</div><!-- /timeline -->
 <button class="back-btn" onclick="window.location.href='./index.html'">← 返回研究室</button>
 </div>
 
@@ -429,7 +769,6 @@ class CosmicAudio {
     this.ctx = null;
     this.started = false;
     this.bigBangFired = false;
-    // 手机需要用户交互才能启动 AudioContext
     const start = () => { if (!this.started) this.init(); };
     document.addEventListener('touchstart', start, { once:true });
     document.addEventListener('click', start, { once:true });
@@ -441,119 +780,194 @@ class CosmicAudio {
     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     this.ctx.resume();
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 0.6;
+    this.masterGain.gain.value = 0.5;
     this.masterGain.connect(this.ctx.destination);
-    this.startAmbient();
-    // 如果进入页面时奇点阶段已过，直接触发大爆炸音
+
+    // 伪混响（多层延迟反馈）
+    this.reverb = this.createReverb();
+
+    // 奇点阶段：低频上升嗡鸣（积蓄能量感）
+    this.startRisingHum();
+
     if (window._cosmos && window._cosmos.flashed) {
       this.triggerBigBang();
     }
   }
 
-  // ===== 环境低频底噪：两个微调谐振荡器 + 滤波噪声 =====
-  startAmbient() {
+  // ===== 伪混响：给所有声音加大教堂空间感 =====
+  createReverb() {
     const ctx = this.ctx;
-
-    // 低频 drone：两个 sine 稍微错开频率 → 产生缓慢 beating
-    const osc1 = ctx.createOscillator();
-    osc1.type = 'sine';
-    osc1.frequency.value = 55;  // A1
-    const osc2 = ctx.createOscillator();
-    osc2.type = 'sine';
-    osc2.frequency.value = 58;  // 微微错开 → 3Hz beating
-
-    const droneGain = ctx.createGain();
-    droneGain.gain.value = 0;
-    // 淡入（3 秒从 0 到 0.12）
-    droneGain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 3);
-
-    osc1.connect(droneGain);
-    osc2.connect(droneGain);
-    droneGain.connect(this.masterGain);
-    osc1.start();
-    osc2.start();
-
-    // 极低频 sub bass（体感低音）
-    const sub = ctx.createOscillator();
-    sub.type = 'sine';
-    sub.frequency.value = 32;
-    const subGain = ctx.createGain();
-    subGain.gain.value = 0;
-    subGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 4);
-    sub.connect(subGain);
-    subGain.connect(this.masterGain);
-    sub.start();
-
-    // 滤波白噪声 → "宇宙风" 质感
-    const bufferSize = ctx.sampleRate * 4;
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const noiseData = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      noiseData[i] = Math.random() * 2 - 1;
+    const convLen = ctx.sampleRate * 3;
+    const buf = ctx.createBuffer(2, convLen, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < convLen; i++) {
+        d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 1.2));
+      }
     }
-    const noise = ctx.createBufferSource();
-    noise.buffer = noiseBuffer;
-    noise.loop = true;
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = 'lowpass';
-    noiseFilter.frequency.value = 200;
-    noiseFilter.Q.value = 1;
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.value = 0;
-    noiseGain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 5);
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(this.masterGain);
-    noise.start();
-
-    this.droneGain = droneGain;
-    this.noiseGain = noiseGain;
+    const conv = ctx.createConvolver();
+    conv.buffer = buf;
+    const wetGain = ctx.createGain();
+    wetGain.gain.value = 0.3;
+    conv.connect(wetGain);
+    wetGain.connect(this.masterGain);
+    return conv;
   }
 
-  // ===== 大爆炸音效：低频冲击 + 噪声爆发 + 回声衰减 =====
+  // ===== 奇点：从极低频缓慢上升的嗡鸣 =====
+  startRisingHum() {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(30, now);
+    osc.frequency.exponentialRampToValueAtTime(180, now + 1.0); // 1秒内上升
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.12, now + 0.5);
+    g.gain.linearRampToValueAtTime(0.08, now + 1.0);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+    osc.connect(g);
+    g.connect(this.masterGain);
+    g.connect(this.reverb);
+    osc.start(now);
+    osc.stop(now + 2);
+  }
+
+  // ===== 大爆炸：寺庙大钟被敲了一下 =====
   triggerBigBang() {
     if (this.bigBangFired || !this.ctx) return;
     this.bigBangFired = true;
     const ctx = this.ctx;
     const now = ctx.currentTime;
 
-    // 1. 低频冲击（深沉的"轰"）
-    const boom = ctx.createOscillator();
-    boom.type = 'sine';
-    boom.frequency.setValueAtTime(80, now);
-    boom.frequency.exponentialRampToValueAtTime(25, now + 1.5); // 频率下滑
-    const boomGain = ctx.createGain();
-    boomGain.gain.setValueAtTime(0.5, now);
-    boomGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5); // 2.5 秒衰减
-    boom.connect(boomGain);
-    boomGain.connect(this.masterGain);
-    boom.start(now);
-    boom.stop(now + 3);
+    // 钟声 = 多个泛音同时敲击，各自不同衰减速率
+    // 基频 C3 = 130.81Hz，泛音按钟的特征排列（非整数倍，更"钟"）
+    const bellTones = [
+      { freq: 130.81, gain: 0.18, decay: 4.0 },  // 基频
+      { freq: 196.00, gain: 0.14, decay: 3.5 },  // ~G3（五度）
+      { freq: 261.63, gain: 0.12, decay: 3.0 },  // C4（八度）
+      { freq: 329.63, gain: 0.08, decay: 2.5 },  // E4（大三度）
+      { freq: 392.00, gain: 0.06, decay: 2.0 },  // G4
+      { freq: 523.25, gain: 0.04, decay: 1.8 },  // C5
+      { freq: 659.26, gain: 0.03, decay: 1.5 },  // E5
+    ];
 
-    // 2. 噪声爆发（"嘶—"）
-    const burstLen = ctx.sampleRate * 3;
-    const burstBuf = ctx.createBuffer(1, burstLen, ctx.sampleRate);
-    const bd = burstBuf.getChannelData(0);
-    for (let i = 0; i < burstLen; i++) {
-      bd[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.6));
-    }
-    const burst = ctx.createBufferSource();
-    burst.buffer = burstBuf;
-    const burstFilter = ctx.createBiquadFilter();
-    burstFilter.type = 'lowpass';
-    burstFilter.frequency.setValueAtTime(800, now);
-    burstFilter.frequency.exponentialRampToValueAtTime(100, now + 2);
-    const burstGain = ctx.createGain();
-    burstGain.gain.setValueAtTime(0.35, now);
-    burstGain.gain.exponentialRampToValueAtTime(0.001, now + 3);
-    burst.connect(burstFilter);
-    burstFilter.connect(burstGain);
-    burstGain.connect(this.masterGain);
-    burst.start(now);
+    bellTones.forEach(t => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = t.freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(t.gain, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + t.decay);
+      osc.connect(g);
+      g.connect(this.masterGain);
+      g.connect(this.reverb); // 过混响 → 大教堂空间感
+      osc.start(now);
+      osc.stop(now + t.decay + 0.5);
+    });
 
-    // 3. 大爆炸后环境音量提升（宇宙"醒来"）
-    if (this.droneGain) {
-      this.droneGain.gain.linearRampToValueAtTime(0.18, now + 4);
+    // 极低频"扩散感"（sub bass 30Hz，让身体感受到"空间在展开"）
+    const sub = ctx.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.value = 35;
+    const subG = ctx.createGain();
+    subG.gain.setValueAtTime(0.15, now);
+    subG.gain.exponentialRampToValueAtTime(0.001, now + 3);
+    sub.connect(subG);
+    subG.connect(this.masterGain);
+    sub.start(now);
+    sub.stop(now + 3.5);
+
+    // 钟声尾巴融入背景弦乐（2秒后开始淡入）
+    setTimeout(() => this.startStrings(), 2000);
+  }
+
+  // ===== 阅读背景：暖弦乐和声（模拟 Interstellar 管风琴+弦乐质感）=====
+  startStrings() {
+    const ctx = this.ctx;
+    this.chordIndex = 0;
+
+    // C小调和声进行：Cm → Ab → Eb → Fm（暖、深、浪漫）
+    this.chords = [
+      [130.81, 155.56, 196.00, 261.63],  // Cm: C3 Eb3 G3 C4
+      [103.83, 130.81, 155.56, 207.65],  // Ab: Ab2 C3 Eb3 Ab3
+      [155.56, 196.00, 233.08, 311.13],  // Eb: Eb3 G3 Bb3 Eb4
+      [174.61, 207.65, 261.63, 349.23],  // Fm: F3 Ab3 C4 F4
+    ];
+
+    this.activeVoices = [];
+    this.playChord(0);
+
+    // 每 12 秒换一个和弦（4 个和弦 = 48 秒一循环）
+    this.chordInterval = setInterval(() => {
+      this.chordIndex = (this.chordIndex + 1) % 4;
+      this.playChord(this.chordIndex);
+    }, 12000);
+  }
+
+  playChord(idx) {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const freqs = this.chords[idx];
+
+    // 淡出旧声部
+    this.activeVoices.forEach(v => {
+      v.gain.gain.linearRampToValueAtTime(0.001, now + 3);
+      setTimeout(() => { try { v.osc1.stop(); v.osc2.stop(); } catch(e){} }, 4000);
+    });
+    this.activeVoices = [];
+
+    // 每个音用两个微调 triangle 波叠加 → 弦乐质感（chorus效果）
+    freqs.forEach((freq, i) => {
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'triangle';
+      osc1.frequency.value = freq;
+
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'triangle';
+      osc2.frequency.value = freq * 1.003; // 微微错开 → 温暖的 chorus
+
+      // 低通滤波 → 去掉尖锐高频，更像弦乐
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 600 + i * 100; // 高音部稍亮
+      filter.Q.value = 0.7;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, now);
+      // 慢攻击（3秒淡入）→ 弦乐的"拉弓"感
+      gain.gain.linearRampToValueAtTime(0.035 - i * 0.005, now + 3);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+      gain.connect(this.reverb);
+
+      osc1.start(now);
+      osc2.start(now);
+
+      this.activeVoices.push({ osc1, osc2, gain });
+    });
+
+    // 偶尔加一个高音 "叮"（模拟钢琴泛音或钟琴）
+    if (Math.random() > 0.4) {
+      setTimeout(() => {
+        const pingFreq = freqs[3] * 2; // 高两个八度
+        const ping = ctx.createOscillator();
+        ping.type = 'sine';
+        ping.frequency.value = pingFreq;
+        const pingG = ctx.createGain();
+        const t = ctx.currentTime;
+        pingG.gain.setValueAtTime(0.015, t);
+        pingG.gain.exponentialRampToValueAtTime(0.001, t + 3);
+        ping.connect(pingG);
+        pingG.connect(this.masterGain);
+        pingG.connect(this.reverb);
+        ping.start(t);
+        ping.stop(t + 3.5);
+      }, 4000 + Math.random() * 5000);
     }
   }
 }
@@ -571,86 +985,344 @@ CosmicFusion.prototype.triggerFlash = function() {
 // B 版内容（笔记原文风格）
 const bContent = {
   0: {
-    title: '奇点与暴胀',
-    body: `<div class="chain">宇宙最初极热，温度高到约 10³² K，热到任何粒子都无法存在。所有能量被挤在极小空间里，<b>浓到爆</b>。时空像被压到极限的橡皮布一样扭曲、变形。这就是<b>奇点</b>，在那一刻所有数学模型都崩溃。<br><br>然后——没人知道为什么——它开始<b>膨胀</b>。原始奇点被突然拉开 → 空间疯狂变大 → 能量被摊开变稀 → 温度暴降。就像热水倒进一个巨大盆里瞬间不那么烫了。粒子开始能存在。</div>
-<div class="cards">
-<div class="c-tagged"><span class="tag t-event">核心</span><b>原始状态</b> 10³² K，物理规律尚未分化的统一状态</div>
-<div class="c-tagged"><span class="tag t-event">核心</span><b>宇宙大爆炸</b> 名字起错了，实际是膨胀</div>
-<div class="c-tagged"><span class="tag t-event">核心</span><b>宇宙新生</b> 时空结构 + 四种力 + 粒子家族。宇宙最底层只有一个东西：场</div>
-<div class="c-tagged"><span class="tag t-q">概念</span><b>时空</b> 不是物体，是一套"规则背景"</div>
-<div class="c-tagged"><span class="tag t-q">概念</span><b>能量</b> 一张万能银行卡，热能、光能、电能、动能都能互换</div>
-<div class="c-tagged"><span class="tag t-q">概念</span><b>为什么宇宙不为零</b> "存在比不存在更自洽"</div>
-</div>`
+    title: `宇宙起源`,
+    body: `<div class="story">宇宙的故事是一条<b>因果链</b>——前一步的产物刚好是后一步的原料，没有任何环节是"凭空"冒出来的：
+
+能量 → 场震出粒子 → 粒子组合成原子核 → 原子核抓住电子变成原子 → 原子被引力压在一起点燃恒星 → 恒星内部锻造出新元素 → 新元素组合成分子 → 分子在合适条件下搭出生命。
+
+整条链的驱动力就是两件事：<b>引力负责聚集</b>，<b>温度下降允许结构稳定</b>。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 物理思维：不是讲东西，是讲关系</button>
+<div class="aside-content"><div class="aside-inner">你看到一张桌子，会说"这是一张桌子"。物理学家看同样的桌子，会说"这是一堆原子用电磁力互相锁住不让手穿过去的结构"。
+
+微观世界没有"东西"这个概念。只有<b>互动模式</b>。电子不是一颗小球——它是一团概率云在和原子核的电磁场互动。光不是一颗子弹——它是电磁场的一段抖动在空间里传播。
+
+所以从现在起，看到任何名词都问自己：<b>它和谁互动？怎么互动？互动的结果是什么？</b></div></div>`
   },
   1: {
-    title: '粒子时代',
-    body: `<div class="chain">温度下降后，夸克第一次能活过"湮灭循环"，开始组合成质子和中子——<b>强相互作用第一次真正发挥作用</b>。<br><br>质子＋中子继续组合 → 形成最早的原子核（氢核、氦核）。宇宙变成一锅<b>"核汤"</b>，这是第一次真正稳定的物质结构出现。</div>
-<div class="cards">
-<div class="c-tagged"><span class="tag t-particle">粒子</span><b>夸克</b> 三条永不分开的"绳子波纹"，强作用力像橡皮筋越拉越紧</div>
-<div class="c-tagged"><span class="tag t-particle">粒子</span><b>质子</b> 带正电、有质量，决定是什么元素</div>
-<div class="c-tagged"><span class="tag t-particle">粒子</span><b>中子</b> 不带电，保持原子核稳定</div>
-<div class="c-tagged"><span class="tag t-particle">粒子</span><b>电子</b> 像自由的小雾滴一样乱飞</div>
-<div class="c-tagged"><span class="tag t-particle">粒子</span><b>光子</b> 电磁场里跳出来的能量子弹，永远光速</div>
-<div class="c-tagged"><span class="tag t-particle">粒子</span><b>中微子</b> 透明的小幽灵粒子，谁都碰不到</div>
-<div class="c-tagged"><span class="tag t-force">力</span><b>引力</b> 有质量的东西让时空下陷</div>
-<div class="c-tagged"><span class="tag t-force">力</span><b>电磁力</b> 你能看到的一切物质现象的核心</div>
-<div class="c-tagged"><span class="tag t-force">力</span><b>弱力</b> 让粒子"改变身份"的作用力</div>
-<div class="c-tagged"><span class="tag t-force">力</span><b>强力</b> 把夸克黏在一起的橡皮筋</div>
-</div>`
+    title: `原始状态`,
+    body: `<div class="story">想象把整个宇宙（所有恒星、星系、你看得到看不到的一切）压缩到一个比针尖还小的点。那里面什么样？
+
+说实话——<b>没人知道</b>。不是没人研究，而是我们所有数学工具到了那个点全部给出"无穷大"或"算不出来"的答案。这就是为什么叫<b>奇点</b>——不是因为它"奇怪"，而是因为数学在这里"出故障了"。
+
+我们只能从"奇点之后一瞬间"开始描述：
+
+<b>热得不可想象</b>：约10³²K。太阳核心大概一千五百万度，这个温度比太阳核心还高一亿亿亿倍。热到什么程度？任何粒子——质子、中子、电子——在这个温度下刚出现就被撞碎，没有任何结构能扛住。
+
+<b>为什么这么热？</b>因为所有能量被挤在极小极小的空间里。能量密度极高 = 温度极高。就像你把整栋楼的暖气管全部塞进一个鸡蛋壳里，那个鸡蛋壳会热到什么程度？无限放大这个比喻，就是奇点。
+
+<b>时空本身也变形了</b>：爱因斯坦告诉我们能量会让时空弯曲（这就是引力的本质）。能量集中到极限→时空弯曲到极限→"弯曲"这个词都不够用了→时间和空间的概念本身失效。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 什么是时空？</button>
+<div class="aside-content"><div class="aside-inner">你以为时间和空间是两样分开的东西？不是。
+
+做个实验：GPS卫星在高空运行，离地球远一点（引力弱一点），它上面的时钟会比地面的钟<b>走得快一点点</b>。如果不修正这个差异，你的导航每天会偏差好几公里。
+
+空间的弯曲影响时间的流速，时间的快慢影响你在空间里的运动。它们不是独立的——它们是<b>同一张布</b>的经线和纬线。物理学家把它当一个整体处理，叫"时空"。
+
+奇点不是一个东西"放在"时空里。奇点就是这张布本身被揉到极限的状态。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 为什么宇宙不是"什么都没有"？</button>
+<div class="aside-content"><div class="aside-inner">"什么都没有"听起来是最简单的状态，但量子力学告诉我们——"完全的零"本身是不稳定的。
+
+类比：你试试让一根铅笔完美地立在笔尖上。理论上那是一个"平衡点"，但现实中任何微小的扰动都会让它倒下。"绝对的无"就像那个完美的笔尖平衡——它在数学上存在，但在物理上做不到。</div></div>`
   },
   2: {
-    title: '宇宙变透明',
-    body: `<div class="chain">宇宙刚出生像一锅<b>沸腾小米粥</b>：光子像滚烫的水把自由电子搅得到处乱飞，让宇宙变成一片白雾。<br><br>当宇宙膨胀变冷后，光子变成软弹，电子被原子核接住形成原子，宇宙瞬间从"白雾"变成<b>透明</b>，光子自由飞行直到今天——那些光就是<b>宇宙微波背景辐射</b>。<br><br>望远镜 = 时间机器。</div>
-<div class="cards">
-<div class="c-tagged"><span class="tag t-event">核心</span><b>Cosmic Dawn</b> 氢原子、氦原子正式出现，宇宙第一次变透明</div>
-<div class="c-tagged"><span class="tag t-particle">粒子</span><b>原子</b> 原子核+电子，第一次真正完整的物质单位</div>
-<div class="c-tagged"><span class="tag t-astro">天体</span><b>暗物质</b> 不发光但有质量，占星系质量 85% 以上</div>
-</div>`
+    title: `宇宙大爆炸`,
+    body: `<div class="story">"大爆炸"这个名字是错的，但改不掉了。没有什么东西在什么地方"炸"了。
+
+真正发生的事：<b>空间本身在变大</b>。不是宇宙在某个空间里膨胀——是空间本身在膨胀。没有中心，没有边缘，每一个点和每一个点之间的距离都在变大。
+
+<b>为什么膨胀会导致温度降低？</b>
+
+想象一个电梯里挤了一百个人，每个人体温37度，电梯里闷热到不行。现在电梯门打开，这一百个人走进一个足球场。人还是那些人（能量没消失），但分散开了→每平方米的"人体热量"变少了→你站在足球场任何一个点感受到的温度都降了。宇宙膨胀就是这个——能量总量不变，但空间变大了，能量密度降了，温度就降了。
+
+<b>温度降低为什么重要？</b>
+
+温度 = 粒子运动的剧烈程度。极高温下粒子像一屋子疯狂弹跳的弹力球，任何两个粒子刚靠近就被第三个撞飞——没有任何结构能维持住。温度降下来后弹力球不那么疯了，粒子终于能靠近、组合、形成稳定的结构。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 什么是能量？</button>
+<div class="aside-content"><div class="aside-inner">能量是"让事情发生的能力"。你搬桌子需要能量，光传播需要能量，化学反应需要能量。
+
+能量有很多种面孔：热、光、运动、化学键里存着的、质量本身（E=mc²）。它们可以互相转换，但<b>总量永远不变</b>——不会凭空出现也不会凭空消失。
+
+任何系统如果能重新组合成一个能量更低的状态，它就<b>一定会</b>这样做，多出来的能量以热或光的形式跑掉。这叫<b>能量重组</b>——结构变了，多余能量被踢出去。这个规则贯穿整个宇宙从头到尾。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 光与望远镜</button>
+<div class="aside-content"><div class="aside-inner">你收到一封朋友的信。信上写的是他<b>寄信那天</b>的事，不是你读信这天的事。如果信走了三个月才到，你看到的就是三个月前的他。
+
+光就是宇宙的"信件"。光速很快（每秒30万公里），但宇宙太大了。1亿光年外的星系发出的光要跑1亿年才到你眼睛里——你看到的是那个星系1亿年前的样子。
+
+<b>望远镜不是放大镜，它是信箱</b>——收的信越远，看到的过去越久。最远的"信"是138亿年前宇宙刚变透明那一刻发出的光——宇宙微波背景辐射。</div></div>`
   },
   3: {
-    title: '暗物质骨架 → 第一代恒星',
-    body: `<div class="chain">宇宙不是完全均匀——带着<b>十万分之一的密度波动</b>。这一点点差距决定了整个宇宙的命运。暗物质先聚成<b>"引力坑"</b>——像房子的钢筋骨架。<br><br>Pop III 恒星：成分极单纯（几乎只有氢+氦），随随便便几十个太阳质量，只活<b>几百万年</b>。内部是<b>"元素锻造工厂"</b>：氢→氦→碳→氧→硅→铁。铁无法释放能量 → 核心塌陷 → <b>超新星爆炸</b>。<br><br>你、我、地球都来自它们的尸体。</div>
-<div class="cards">
-<div class="c-tagged"><span class="tag t-astro">天体</span><b>暗物质晕</b> 宇宙先长骨架（暗物质），再长肉（普通物质）</div>
-<div class="c-tagged"><span class="tag t-astro">天体</span><b>Pop III 恒星</b> 零金属，寿命极短，内部核聚变走到铁</div>
-<div class="c-tagged"><span class="tag t-event">核心</span><b>核聚变</b> 系统能量变低→多出来的能量必须离开</div>
-<div class="c-tagged"><span class="tag t-event">核心</span><b>92种元素</b> 1-26号在恒星内，26-92号在爆炸阶段</div>
-</div>`
+    title: `宇宙新生`,
+    body: `<div class="story">宇宙一开场就同时有了四样东西，它们不是先后出现的：
+
+① <b>时空</b>——舞台本身
+② <b>场</b>——舞台的"材质"
+③ <b>四种力</b>——舞台上的游戏规则
+④ <b>粒子</b>——场上的角色
+
+<b>什么是"场"？</b>
+
+想象一张无限大的蹦床。蹦床的表面本身=时空。蹦床的弹性和张力=场。你在蹦床上跳一下，蹦床表面鼓起一个包——那个包就是粒子。"粒子"不是独立的小珠子，它是场的一部分被激发了。包消失了，场还在；场还在，包随时可以再冒出来。
+
+<b>宇宙最底层只有一个东西：场。</b>时空是场的形状，力是场的规则，粒子是场的局部激发。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 夸克——最底层的砖头</button>
+<div class="aside-content"><div class="aside-inner">所有"有重量的普通物质"（你、地球、恒星）拆到最底层，都是夸克。
+
+三个夸克被强力绑在一起→变成一个质子或中子。你没办法把一个夸克单独拽出来——强力有个怪脾气：<b>你越用力拉，它绑得越紧</b>。就像三个人手拉手站在一起，你拉其中一个人的胳膊，另外两个人的手会抓得更紧。你如果硬拉到断，断裂处会凭空冒出新的夸克来补上——所以永远是三个一组，从不落单。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 质子 · 中子 · 电子</button>
+<div class="aside-content"><div class="aside-inner"><b>质子</b>：带正电。一个原子有几个质子就是什么元素——1个=氢，6个=碳，26个=铁。质子数是元素的身份证号，改不了。
+
+<b>中子</b>：不带电，和质子挤在原子核里。它的工作是当"和事佬"——质子都带正电，正正相斥想弹开，中子夹在中间帮忙缓冲。没有中子，质子们就散架了。
+
+<b>电子</b>：带负电，比质子轻1836倍。这时候宇宙太热，电子到处乱飞没有归属——就像一群人在狂风暴雨里跑，谁也抓不住谁。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 光子 · 中微子</button>
+<div class="aside-content"><div class="aside-inner"><b>光子</b>：没有质量，永远以光速运动。它是电磁力的"快递员"——任何带电粒子之间要互动，必须通过交换光子来完成。没有光子，原子之间永远互相看不见、互相不影响。
+
+只要有带电结构发生变化（电子跳轨道、原子核重组），系统就发射光子把多余能量丢出去——这是宇宙最常用的"甩包袱"方式。
+
+<b>中微子</b>：极轻，几乎不跟任何东西互动。它能直接穿过整个地球不碰到任何东西——每秒钟有几十万亿个中微子穿过你的身体，你完全感觉不到。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 四种力——宇宙的四套规则</button>
+<div class="aside-content"><div class="aside-inner"><b>强力</b>：把夸克绑成质子中子。力最强，但管辖范围极小——只在原子核内部（大约一个质子的直径）起作用。超出这个范围它就不管了。
+
+<b>电磁力</b>：管所有带电的东西之间的吸引和排斥。光、化学反应、你摸到桌子感觉硬、手机屏幕发光——日常生活里你能感知到的几乎所有现象都是电磁力在管。
+
+<b>弱力</b>：能让粒子"变身"——最重要的功能是让质子变成中子（或反过来）。没有弱力就没有核聚变，没有核聚变就没有恒星。
+
+<b>引力</b>：有质量的东西让周围时空弯曲，其他东西沿着弯曲路径走。四种力里最弱的——弱到什么程度？一块小磁铁吸起一颗钉子，就赢了整个地球对那颗钉子的引力。但引力管得最远，而且永远只吸不斥，所以在大尺度上（星系、宇宙）它是老大。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 氢核、氦核、少量锂核</button>
+<div class="aside-content"><div class="aside-inner">大约宇宙诞生3分钟时，温度降到够低→强力终于可以把质子和中子绑在一起→最早的原子核出现：
+
+1个质子 = <b>氢核</b>
+2个质子 + 2个中子 = <b>氦核</b>
+还有<b>少量锂核</b>
+
+注意：这时候只有"核"，没有完整的原子——电子还在外面到处乱飞，被高能光子不停地撞，没法被原子核抓住。宇宙这时候是一锅"核汤"：原子核、电子、光子混在一起。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 核聚变——为什么质子能合在一起？</button>
+<div class="aside-content"><div class="aside-inner">这里有一个关键问题：<b>质子都带正电，正正相斥，按理说应该互相弹开。为什么能撞到一起？</b>
+
+答案是两种力的"管辖范围"不同：
+
+<b>电磁力</b>管得远——两个质子还离得很远的时候，电磁排斥就已经在推它们分开了。
+<b>强力</b>只管极近距离（~1飞米，比原子小十万倍）——但一旦进入这个范围，强力比电磁力强100倍，瞬间把质子锁在一起。
+
+问题就变成了：怎么让两个质子突破电磁排斥、靠到强力能起作用的距离？
+答案：<b>极高温 + 极高压</b>。温度够高→质子动得够快→冲劲够大→能闯过电磁排斥的"围墙"→进入强力范围→被锁死→聚变完成。
+
+具体步骤（质子-质子链）：
+<b>第一步</b>：质子 + 质子 → 氘核（1质子+1中子）+ 正电子 + 中微子。其中一个质子通过弱力变成了中子。
+<b>第二步</b>：氘核 + 质子 → 氦-3核（2质子+1中子）+ 光子释放。
+<b>第三步</b>：两组氦-3相撞 → 氦-4核（2质子+2中子）+ 2个多余质子被弹出。
+
+4个氢核变成1个氦-4核。氦-4核比4个氢核加起来<b>稍微轻一点</b>——少掉的那点质量变成了能量（E=mc²），以光子的形式释放。这就是恒星发光发热的本质。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 原子结构 · 电子轨道"房子模型"</button>
+<div class="aside-content"><div class="aside-inner">原子 = 原子核（质子+中子）+ 核外电子。
+
+电子不是随便乱转的，它们住在不同层级的"楼层"里，每层能住的人数有限：
+
+<b>第1层</b>：1S（一间双人间，最多住2个）
+<b>第2层</b>：2S（双人间）+ 2P（三间双人间：Px/Py/Pz，共住6个）→ 这层最多8个
+<b>第3层</b>：3S + 3P + 3d（五间双人间，共住10个）→ 更大
+<b>第4层</b>：4S + 4P + 4d + 4f（七间双人间，共住14个）→ 再大
+<b>第5层</b>：继续扩展......
+
+楼层越高 = 房间离原子核越远 = 电子被核抓得越松。
+
+<b>为什么这个重要？</b>因为<b>最外层电子住了几个</b>决定了元素的全部化学行为：
+· 外层只有1-2个→想丢掉→外向活泼（钠、钾）
+· 外层差1-2个就满→想抢别人的→攻击性强（氧、氟）
+· 外层刚好满→不需要任何人→完全不反应（氦、氖）
+· 外层正好一半→既能给也能拿→选择共享→能搭极复杂的结构（碳）</div></div>`
   },
   4: {
-    title: '第二代恒星 → 星系成型',
-    body: `<div class="chain">最核心的底层逻辑：<b>重元素 = 冷却剂</b>。冷却效率高 = 气体更容易塌缩 = 恒星更容易形成 = 尺寸更小、更稳定。<br><br>散热越快→碎裂越多→一块气体可以碎成几十、上百颗小恒星。<br><br>星系 = <b>暗物质做骨架 + 气体做肌肉 + 恒星做灯光 + 黑洞做心脏</b>。</div>
-<div class="cards">
-<div class="c-tagged"><span class="tag t-astro">天体</span><b>Pop II 恒星</b> 质量较小→寿命更长→稳定性更高</div>
-<div class="c-tagged"><span class="tag t-astro">天体</span><b>星系诞生</b> 从均匀到"网状结构"，星系合并而不是独自成长</div>
-</div>`
+    title: `Cosmic Dawn（宇宙黎明）`,
+    body: `<div class="story">38万年时宇宙冷到约3000度→光子的能量终于不够把电子从原子核身边撞飞了→电子被原子核的正电吸住→<b>第一批完整原子诞生</b>（氢原子、氦原子）。
+
+光子突然发现没有自由电子可撞了，第一次可以直线飞行。<b>宇宙从一片白雾变成透明</b>。那一刻释放的光到今天还在飞，波长被膨胀拉长成微波——宇宙微波背景辐射。
+
+然后宇宙进入了一段漫长的"黑暗时代"——有原子但没有发光的天体。直到约1亿年时，第一批恒星点亮。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 从均匀气体到第一颗恒星</button>
+<div class="aside-content"><div class="aside-inner">宇宙刚开始几乎完全均匀——到处都是差不多密度的氢和氦。但"几乎"不是"完全"。有些地方密度<b>稍微高了十万分之一</b>。这些微小差异来自量子涨落（微观世界的随机波动）被宇宙暴胀拉大到宏观尺度。
+
+然后引力的正反馈启动了：
+
+稍微密一点的地方→引力稍微强一点→把周围的气体拉过来→变得更密→引力更强→拉来更多......
+
+反过来：稍微疏一点的地方→引力稍微弱一点→留不住气体→气体被周围密的地方抢走→变得更疏......
+
+<b>结果：密的越来越密，疏的越来越疏。</b>宇宙从均匀慢慢变成"一坨一坨"的。
+
+为什么花了整整1亿年？因为氢和氦太轻了→引力弱→拉得慢。初始密度差又太小（十万分之一）。但引力永不放弃，最终它赢了。
+
+气体团中心越来越密→压力越来越大→温度升到千万度→<b>核聚变点燃</b>→第一颗恒星亮了。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 恒星 = 引力 vs 热压的拔河</button>
+<div class="aside-content"><div class="aside-inner">恒星不是一个安静的发光球。它内部每时每刻都在进行一场<b>拔河比赛</b>：
+
+一边：<b>引力</b>——恒星自身巨大的质量全都想往中心压。引力只有一个目标：把所有东西压成一个点。
+另一边：<b>核聚变产生的热压和辐射压</b>——核心几千万度的高温让气体拼命往外膨胀。
+
+两边势均力敌→恒星既不塌缩也不爆炸→稳定发光。
+
+恒星内部从里到外：
+<b>核心</b>（~1500万K）：聚变反应区，氢变氦，能量工厂
+<b>辐射层</b>：光子往外跑但被反复吸收和散射，光子穿过这层要<b>几十万年</b>
+<b>对流层</b>：热气体翻滚上升、冷气体下沉，像锅里煮水
+<b>光球层</b>：光终于自由飞出——你看到的"恒星表面"
+
+这个平衡是<b>自我修正</b>的：核心聚变变强→热压增大→恒星微微膨胀→密度降低→聚变减弱→恒星缩回来。反之亦然。恒星在不停微调自己。
+
+恒星的一生就是这场拔河的故事：
+· 燃料充足→拔河平衡→稳定发光（太阳现在在这个阶段）
+· 燃料越来越少→平衡点不断变化→恒星膨胀变红巨星
+· 烧到铁→铁不释放能量→热压那队突然撤了→引力瞬间赢→核心不到一秒塌缩→反弹→超新星</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 原子云 vs 分子云</button>
+<div class="aside-content"><div class="aside-inner"><b>原子云</b>：主体是氢原子，温度较高。宇宙早期没有金属元素，冷却效率极差——就像一个没有散热风扇的电脑，热量排不出去。排不出热→气体压力高→引力压不动→没法塌缩成小块→只能整团一起塌→形成的恒星超级大。
+
+<b>分子云</b>：主体是氢分子（H₂）70-80%、氦20-25%、尘埃<1%。有了重元素和尘埃→它们的原子结构复杂、电子层多→能吸收热量再以红外光辐射出去→相当于<b>给气体装了散热器</b>→冷却效率高→温度降得下来→引力能赢→气体能碎裂成很多小块→形成大量大小不一的恒星。
+
+一句话：<b>冷 = 能碎裂 = 能造很多小恒星</b>。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 暗物质</button>
+<div class="aside-content"><div class="aside-inner">大爆炸后不到一微秒就形成了——<b>比普通物质还早</b>。
+
+它不发光、不反射光、不和光互动。你看不到它，但它有质量→有引力。宇宙总质量的<b>85%</b>是暗物质，只有15%是你能看到的东西。
+
+怎么知道它存在？因为星系转得太快了——按能看见的物质算出来的引力根本不够让星系不散架。一定有看不见的东西在提供额外引力。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 暗能量</button>
+<div class="aside-content"><div class="aside-inner">宇宙不只是在膨胀，而且膨胀在<b>加速</b>。推动加速的东西叫暗能量。占宇宙总能量的~68%。到底是什么？完全不知道。
+
+宇宙组成：68%暗能量 + 27%暗物质 + <b>5%普通物质</b>。你、地球、太阳、所有恒星、所有星系——全在这5%里。</div></div>`
   },
   5: {
-    title: '太阳系诞生',
-    body: `<div class="chain">星云坍缩。角动量守恒——像花样滑冰收紧手臂时自转加速。雾被甩平形成<b>"宇宙煎饼"</b>。中心是太阳，盘里是未来行星的材料。<br><br><b>尘埃靠静电粘→卵石靠碰撞长→小行星靠引力吞→行星靠互相撞→太阳靠核聚变稳→内岩外气靠温度分区。</b></div>
-<div class="cards">
-<div class="c-tagged"><span class="tag t-astro">天体</span><b>太阳系</b> 角动量守恒、冰线划分、吸积链条</div>
-<div class="c-tagged"><span class="tag t-q">概念</span><b>不是巧合</b> 26个元素→组合爆炸→某些分子碰巧能自我复制→自然选择开始</div>
-</div>`
+    title: `第一代恒星 Pop III`,
+    body: `<div class="story">宇宙约1亿岁时，第一批恒星点亮。不是一颗——大约<b>1000万到10亿颗</b>。
+
+<b>为什么它们这么大？</b>
+因为当时只有氢和氦，没有重元素当散热器。气体冷却不下来→压力高→引力没法把它碎裂成小块→只能整团一起塌→每颗星随随便便几十甚至上百个太阳质量。
+
+<b>为什么它们死得这么快？</b>
+质量越大→核心被压得越狠→聚变越猛→燃料烧得越快。就像一辆油门踩到底的跑车，油箱再大也撑不了多久。太阳能烧100亿年，它们只活200-500万年。
+
+<b>为什么叫"Pop III"（第三星族）？</b>
+天文学家先发现了离我们近的恒星（Pop I），再发现更老一代（Pop II），最后推测出最早这一代，编号就反过来了。
+
+<b>它们内部发生了什么？</b>
+核心温度极高→核聚变能一路走到底：氢→氦→碳→氧→硅→<b>铁</b>。铁是终点——铁的原子核是最稳定的构型，再聚变下去不会释放能量反而要吸收能量。恒星内部就是一个<b>元素锻造工厂</b>，从1号氢一直锻造到26号铁。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 产生了92种元素</button>
+<div class="aside-content"><div class="aside-inner">1-26号（氢到铁）：在恒星核心正常聚变过程中产生。
+
+但铁之后怎么办？铁堆在核心→核心失去能量来源→撑不住上面几十个太阳的重压→核心在<b>不到一秒</b>内塌缩→塌到极限后反弹→<b>超新星爆炸</b>。
+
+爆炸瞬间的极端温度和压力（远超恒星稳定燃烧时期）强行把铁以上的元素也造出来了——一直到92号铀。
+
+所以：1-26号在恒星"活着"的时候造的，27-92号在恒星"死"的那一瞬间造的。
+
+爆炸把所有元素喷洒进宇宙——你身体里的碳、血液里的铁、骨头里的钙，都来自某颗古老恒星的爆炸碎片。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 衰变</button>
+<div class="aside-content"><div class="aside-inner">超新星造出的重元素里有些原子核太大太不稳定——质子和中子太多了，强力勉强绑着但维持不久。它们会自己"掉零件"（甩掉一些质子或中子），变成更轻更稳定的原子核，同时放出能量。
+
+地球内部到现在还有铀、钍等元素在持续衰变放热——这是地球内部热量的重要来源之一。</div></div>`
   },
   6: {
-    title: '地球形成与早期演化',
-    body: `<div class="chain">七个环节：太阳形成→尘埃吸积成地球→碰撞释放巨大能量→地球熔化→铁下沉到中心→地幔对流形成→地壳冷却固化→大气和海洋形成。<br><br>Theia 撞击能量是太阳照地球一年的<b>一百万倍</b>。铁比岩石重，像苹果往下沉——沉到最中心就停了。<br><br>地球内部岩石像加热的湿海绵——<b>放气</b>——冒出水蒸气、CO₂、N₂。冷却后水蒸气凝结成雨，积累成海洋。<br><br>闪电 + 紫外线 + 液态水。<b>生命的舞台准备好了。</b></div>
-<div class="cards">
-<div class="c-tagged"><span class="tag t-earth">地球</span><b>地质形成</b> 七环节因果链，本质是重力势能</div>
-<div class="c-tagged"><span class="tag t-earth">地球</span><b>铁下沉</b> 沉到最底部→势能释放完→加热停止</div>
-<div class="c-tagged"><span class="tag t-earth">地球</span><b>对流</b> 锅里煮汤：热的上升冷的下沉</div>
-<div class="c-tagged"><span class="tag t-earth">地球</span><b>放气</b> 加热的湿海绵，提供早期大气</div>
-<div class="c-tagged"><span class="tag t-earth">地球</span><b>海洋</b> 蒸发→凝结→再蒸发 = 搬运热量的循环</div>
-</div>`
+    title: `星系雏形`,
+    body: `<div class="story"><b>星系的真正骨架不是恒星，是暗物质。</b>暗物质占星系质量的85%以上。
+
+它先在宇宙中形成大量看不见的"引力坑"（暗物质晕）——就像大地上有一些看不见的凹坑。普通物质（氢氦气体）慢慢滚进这些坑里聚集。<b>宇宙是先长骨架（暗物质），再长肉（普通物质）。</b>
+
+第一代恒星爆炸后，重元素被喷洒进宇宙→气体冷却效率暴增→气体能碎裂成很多小块→大量小恒星诞生→围绕引力中心旋转→<b>星系雏形出现</b>。</div>`
+  },
+  7: {
+    title: `第二代恒星 Pop II`,
+    body: `<div class="story"><b>重元素改变了一切。</b>
+
+第一代恒星爆炸后留下"超新星遗迹泡泡"——冲击波把周围气体推开，形成空心壳结构。泡泡边缘气体被压密、重元素混入。泡泡互相交叠→形成蜂窝状结构→蜂窝交汇处密度最高→引力塌缩→第二代恒星诞生。
+
+<b>为什么第二代能形成很多小恒星？</b>
+重元素的原子结构复杂、电子层多→能吸收热再辐射出去→气体散热快→能降温→压力变小→引力能碎裂气体→一块气体碎成几十上百颗小恒星。第一代只能造几个巨怪，第二代能造整片星团。
+
+<b>恒星的死法取决于质量：</b>
+· 大于8个太阳 → 超新星爆炸 → 留下中子星或黑洞
+· 0.5-8个太阳 → 外层吹掉 → 留下白矮星
+· 小于0.5个太阳 → 寿命数千亿年，到现在都还没死</div>`
+  },
+  8: {
+    title: `星系诞生`,
+    body: `<div class="story">星系 = 暗物质做骨架 + 气体做肌肉 + 恒星做灯光 + 黑洞做心脏。
+
+整个过程：
+① 宇宙几乎均匀→微小密度波动（来自量子涨落被暴胀拉大）
+② 暗物质先聚集成网状骨架
+③ 普通物质掉进暗物质引力井
+④ 第一代恒星点亮→爆炸→重元素出现
+⑤ 冷却效率飙升→大量小恒星诞生→星系变亮
+⑥ 星系互相吞噬合并→越长越大
+⑦ 宇宙大尺度结构形成：星系→星系团→超星系团→宇宙网状结构
+
+<b>银河系不是一次生成的</b>——它吞并了至少十几个小星系才长成现在的样子。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 星系五大组成</button>
+<div class="aside-content"><div class="aside-inner"><b>① 中心黑洞</b>（超大质量，银河系的是400万个太阳质量）
+<b>② 暗物质</b>（85-90%的质量，看不见但提供引力骨架）
+<b>③ 恒星</b>（单独的和聚成星团的）
+<b>④ 旋臂</b>（气体密集的"高速公路"，恒星在这里密集诞生）
+<b>⑤ 星际介质</b>：氢氦气体 + 金属元素气体 + 尘埃（金属固体微粒）</div></div>`
+  },
+  9: {
+    title: `太阳系诞生 行星系统`,
+    body: `<div class="story">一个含有重元素的星云在引力下塌缩。中心温度升到极高→核聚变点燃→<b>太阳开始发光</b>。
+
+塌缩的同时气体云在转→越缩越小→转得越快（角动量守恒：滑冰运动员收紧手臂会加速转，同样的道理）→赤道方向被甩出去→球变成扁盘。中心=太阳，盘=行星的原料。
+
+盘里的尘埃怎么变成行星的？先靠<b>静电</b>粘（毛衣粘头发那种）→稍微大一点靠碰撞卡住→再大引力开始起作用→正反馈→越来越大→撞出行星。
+
+<b>为什么内岩石外气体？</b>
+太阳附近太热→水和冰全蒸发→只剩岩石和铁→岩石行星（水星金星地球火星，都不大）。远离太阳够冷→冰大量存在→冰+岩石核心引力够大→抓住周围氢氦→气体巨行星（木星土星，巨大）。
+
+分隔线叫<b>冰线</b>。冰线外没能长成大行星的碎块→<b>彗星</b>，后来撞地球时带来了水。
+
+这不是巧合——这是物理和化学在这个条件下的必然结果。</div>`
+  },
+  10: {
+    title: `🌏 地球的地质形成、演化`,
+    body: `<div class="story">地球不是"生成"的，是被无数微行星互相撞出来的。每次碰撞把运动能变成热。
+
+后来一个火星大小的天体Theia正面撞上地球——碰撞能量是太阳照地球一年的<b>一百万倍</b>。结果：整个地球从里到外全部熔成岩浆球，温度4000-5000K。
+
+撞飞出去的碎片在轨道上重新聚集→<b>月球</b>。月球最初离地球只有1.6万公里（现在38万公里），在不断远离。</div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 碰撞 → 全球熔化 → 月球</button>
+<div class="aside-content"><div class="aside-inner">地球不是"生成"的，是被无数微行星互相撞出来的。每次碰撞把运动能变成热。
+
+后来一个火星大小的天体Theia正面撞上地球——碰撞能量是太阳照地球一年的<b>一百万倍</b>。结果：整个地球从里到外全部熔成岩浆球，温度4000-5000K。
+
+撞飞出去的碎片在轨道上重新聚集→<b>月球</b>。月球最初离地球只有1.6万公里（现在38万公里），在不断远离。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 铁下沉 → 分层 → 势能释放</button>
+<div class="aside-content"><div class="aside-inner">地球完全熔了之后→液态→重的东西会沉底。铁比岩石重→铁往下沉到中心，岩石浮在外面。地球分了层：铁核心 + 岩石地幔 + 地壳。
+
+<b>铁下沉时为什么会放热？</b>
+高处的东西有"势能"——就像你举着一个球松手，球往下掉的过程中势能变成运动能，砸到地上变成热。铁从地球外层沉到核心，走了几千公里的"下坡路"，一路把势能变成热。所有铁都沉到底后没有更低可去→势能释放完→这个加热过程停了。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 对流 · 为什么固体地幔能"流动"</button>
+<div class="aside-content"><div class="aside-inner">内部极热外面冷→热的密度小往上浮→冷的密度大往下沉→形成循环=<b>对流</b>。
+
+但地幔不是液体，它是固体。固体怎么"流"？
+
+答案是<b>时间尺度</b>。你用手推一块岩石——硬的。但几百万年持续的高温高压下，固体岩石会像橡皮泥一样缓慢变形。对流速度大概是每年几厘米——你指甲生长的速度。但几百万年后，地幔物质可以移动数千公里。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 放气 → 原始大气 → 海洋</button>
+<div class="aside-content"><div class="aside-inner">地球内部岩石里困着水蒸气、CO₂、N₂等气体分子。高温把它们"烤"出来→通过火山和裂缝释放到地表→<b>放气（outgassing）</b>。加上彗星撞击带来的冰和气体→地球有了第一层大气。
+
+这层大气<b>完全没有氧气</b>——主要是水蒸气（H₂O）、二氧化碳（CO₂）、氮气（N₂）和硫化氢（H₂S）。
+
+地球继续降温→水蒸气凝结成雨→最初的雨落到炙热地面立刻蒸发→但每次蒸发带走一点热→地面越来越凉→终于有水留住了→积累成<b>最早的海洋</b>。</div></div>
+<button class="aside-toggle" onclick="toggleAside(this)"><span class="arr">▸</span> 闪电 + 紫外线 → 舞台准备好了</button>
+<div class="aside-content"><div class="aside-inner">闪电不断劈入海洋——给"化学汤"输入高能量。太阳紫外线直射海里（当时没臭氧层挡）——"打醒"海洋里的分子让它们开始反应和组合。
+
+固体地壳 + 液态海洋 + 气体大气 + 持续的能量输入 = <b>生命的舞台准备好了</b>。
+
+地球表面不断向太空辐射热→缓慢冷却。但核心放射性衰变还在产热，所以到现在地球内部仍然极热。</div></div>`
   }
 };
 
 // 全局翻转状态
 let globalSide = 'a';
 const savedA = {};
+let isFlipping = false;
 
-// 长按翻转（任意位置长按 → 全部章节一起翻）
+// 长按翻转（任意位置长按 → 整面墙一起翻）
 let flipTimer = null;
 
 document.addEventListener('touchstart', (e) => {
@@ -666,7 +1338,6 @@ document.addEventListener('touchend', () => {
   if (flipTimer) { clearTimeout(flipTimer); flipTimer = null; }
 }, { passive: true });
 
-// 鼠标长按（桌面端）
 document.addEventListener('mousedown', (e) => {
   if (e.target.closest('.aside-toggle') || e.target.closest('.aside-content') || e.target.closest('.back-btn')) return;
   flipTimer = setTimeout(() => { doFlipAll(); flipTimer = null; }, 600);
@@ -676,16 +1347,17 @@ document.addEventListener('mouseup', () => {
 });
 
 function doFlipAll() {
-  const epochs = document.querySelectorAll('.epoch');
+  if (isFlipping) return;
+  isFlipping = true;
+  
+  const wall = document.getElementById('timelineInner');
+  const epochs = wall.querySelectorAll('.epoch');
   const nextSide = globalSide === 'a' ? 'b' : 'a';
 
-  // 所有章节同时翻出去
-  epochs.forEach(epoch => {
-    const inner = epoch.querySelector('.flip-inner');
-    if (inner) inner.classList.add('flipping-out');
-  });
+  // 整面墙翻出去（旋转到 90° 消失）
+  wall.classList.add('wall-out');
 
-  // 400ms 后（转到 90° 不可见时）切换内容
+  // 600ms 后（墙转到侧面不可见时）换内容
   setTimeout(() => {
     epochs.forEach((epoch, idx) => {
       const inner = epoch.querySelector('.flip-inner');
@@ -702,15 +1374,19 @@ function doFlipAll() {
         inner.innerHTML = savedA[idx].body;
         epoch.querySelector('.epoch-title').textContent = savedA[idx].title;
       }
-
-      // 翻回来
-      inner.classList.remove('flipping-out');
-      inner.classList.add('flipping-in');
-      setTimeout(() => inner.classList.remove('flipping-in'), 400);
     });
 
     globalSide = nextSide;
-  }, 400);
+
+    // 墙从另一面翻回来
+    wall.classList.remove('wall-out');
+    wall.classList.add('wall-in');
+
+    setTimeout(() => {
+      wall.classList.remove('wall-in');
+      isFlipping = false;
+    }, 600);
+  }, 600);
 
   if (navigator.vibrate) navigator.vibrate(30);
 }
