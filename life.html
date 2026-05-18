@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生命演化</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+
+:root {
+  --bg-start: #040a08;
+  --text-hero: #d8ede0;
+  --text-primary: #c8dcc8;
+  --text-body: #a0baa6;
+  --text-dim: #6a9478;
+  --text-muted: #406050;
+  --accent: #4a9e6a;
+  --accent-glow: rgba(74,158,106,0.15);
+  --line-color: rgba(74,158,106,0.1);
+  --card-bg: rgba(8,18,12,0.85);
+  --card-border: rgba(74,158,106,0.12);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-start);
+  color: var(--text-primary);
+  font-family: 'Noto Serif SC', 'Georgia', serif;
+  overflow-x: hidden;
+  line-height: 1.9;
+}
+
+/* BG + Particles */
+#bg-layer { position: fixed; inset: 0; z-index: 0; background: var(--bg-start); }
+#particles { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+.vignette {
+  position: fixed; inset: 0; pointer-events: none; z-index: 2;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(4,10,8,0.75) 100%);
+}
+
+.grain {
+  position: fixed; inset: 0; pointer-events: none; z-index: 3;
+  opacity: 0.03; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='2' numOctaves='3'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 200px;
+}
+
+/* Intro */
+.intro {
+  position: fixed; inset: 0; z-index: 1000;
+  background: #020604; display: flex;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.intro.dying { animation: intro-die 2.5s ease forwards; }
+@keyframes intro-die { to { opacity: 0; pointer-events: none; } }
+
+.cell-label {
+  position: absolute; bottom: 18%; left: 50%; transform: translateX(-50%);
+  font-family: 'Cormorant Garamond', serif; font-size: 11px; font-weight: 300;
+  letter-spacing: 8px; color: rgba(74,158,106,0.4); text-transform: uppercase;
+  opacity: 0; animation: label-in 2s ease 0.8s forwards;
+}
+@keyframes label-in { to { opacity: 1; } }
+
+#cell-canvas { position: fixed; inset: 0; z-index: 999; pointer-events: none; }
+
+/* Progress */
+.progress-track {
+  position: fixed; right: 20px; top: 50%; transform: translateY(-50%);
+  width: 1px; height: 30vh; z-index: 50;
+  background: rgba(74,158,106,0.08); opacity: 0; transition: opacity 1s;
+}
+.progress-track.show { opacity: 1; }
+.progress-fill {
+  width: 100%; background: var(--accent); position: absolute;
+  top: 0; height: 0%; box-shadow: 0 0 6px rgba(74,158,106,0.3);
+  transition: height 0.15s linear;
+}
+
+/* Content */
+.content {
+  position: relative; z-index: 4;
+  max-width: 660px; margin: 0 auto; padding: 0 28px;
+  display: none;
+}
+.content.visible { display: block; }
+
+/* Header */
+.header-space {
+  height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  position: relative;
+}
+.main-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 48px; font-weight: 300; font-style: italic;
+  color: var(--text-hero); letter-spacing: 8px;
+  margin-bottom: 16px; opacity: 0; transform: translateY(30px);
+  animation: hero-in 2.5s cubic-bezier(.16,1,.3,1) 0.5s forwards;
+}
+.main-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px; font-weight: 300; letter-spacing: 5px;
+  color: var(--text-muted); opacity: 0;
+  animation: fade-up 2s ease 1.2s forwards;
+}
+.main-line {
+  width: 1px; height: 60px; margin: 40px auto 0;
+  background: linear-gradient(to bottom, var(--accent), transparent);
+  opacity: 0; animation: fade-up 2s ease 1.8s forwards;
+}
+.scroll-cue {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 11px; letter-spacing: 5px; color: var(--text-muted);
+  opacity: 0; animation: fade-up 2s ease 2.4s forwards;
+}
+@keyframes hero-in { to { opacity: 1; transform: translateY(0); } }
+@keyframes fade-up { to { opacity: 1; transform: translateY(0); } }
+
+/* Timeline */
+.timeline { position: relative; padding: 60px 0 100px 50px; }
+.timeline-line {
+  position: absolute; left: 10px; top: 0; bottom: 0; width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--line-color) 3%, var(--line-color) 97%, transparent);
+}
+
+/* Epoch */
+.epoch {
+  position: relative; margin-bottom: 90px;
+  opacity: 0; transform: translateY(60px);
+  transition: opacity 1.2s cubic-bezier(.16,1,.3,1), transform 1.2s cubic-bezier(.16,1,.3,1);
+}
+.epoch.revealed { opacity: 1; transform: translateY(0); }
+
+.epoch-glow {
+  position: absolute; left: -80px; top: -40px;
+  width: 180px; height: 180px; border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  opacity: 0; transition: opacity 1.5s ease 0.3s; pointer-events: none;
+}
+.epoch.revealed .epoch-glow { opacity: 1; }
+
+.epoch-dot {
+  position: absolute; left: -44px; top: 10px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-muted);
+  transition: all 0.8s cubic-bezier(.16,1,.3,1);
+}
+.epoch.revealed .epoch-dot {
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(74,158,106,0.5), 0 0 25px rgba(74,158,106,0.15);
+}
+
+.epoch-connector {
+  position: absolute; left: -36px; top: 13px; width: 20px; height: 1px;
+  background: rgba(74,158,106,0.15);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform 0.6s ease 0.4s;
+}
+.epoch.revealed .epoch-connector { transform: scaleX(1); }
+
+.epoch-time {
+  font-family: 'Cormorant Garamond', serif; font-size: 12px; font-weight: 300;
+  color: var(--text-muted); letter-spacing: 4px; margin-bottom: 8px;
+}
+.epoch-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px; font-weight: 400; color: var(--text-hero);
+  margin-bottom: 28px; line-height: 1.5; letter-spacing: 1px;
+}
+
+/* SVG silhouettes */
+.silhouette {
+  display: block; margin: 0 auto 30px;
+  opacity: 0; transition: opacity 1.5s ease 0.5s;
+}
+.epoch.revealed .silhouette { opacity: 1; }
+.sil-pulse { animation: sil-pulse 3s ease-in-out infinite; }
+@keyframes sil-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+.sil-drift { animation: sil-drift 6s ease-in-out infinite; }
+@keyframes sil-drift { 0%,100%{transform:translateX(0)} 50%{transform:translateX(4px)} }
+.sil-sway { animation: sil-sway 5s ease-in-out infinite; }
+@keyframes sil-sway { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(1.5deg)} }
+.sil-breathe { animation: sil-breathe 4s ease-in-out infinite; }
+@keyframes sil-breathe { 0%,100%{transform:scale(1) translateY(0)} 50%{transform:scale(1.02) translateY(-2px)} }
+
+/* Story */
+.story {
+  font-size: 15px; font-weight: 300; color: var(--text-body);
+  line-height: 2.2; margin-bottom: 24px;
+}
+.story b { font-weight: 500; color: var(--text-primary); }
+
+/* Chain */
+.chain {
+  font-size: 13px; color: var(--text-dim); line-height: 2;
+  padding: 14px 18px; margin: 0 0 20px;
+  border-left: 2px solid rgba(74,158,106,0.2);
+  background: rgba(8,18,12,0.6); border-radius: 0 3px 3px 0;
+}
+.chain b { font-weight: 500; color: var(--text-body); }
+
+/* Sub-toggle */
+.sub {
+  margin: 6px 0; border: 1px solid var(--card-border);
+  border-radius: 4px; background: var(--card-bg);
+  overflow: hidden;
+}
+.sub-h {
+  cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px;
+}
+.sub-t { font-size: 14px; font-weight: 400; color: var(--text-primary); flex: 1; }
+.sub-a {
+  font-size: 10px; color: var(--accent); opacity: 0.6;
+  transition: transform 0.3s; flex-shrink: 0;
+}
+.sub-h.closed .sub-a { transform: rotate(-90deg); }
+.sub-body {
+  overflow: hidden;
+  transition: max-height 0.5s ease, padding 0.3s ease;
+}
+.sub-body.closed { max-height: 0 !important; padding-top: 0; padding-bottom: 0; }
+.sub-ct {
+  font-size: 13px; color: var(--text-dim); line-height: 2;
+  padding: 0 16px 14px;
+}
+.sub-ct b { font-weight: 500; color: var(--text-body); }
+
+/* Cards */
+.cards {
+  margin-top: 20px; padding: 16px 18px;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 3px;
+}
+.card-item {
+  font-size: 13px; color: var(--text-dim); line-height: 1.8;
+  padding: 4px 0; display: flex; align-items: baseline; gap: 10px;
+}
+.card-item::before {
+  content: ''; width: 3px; height: 3px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0; margin-top: 9px; opacity: 0.5;
+}
+.card-item b { font-weight: 500; color: var(--text-body); }
+
+/* Divider */
+.chapter-div {
+  text-align: center; margin: 20px 0 70px;
+  opacity: 0; transform: translateY(20px); transition: all 1s ease;
+}
+.chapter-div.revealed { opacity: 1; transform: translateY(0); }
+.chapter-div-line {
+  width: 40px; height: 1px; margin: 0 auto;
+  background: linear-gradient(to right, transparent, var(--accent), transparent);
+  opacity: 0.25;
+}
+
+/* Full chain */
+.full-chain {
+  margin: 40px 0 0; padding: 20px 22px;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 4px; font-size: 13px; color: var(--text-dim); line-height: 2;
+}
+.full-chain b { font-weight: 500; color: var(--text-body); }
+
+/* Back */
+.back-section {
+  text-align: center; padding: 60px 0 140px;
+  opacity: 0; transform: translateY(20px); transition: all 1s ease;
+}
+.back-section.revealed { opacity: 1; transform: translateY(0); }
+.back-btn {
+  display: inline-block; padding: 16px 44px;
+  background: transparent; border: 1px solid rgba(74,158,106,0.15);
+  color: var(--text-dim); font-family: 'Cormorant Garamond', serif;
+  font-size: 14px; letter-spacing: 4px; cursor: pointer;
+  transition: all 0.4s; border-radius: 2px;
+}
+.back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+@media (max-width: 600px) {
+  .main-title { font-size: 30px; letter-spacing: 5px; }
+  .timeline { padding-left: 36px; }
+  .epoch-dot { left: -30px; }
+  .epoch-connector { left: -22px; width: 12px; }
+  .epoch-glow { left: -50px; width: 120px; height: 120px; }
+  .epoch-title { font-size: 20px; }
+  .story { font-size: 14px; line-height: 2; }
+  .silhouette { max-width: 80%; }
+}
+
+/* ===== 整面墙翻转 ===== */
+.timeline-inner { transform-style:preserve-3d; transform-origin:center center; }
+.timeline-inner.wall-out { animation: wallOut 0.6s ease-in forwards; }
+.timeline-inner.wall-in { animation: wallIn 0.6s ease-out forwards; }
+@keyframes wallOut { 0%{transform:scaleX(1);opacity:1} 100%{transform:scaleX(0);opacity:0} }
+@keyframes wallIn { 0%{transform:scaleX(0);opacity:0} 100%{transform:scaleX(1);opacity:1} }
+
+</style>
+</head>
+<body>
+
+<div id="bg-layer"></div>
+<canvas id="particles"></canvas>
+<div class="vignette"></div>
+<div class="grain"></div>
+
+<div class="intro" id="intro">
+  <canvas id="cell-canvas"></canvas>
+  <div class="cell-label">点击 · 生命开始</div>
+</div>
+
+<div class="progress-track" id="prog-track">
+  <div class="progress-fill" id="prog-fill"></div>
+</div>
+
+<div class="content" id="content">
+<div class="header-space">
+  <h1 class="main-title" style="font-size:36px;opacity:0.6;letter-spacing:16px">生命演化</h1>
+  <div class="scroll-cue" style="margin-top:40px;opacity:0.25">↓</div>
+</div>
+
+<div class="timeline">
+<div class="timeline-line"></div>
+<div class="timeline-inner" id="timelineInner">
+<div style="text-align:right;font-size:10px;color:var(--text-muted);opacity:0.3;letter-spacing:1px;font-style:italic;margin-bottom:20px;padding-right:4px">长按切换版本</div>
+
+<!-- ====== 1: ORIGIN ====== -->
+<div class="epoch">
+<div class="epoch-glow"></div><div class="epoch-dot"></div><div class="epoch-connector"></div>
+<div class="epoch-time">~38 亿年前</div>
+<div class="epoch-title">生命的起源（原核细胞）</div>
+<svg class="silhouette sil-pulse" width="80" height="80" viewBox="0 0 80 80">
+  <circle cx="40" cy="40" r="20" fill="none" stroke="rgba(74,200,120,0.35)" stroke-width="1.2"/>
+  <circle cx="40" cy="40" r="12" fill="none" stroke="rgba(74,200,120,0.2)" stroke-width="0.8"/>
+  <circle cx="40" cy="40" r="5" fill="rgba(74,200,120,0.25)"/>
+  <circle cx="40" cy="40" r="22" fill="rgba(74,200,120,0.04)"/>
+</svg>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">生命 = <b>一个能够自我复制的、有边界的、化学系统</b>。不多不少。
+
+为什么"自我复制"关键？能复制的积累，不能复制的消失。复制出错（突变）→碰巧复制更快→扩散。<b>自然选择在"生命"这个词出现之前就在运行了。</b>
+
+环境永远都是准备好了的。任何环境都必然会产生某些结果。地球这个环境产生的结果就是生命。</div>
+<div class="chain"><b>因果链：</b>无机分子 → 能量驱动 → 有机分子 → RNA自我复制 → 磷脂膜包裹 → 第一个"细胞" → 囊泡竞争 → DNA存储 → 蛋白质执行 → 原核生物</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">分子 · 离子 · 氧化 · 有机分子</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>分子</b>=原子用化学键绑一起。<b>离子</b>=丢/抢电子后带电的原子。<b>氧化</b>=被抢走电子。
+<b>有机分子</b>=以碳为骨架的分子。为什么碳？外层恰好4个电子→既不全丢也不全抢→选择共享→能同时朝四个方向连接→唯一能搭复杂三维结构的元素。
+原始海洋中：CO₂+H₂O+N₂+紫外线/闪电 → 有机分子。米勒-尤素实验已在实验室重现——纯化学，不需要魔法。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">原始核糖核酸（RNA）· 核苷酸</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>核苷酸</b>=磷酸+糖（核糖）+碱基。RNA的基本单元。
+<b>RNA</b>=核苷酸串成的长链，四种碱基（A/U/C/G）顺序可变→携带信息。
+RNA有特殊性质：<b>能催化化学反应</b>。如果一段RNA碰巧能催化核苷酸连接→就能加速造自己的副本→自我强化循环→<b>第一个自我复制系统</b>。
+但还不是生命——缺<b>边界</b>。为什么？没边界→有用分子扩散到整个海洋→浓度太低→反应速率趋近零。有边界→分子被圈在小空间→浓度高→反应高效。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">磷脂 · 脂肪泡泡 · 选择通透性</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>磷脂</b>：一头亲水一头怕水→扔水里自动排成双层膜→中空小球=<b>囊泡</b>。纯物理化学自发行为。
+<b>选择通透性</b>：膜不是铁壁→小分子能穿过，大分子被挡→有了"内"和"外"→系统有了边界→可以积累有用分子、维持自己的化学环境。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">囊泡竞争 · 自我复制</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">磷脂囊泡+里面的RNA→最原始"细胞"。有限资源下<b>复制快的赢</b>，复制慢的被淘汰。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">氨基酸 · 蛋白质 · 蛋白质合成机制</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>氨基酸</b>：20种小分子。<b>蛋白质</b>：氨基酸按特定顺序串成链→折叠成特定形状→<b>形状决定功能</b>。蛋白质负责执行：搭结构（支架）、催化反应（酶）、运输、传信号。
+合成流程：DNA→转录成mRNA→mRNA指导氨基酸排列→蛋白质折叠。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">脱氧核糖核酸（DNA）· ATP · 葡萄糖 · 脂肪分子</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>DNA</b>双链比RNA稳定→长期信息存储。为什么更稳定？①双链=两份备份，一条坏了照另一条修 ②糖骨架少一个氧原子→化学上更难被分解。
+<b>蛋白质为什么比RNA干活强？</b>RNA只有4种碱基当积木，蛋白质有20种氨基酸→折叠出的形状多几个数量级→能做的事多几个数量级。
+DNA=图纸档案馆，RNA=施工副本，蛋白质=按图纸建的结构和工人。
+<b>ATP</b>：细胞"充电电池"。<b>葡萄糖</b>：基础能量燃料。<b>脂肪</b>：长期储能，每克比糖多一倍。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">原核生物——第一批真正的生命</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">结构：<b>没有细胞核</b>（DNA直接漂在细胞质里）、没有内部隔间。一层膜包着：环形DNA、核糖体（读RNA造蛋白质的小机器）、细胞质。极简但完整——能复制、有边界、有代谢。
+它们统治地球<b>将近20亿年</b>。地球大部分时间只有细菌。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">生命是什么——一个更深的视角</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"></div></div></div>
+</div></div>
+</div>
+
+
+
+<!-- ====== 2: PHOTOSYNTHESIS ====== -->
+<div class="epoch">
+<div class="epoch-glow"></div><div class="epoch-dot"></div><div class="epoch-connector"></div>
+<div class="epoch-time">~35–25 亿年前</div>
+<div class="epoch-title">早期生命的演化：光合作用和大氧化事件</div>
+<svg class="silhouette sil-pulse" width="120" height="60" viewBox="0 0 120 60">
+  <circle cx="30" cy="30" r="8" fill="none" stroke="rgba(74,200,120,0.3)" stroke-width="1"/>
+  <circle cx="30" cy="30" r="3" fill="rgba(74,200,120,0.2)"/>
+  <circle cx="50" cy="25" r="7" fill="none" stroke="rgba(74,200,120,0.3)" stroke-width="1"/>
+  <circle cx="50" cy="25" r="2.5" fill="rgba(74,200,120,0.2)"/>
+  <circle cx="45" cy="40" r="6" fill="none" stroke="rgba(74,200,120,0.25)" stroke-width="0.8"/>
+  <circle cx="65" cy="32" r="9" fill="none" stroke="rgba(74,200,120,0.3)" stroke-width="1"/>
+  <circle cx="65" cy="32" r="3.5" fill="rgba(74,200,120,0.2)"/>
+  <circle cx="85" cy="28" r="7" fill="none" stroke="rgba(74,200,120,0.25)" stroke-width="0.8"/>
+</svg>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">最早的细菌靠地热、化学物质获取能量——但这些有限→生命总量有天花板。<b>直到一个细菌找到了新能量源。</b></div>
+<div class="chain"><b>因果链：</b>无氧发酵（低效）→ 光合作用（无限能量）→ O₂"废料" → 7亿年被还原性物质吸收 → 耗尽 → O₂暴涨 → 大氧化 → 厌氧生命大灭绝 → 有氧呼吸（能量×18）→ 臭氧层 → 为登陆铺路</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">"无氧发酵" → 光合作用</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>无氧发酵</b>：没氧气时分解有机物获取少量ATP。效率低——葡萄糖没被完全拆解，大部分能量还锁着。
+<b>光合作用</b>：6CO₂+6H₂O+光能→葡萄糖+6O₂。太阳能几乎无限→只需阳光水CO₂就行。
+某个细菌蛋白质碰巧捕捉光子→微小优势→繁殖稍快→几百万年优化→完整光合系统。<b>氧气是"废料"</b>——从H₂O提取电子后剩下的就是O₂。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">还原性物质 · 为什么O₂花了7亿年才积累</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">地球有大量<b>还原性物质</b>（Fe²⁺、H₂S等）→O₂一释放就被"吃掉"：Fe²⁺+O₂→Fe₂O₃（铁锈）。缓冲期<b>7亿年</b>。直到还原性物质耗尽→O₂终于积累。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">大氧化事件 · 活性氧 · 超氧化物歧化酶</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">~25亿年前O₂从~0%暴涨到20-30%=<b>大氧化事件</b>。O₂对厌氧生命<b>剧毒</b>——产生<b>活性氧</b>（ROS），攻击DNA、膜、蛋白质。大灭绝。
+活下来的两条路：①躲到无氧环境 ②进化出<b>超氧化物歧化酶</b>→把毒药变燃料→有氧呼吸。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">细胞呼吸 · 臭氧层</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">葡萄糖+O₂→CO₂+H₂O+大量ATP。效率比无氧发酵高<b>~18倍</b>——O₂能把葡萄糖<b>彻底拆解</b>。能量×18→复杂生命的能量基础。
+O₂在高空→臭氧层→挡紫外线→之前生命只能躲水下→现在<b>陆地变得宜居</b>。</div></div></div>
+</div></div>
+</div>
+
+
+
+<!-- ====== 3: EUKARYOTES ====== -->
+<div class="epoch">
+<div class="epoch-glow"></div><div class="epoch-dot"></div><div class="epoch-connector"></div>
+<div class="epoch-time">~20 亿年前</div>
+<div class="epoch-title">真核生物的出现和内共生理论</div>
+<svg class="silhouette sil-pulse" width="100" height="100" viewBox="0 0 100 100">
+  <ellipse cx="50" cy="50" rx="32" ry="28" fill="none" stroke="rgba(74,200,120,0.3)" stroke-width="1.2"/>
+  <ellipse cx="50" cy="50" rx="32" ry="28" fill="rgba(74,200,120,0.04)"/>
+  <ellipse cx="46" cy="45" rx="10" ry="9" fill="none" stroke="rgba(100,200,140,0.3)" stroke-width="0.8"/>
+  <circle cx="46" cy="45" r="4" fill="rgba(100,200,140,0.15)"/>
+  <ellipse cx="62" cy="55" rx="6" ry="3.5" fill="rgba(200,150,80,0.2)" stroke="rgba(200,150,80,0.3)" stroke-width="0.6"/>
+  <ellipse cx="36" cy="58" rx="5" ry="3" fill="rgba(200,150,80,0.15)" stroke="rgba(200,150,80,0.25)" stroke-width="0.6"/>
+  <ellipse cx="55" cy="38" rx="4" ry="2.5" fill="rgba(200,150,80,0.12)" stroke="rgba(200,150,80,0.2)" stroke-width="0.5"/>
+</svg>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">原核生物的限制：没有内部分工→所有反应在同一空间→互相干扰→复杂度有天花板。
+<b>真核生物</b>的革命：细胞核（DNA被保护）+各种细胞器各司其职→一个人干所有活 变成 有分工的工厂。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">内共生——为什么没消化掉？</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">大原核细胞吞了小原核细胞→但没消化。为什么？小细胞擅长有氧呼吸→不断产ATP→<b>留着它比吃掉它更赚</b>。久了之后基因互相依赖→谁也离不开谁→小的变成"内部器官"。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">线粒体 · 叶绿体</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>线粒体</b>=被吞的有氧呼吸细菌→"发电厂"。证据：有<b>独立的环形DNA</b>（跟细菌一样）、双层膜、二分裂。
+<b>叶绿体</b>=被吞的蓝藻→"太阳能板"。同样有独立DNA。
+线粒体+叶绿体→真核细胞能量远超原核→<b>复杂生命从此可能</b>。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">细胞核怎么来的 · "无聊的十亿年"</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>细胞核</b>：细胞膜向内折叠→把DNA包起来→转录和翻译被隔开→加了"质检"环节→错误率降低、调控更精细。
+
+真核（~20亿年前）到多细胞（~6亿年前）之间等了<b>14亿年</b>。为什么？多细胞需要四套全新基础设施：细胞黏附蛋白（粘住不散架）、细胞间信号通讯、程序性细胞死亡（某些细胞主动自杀）、基因调控开关（同一DNA在不同细胞读不同段落）。每套都需要几亿年进化。</div></div></div>
+</div></div>
+</div>
+
+
+
+<!-- ====== 4: MULTICELLULAR & CAMBRIAN ====== -->
+<div class="epoch">
+<div class="epoch-glow"></div><div class="epoch-dot"></div><div class="epoch-connector"></div>
+<div class="epoch-time">~6–5.4 亿年前</div>
+<div class="epoch-title">多细胞生物的进化和寒武纪大爆发</div>
+<svg class="silhouette sil-drift" width="120" height="70" viewBox="0 0 120 70">
+  <ellipse cx="60" cy="35" rx="35" ry="22" fill="rgba(74,200,120,0.08)" stroke="rgba(74,200,120,0.3)" stroke-width="1"/>
+  <ellipse cx="60" cy="25" rx="18" ry="10" fill="rgba(74,200,120,0.05)" stroke="rgba(74,200,120,0.2)" stroke-width="0.8"/>
+  <circle cx="50" cy="22" r="2.5" fill="rgba(140,230,170,0.3)"/>
+  <circle cx="70" cy="22" r="2.5" fill="rgba(140,230,170,0.3)"/>
+  <line x1="35" y1="32" x2="85" y2="32" stroke="rgba(74,200,120,0.12)" stroke-width="0.6"/>
+  <line x1="33" y1="38" x2="87" y2="38" stroke="rgba(74,200,120,0.12)" stroke-width="0.6"/>
+  <line x1="35" y1="44" x2="85" y2="44" stroke="rgba(74,200,120,0.1)" stroke-width="0.6"/>
+  <line x1="60" y1="25" x2="60" y2="55" stroke="rgba(74,200,120,0.12)" stroke-width="0.6"/>
+</svg>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">单细胞能做的有限。细胞合作→分工→效率暴涨。前提：①足够能量（线粒体解决）②细胞间通讯和黏附机制（需要时间进化）。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">从细胞到器官 · 组织 · 肌肉细胞</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">多细胞的核心：单个细胞放弃全能性，换取集体的超能力。同类细胞聚成<b>组织</b>（肌肉组织、上皮组织、神经组织）→ 不同组织协作成<b>器官</b>（心脏=肌肉+结缔+神经）→ 器官配合成<b>系统</b>（循环系统、消化系统）→ 整个生物体。
+<b>肌肉细胞</b>：放弃了光合、感光等能力，专精收缩和舒张→化学能直接变机械运动→所有动物能"动"的物理基础。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">埃迪亚卡拉动物群 · 寒武纪大爆发</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>埃迪亚卡拉</b>（~5.7亿年）：最早大型多细胞化石群。扁平叶状/圆盘状，没嘴没腿没眼——寒武纪前的"实验品"。
+<b>寒武纪大爆发</b>（~5.4亿年）：几乎所有现代动物门类的祖先在几千万年内同时出现。为什么？①O₂终于够高 ②<b>眼睛出现→捕食者能"看见"→猎物进化壳/刺/速度→军备竞赛启动</b> ③基因调控网络（Hox基因）成熟→小基因变化→大身体变化。</div></div></div>
+</div></div>
+</div>
+
+
+
+<!-- ====== 5: LAND ====== -->
+<div class="epoch">
+<div class="epoch-glow"></div><div class="epoch-dot"></div><div class="epoch-connector"></div>
+<div class="epoch-time">~3.7 亿年前</div>
+<div class="epoch-title">脊椎动物从海洋到陆地的进化</div>
+<svg class="silhouette sil-sway" width="160" height="60" viewBox="0 0 160 60">
+  <path d="M30,35 Q60,20 100,28 Q130,32 145,35 Q130,42 100,40 Q60,45 30,35Z" fill="rgba(74,200,120,0.08)" stroke="rgba(74,200,120,0.25)" stroke-width="1"/>
+  <ellipse cx="30" cy="35" rx="14" ry="9" fill="rgba(74,200,120,0.06)" stroke="rgba(74,200,120,0.2)" stroke-width="0.8"/>
+  <circle cx="24" cy="32" r="1.5" fill="rgba(140,230,170,0.35)"/>
+  <line x1="65" y1="42" x2="62" y2="52" stroke="rgba(74,200,120,0.2)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="90" y1="40" x2="88" y2="50" stroke="rgba(74,200,120,0.2)" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M145,35 Q152,30 155,35 Q152,40 145,35Z" fill="rgba(74,200,120,0.06)" stroke="rgba(74,200,120,0.15)" stroke-width="0.6"/>
+</svg>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">生命在海洋待了30+亿年。登陆要解决：重力（没浮力）、呼吸（鳃不行）、干燥（脱水）、繁殖（精卵不能空气中游）。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">从鳃呼吸到肺呼吸</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">鳃和肺干同一件事：O₂穿过薄膜入血，CO₂从血液排出。区别只是介质从水→空气。
+某些鱼进化出"气囊"→水面吞空气→缺氧浅水中巨大优势→气囊逐步变<b>肺</b>。鱼鳍骨头变粗→支撑身体→变<b>四肢</b>。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">两栖→爬行→羊膜卵</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>两栖</b>（类似蝾螈）能在陆地活动但<b>必须回水里繁殖</b>——卵没壳会干死。
+后来进化出<b>羊膜卵</b>——壳+内部液体=胚胎自带小池塘→<b>不需要回水边</b>→深入内陆→<b>爬行动物</b>诞生（~3.1亿年前）。爬行动物从此统治陆地。</div></div></div>
+</div></div>
+</div>
+
+
+
+<!-- ====== 6: DINOSAURS ====== -->
+<div class="epoch">
+<div class="epoch-glow"></div><div class="epoch-dot"></div><div class="epoch-connector"></div>
+<div class="epoch-time">~2.3 亿–6600 万年前</div>
+<div class="epoch-title">恐龙的出现和哺乳动物的兴起</div>
+<svg class="silhouette sil-breathe" width="180" height="90" viewBox="0 0 180 90">
+  <path d="M25,55 Q20,40 30,30 Q35,25 40,28 L42,25 Q44,22 46,25 L45,30 Q55,22 70,25 Q90,28 110,35 Q140,42 155,55 Q160,60 155,65 Q140,65 130,62 Q120,65 115,62 Q100,68 80,68 Q60,65 45,60 Q35,62 25,55Z" fill="rgba(74,200,120,0.08)" stroke="rgba(74,200,120,0.25)" stroke-width="1"/>
+  <circle cx="35" cy="30" r="1.8" fill="rgba(140,230,170,0.4)"/>
+  <line x1="80" y1="68" x2="78" y2="82" stroke="rgba(74,200,120,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="95" y1="68" x2="97" y2="82" stroke="rgba(74,200,120,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="55" y1="63" x2="52" y2="75" stroke="rgba(74,200,120,0.15)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="120" y1="63" x2="123" y2="75" stroke="rgba(74,200,120,0.15)" stroke-width="1.8" stroke-linecap="round"/>
+</svg>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">距今2.51亿年，<b>95%海洋物种、70%陆地脊椎动物灭绝</b>——史上最严重。可能原因：大规模火山→CO₂暴增→温室效应→海洋酸化→食物链崩溃。之后5000万年恢复，"生态真空"里恐龙崛起。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">二叠纪-三叠纪灭绝事件</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">距今2.51亿年，<b>95%海洋物种、70%陆地脊椎动物灭绝</b>——史上最严重。可能原因：大规模火山→CO₂暴增→温室效应→海洋酸化→食物链崩溃。之后5000万年恢复，"生态真空"里恐龙崛起。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">恐龙——直立姿势的革命</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">关键区别：<b>腿的位置</b>。其他爬行动物腿伸向两侧（展肢）。恐龙腿<b>垂直在身体下方</b>（直立/柱状）。
+为什么这决定了谁称霸？<b>效率</b>（不需持续收缩肌肉防滑）、<b>速度</b>（推进效率高）、<b>体型</b>（展肢撑不住大体型，直立可以）。蜥脚龙30-100m、霸王龙12m、三角龙/剑龙/甲龙各种防御。统治<b>1.65亿年</b>（人类只有~30万年）。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">哺乳动物——恐龙阴影下1.65亿年</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">和恐龙<b>几乎同时出现</b>。但被压制：极小（鼠大小）、夜行、隐蔽。大型生态位被恐龙占完。在"缝隙"里悄悄进化出更复杂大脑、更敏锐嗅觉听觉。
+距今6600万年，10km小行星撞地球→尘埃遮天→光合作用停→植物死→食草动物死→食肉动物死→食物链从底层崩塌。大型动物每天需大量食物→几周断粮就死→且没法躲进地洞。小型哺乳动物只需一点食物→靠种子昆虫苟活→<b>钻进地洞</b>躲过热浪→活下来→生态位全空→爆发。</div></div></div>
+</div></div>
+</div>
+
+
+
+<!-- ====== 7: MAMMALS TO HUMANS ====== -->
+<div class="epoch">
+<div class="epoch-glow"></div><div class="epoch-dot"></div><div class="epoch-connector"></div>
+<div class="epoch-time">~6600 万年前 → 现在</div>
+<div class="epoch-title">哺乳动物到人类的进化</div>
+<svg class="silhouette" width="60" height="120" viewBox="0 0 60 120">
+  <circle cx="30" cy="18" r="8" fill="none" stroke="rgba(200,180,130,0.3)" stroke-width="1"/>
+  <line x1="30" y1="26" x2="30" y2="65" stroke="rgba(200,180,130,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="30" y1="35" x2="15" y2="55" stroke="rgba(200,180,130,0.2)" stroke-width="1" stroke-linecap="round"/>
+  <line x1="30" y1="35" x2="45" y2="55" stroke="rgba(200,180,130,0.2)" stroke-width="1" stroke-linecap="round"/>
+  <line x1="30" y1="65" x2="20" y2="95" stroke="rgba(200,180,130,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="30" y1="65" x2="40" y2="95" stroke="rgba(200,180,130,0.25)" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="20" y1="95" x2="16" y2="98" stroke="rgba(200,180,130,0.15)" stroke-width="1" stroke-linecap="round"/>
+  <line x1="40" y1="95" x2="44" y2="98" stroke="rgba(200,180,130,0.15)" stroke-width="1" stroke-linecap="round"/>
+</svg>
+<div class="flip-body"><div class="flip-inner">
+<div class="story">~6500万年前。森林覆盖→树上生活需要：<b>前向眼睛</b>（立体视觉，跳跃必须判断距离）、<b>灵活手指</b>（抓握）、<b>旋转手腕</b>、<b>更大大脑</b>（视觉皮层+运动皮层）。你现在还保留这些——全是树上生活的遗产。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">灵长类——树上生活塑造了我们</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">~6500万年前。森林覆盖→树上生活需要：<b>前向眼睛</b>（立体视觉，跳跃必须判断距离）、<b>灵活手指</b>（抓握）、<b>旋转手腕</b>、<b>更大大脑</b>（视觉皮层+运动皮层）。你现在还保留这些——全是树上生活的遗产。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">类人猿 → 直立行走</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>类人猿</b>（~2500万年）：没尾巴、臂行、更大脑、更复杂社会。人类也是类人猿。
+<b>直立行走</b>（~700万年）：东非气候变干→森林退缩→被迫下树。直立优势：看更远、手腾出来、散热更好、长距离省力。<b>南方古猿</b>脑容量400-500cc，存在了约400万年。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">工具与大脑——能人 → 直立人 → 智人</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct"><b>能人</b>（~300万年）：第一个造工具→切肉/敲骨髓→高能食物→支撑更大脑→更好工具→<b>正反馈循环</b>。
+<b>直立人</b>（~200万年）：脑容量~900cc。两个关键突破——①<b>用火</b>→烹饪让食物更易消化→同样食物净能量增加→养更大的脑 ②<b>走出非洲</b>→到达亚洲和欧洲。
+<b>智人</b>（~30万年）：关键创新=<b>语言</b>→知识脱离基因传递→积累速度从百万年级变成几代人。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">人类和黑猩猩的DNA有98.8%是相同的</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">1.2%差异→在几百万年自然选择中被放大→直立行走、语言、抽象思维、文明。微小的基因差异，巨大的表型差异。</div></div></div>
+</div></div>
+</div>
+
+<!-- FULL CHAIN -->
+<div class="full-chain">
+<b>全链条</b><br>
+化学汤 → 有机分子 → RNA自我复制 → 磷脂膜 → 原核细胞 → 光合作用 → 大氧化 → 有氧呼吸×18 → 内共生→真核 → 多细胞 → 寒武纪军备竞赛 → 登陆 → 两栖→羊膜卵→爬行 → 恐龙1.65亿年 → 小行星灭绝 → 哺乳动物爆发 → 灵长类上树 → 气候下树 → 直立行走 → 工具 → 智人
+</div>
+
+</div><!-- /timeline-inner -->
+</div>
+
+<div class="back-section">
+  <button class="back-btn">← 返回研究室</button>
+</div>
+</div>
+
+<script>
+// ===== CELL DIVISION OPENING =====
+var fired = false;
+var cellCV = document.getElementById('cell-canvas');
+var cellCtx = cellCV.getContext('2d');
+var cells = [];
+var cellPhase = 'idle';
+var cellStart = 0;
+var idleT = 0;
+
+function resizeCell() {
+  cellCV.width = window.innerWidth;
+  cellCV.height = window.innerHeight;
+}
+resizeCell();
+window.addEventListener('resize', resizeCell);
+
+function drawIdleCell() {
+  if (cellPhase !== 'idle') return;
+  cellCtx.clearRect(0, 0, cellCV.width, cellCV.height);
+  idleT += 0.02;
+  var cx = cellCV.width / 2;
+  var cy = cellCV.height / 2;
+  var pulse = 1 + Math.sin(idleT * 1.5) * 0.08;
+  var r = 14 * pulse;
+
+  // Outer glow
+  var g3 = cellCtx.createRadialGradient(cx, cy, 0, cx, cy, r * 6);
+  g3.addColorStop(0, 'rgba(74,158,106,0.08)');
+  g3.addColorStop(1, 'rgba(74,158,106,0)');
+  cellCtx.beginPath();
+  cellCtx.arc(cx, cy, r * 6, 0, Math.PI * 2);
+  cellCtx.fillStyle = g3;
+  cellCtx.fill();
+
+  // Mid glow
+  var g2 = cellCtx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.5);
+  g2.addColorStop(0, 'rgba(74,158,106,0.2)');
+  g2.addColorStop(1, 'rgba(74,158,106,0)');
+  cellCtx.beginPath();
+  cellCtx.arc(cx, cy, r * 2.5, 0, Math.PI * 2);
+  cellCtx.fillStyle = g2;
+  cellCtx.fill();
+
+  // Membrane
+  cellCtx.beginPath();
+  cellCtx.arc(cx, cy, r, 0, Math.PI * 2);
+  cellCtx.strokeStyle = 'rgba(74,200,120,' + (0.4 + Math.sin(idleT) * 0.1) + ')';
+  cellCtx.lineWidth = 1.5;
+  cellCtx.stroke();
+
+  // Nucleus
+  cellCtx.beginPath();
+  cellCtx.arc(cx, cy, 5 * pulse, 0, Math.PI * 2);
+  cellCtx.fillStyle = 'rgba(100,220,150,0.25)';
+  cellCtx.fill();
+
+  // Core dot
+  cellCtx.beginPath();
+  cellCtx.arc(cx, cy, 2, 0, Math.PI * 2);
+  cellCtx.fillStyle = 'rgba(150,240,180,0.5)';
+  cellCtx.fill();
+
+  requestAnimationFrame(drawIdleCell);
+}
+drawIdleCell();
+
+// Click handler
+document.getElementById('intro').addEventListener('click', function() {
+  startLife();
+});
+
+function startLife() {
+  if (fired) return;
+  fired = true;
+  cellPhase = 'dividing';
+  cellStart = performance.now();
+  var cx = cellCV.width / 2;
+  var cy = cellCV.height / 2;
+  cells = [{ x: cx, y: cy, r: 14, a: 1, vx: 0, vy: 0 }];
+
+  var lbl = document.querySelector('.cell-label');
+  if (lbl) { lbl.style.transition = 'opacity 0.3s'; lbl.style.opacity = '0'; }
+
+  animateDivision();
+}
+
+function animateDivision() {
+  var t = (performance.now() - cellStart) / 1000;
+  cellCtx.clearRect(0, 0, cellCV.width, cellCV.height);
+
+  if (t > 0.8 && cells.length === 1) divide(0);
+  if (t > 2.0 && cells.length === 2) { divide(0); divide(1); }
+  if (t > 3.2 && cells.length === 4) { for (var i = 0; i < 4; i++) divide(i); }
+  if (t > 4.2 && cells.length === 8) { for (var i = 0; i < 8; i++) divide(i); }
+
+  for (var j = 0; j < cells.length; j++) {
+    var c = cells[j];
+    c.x += c.vx;
+    c.y += c.vy;
+    c.vx *= 0.97;
+    c.vy *= 0.97;
+    if (t > 5) c.a = Math.max(0, c.a - 0.008);
+    if (c.a <= 0) continue;
+
+    var g = cellCtx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r * 3);
+    g.addColorStop(0, 'rgba(74,158,106,' + (0.1 * c.a) + ')');
+    g.addColorStop(1, 'rgba(74,158,106,0)');
+    cellCtx.beginPath();
+    cellCtx.arc(c.x, c.y, c.r * 3, 0, Math.PI * 2);
+    cellCtx.fillStyle = g;
+    cellCtx.fill();
+
+    cellCtx.beginPath();
+    cellCtx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+    cellCtx.strokeStyle = 'rgba(74,200,120,' + (0.4 * c.a) + ')';
+    cellCtx.lineWidth = 0.8;
+    cellCtx.stroke();
+
+    cellCtx.beginPath();
+    cellCtx.arc(c.x, c.y, c.r * 0.35, 0, Math.PI * 2);
+    cellCtx.fillStyle = 'rgba(100,220,150,' + (0.25 * c.a) + ')';
+    cellCtx.fill();
+  }
+
+  if (t < 7) {
+    requestAnimationFrame(animateDivision);
+  } else {
+    var intro = document.getElementById('intro');
+    intro.classList.add('dying');
+    document.getElementById('content').classList.add('visible');
+    document.getElementById('prog-track').classList.add('show');
+    setTimeout(function() { intro.style.display = 'none'; }, 3000);
+  }
+}
+
+function divide(idx) {
+  var p = cells[idx];
+  var angle = Math.random() * Math.PI * 2;
+  var speed = 1.5 + Math.random();
+  var nr = p.r * 0.85;
+  p.r = nr;
+  p.vx = Math.cos(angle) * speed;
+  p.vy = Math.sin(angle) * speed;
+  cells.push({
+    x: p.x, y: p.y, r: nr, a: 1,
+    vx: -Math.cos(angle) * speed,
+    vy: -Math.sin(angle) * speed
+  });
+}
+
+// ===== BACKGROUND PARTICLES =====
+var pCV = document.getElementById('particles');
+var pCtx = pCV.getContext('2d');
+var W, H;
+var bParticles = [];
+
+function resizeP() { W = pCV.width = window.innerWidth; H = pCV.height = window.innerHeight; }
+resizeP();
+window.addEventListener('resize', resizeP);
+
+for (var i = 0; i < 100; i++) {
+  bParticles.push({
+    x: Math.random() * 2000,
+    y: Math.random() * 8000,
+    r: Math.random() * 2 + 0.5,
+    a: Math.random() * 0.18 + 0.04,
+    sx: Math.random() * 0.3 - 0.15,
+    sy: Math.random() * 0.2 - 0.1,
+    ws: Math.random() * 0.005 + 0.002,
+    wa: Math.random() * 20 + 5,
+    ph: Math.random() * Math.PI * 2,
+    ps: Math.random() * 0.01 + 0.005
+  });
+}
+
+function getScrollProgress() {
+  var st = window.scrollY;
+  var dh = document.documentElement.scrollHeight - window.innerHeight;
+  return dh > 0 ? st / dh : 0;
+}
+
+function drawParticles() {
+  requestAnimationFrame(drawParticles);
+  pCtx.clearRect(0, 0, W, H);
+  var t = Date.now() * 0.001;
+  var scroll = window.scrollY;
+  var prog = getScrollProgress();
+  var r1 = Math.floor(40 + prog * 70);
+  var g1 = Math.floor(140 + prog * 30);
+  var b1 = Math.floor(110 - prog * 60);
+
+  for (var i = 0; i < bParticles.length; i++) {
+    var p = bParticles[i];
+    var wobble = Math.sin(t * p.ws + p.ph) * p.wa;
+    var pulse = 0.7 + 0.3 * Math.sin(t * p.ps + p.ph);
+    var px = ((p.x + wobble + p.sx * t * 10) % W + W) % W;
+    var py = ((p.y - scroll * 0.12 + p.sy * t * 10) % (H * 4) + H * 4) % (H * 4) - H * 0.5;
+    if (py < -20 || py > H + 20) continue;
+
+    var alpha = p.a * pulse;
+    var g = pCtx.createRadialGradient(px, py, 0, px, py, p.r * 4);
+    g.addColorStop(0, 'rgba(' + r1 + ',' + g1 + ',' + b1 + ',' + (alpha * 0.35) + ')');
+    g.addColorStop(1, 'rgba(' + r1 + ',' + g1 + ',' + b1 + ',0)');
+    pCtx.beginPath();
+    pCtx.arc(px, py, p.r * 4, 0, Math.PI * 2);
+    pCtx.fillStyle = g;
+    pCtx.fill();
+
+    pCtx.beginPath();
+    pCtx.arc(px, py, p.r * pulse, 0, Math.PI * 2);
+    pCtx.fillStyle = 'rgba(' + (r1+40) + ',' + (g1+30) + ',' + (b1+20) + ',' + alpha + ')';
+    pCtx.fill();
+  }
+}
+drawParticles();
+
+// ===== DYNAMIC BG COLOR =====
+function updateBg() {
+  var p = getScrollProgress();
+  var r = Math.floor(4 + p * 8);
+  var g = Math.floor(10 + p * 2 - p * p * 6);
+  var b = Math.floor(8 - p * 6);
+  document.getElementById('bg-layer').style.backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+
+// ===== SCROLL REVEAL =====
+function onScroll() {
+  var els = document.querySelectorAll('.epoch, .chapter-div, .back-section');
+  for (var i = 0; i < els.length; i++) {
+    if (els[i].getBoundingClientRect().top < window.innerHeight * 0.85) {
+      els[i].classList.add('revealed');
+    }
+  }
+  var st = window.scrollY;
+  var dh = document.documentElement.scrollHeight - window.innerHeight;
+  if (dh > 0) {
+    document.getElementById('prog-fill').style.height = (st / dh * 100) + '%';
+  }
+  updateBg();
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+window.addEventListener('load', onScroll);
+
+// ===== SUB TOGGLE =====
+function toggleSub(headerEl) {
+  var body = headerEl.parentElement.querySelector('.sub-body');
+  var arrow = headerEl.querySelector('.sub-a');
+
+  if (body.classList.contains('closed')) {
+    body.classList.remove('closed');
+    body.style.maxHeight = body.scrollHeight + 'px';
+    headerEl.classList.remove('closed');
+  } else {
+    body.style.maxHeight = '0';
+    body.classList.add('closed');
+    headerEl.classList.add('closed');
+  }
+}
+
+// Initialize all sub-bodies with proper max-height
+window.addEventListener('load', function() {
+  var bodies = document.querySelectorAll('.sub-body');
+  for (var i = 0; i < bodies.length; i++) {
+    if (!bodies[i].classList.contains('closed')) {
+      bodies[i].style.maxHeight = bodies[i].scrollHeight + 'px';
+    }
+  }
+});
+
+// ============ A/B 翻转 ============
+const bContent = {
+  0: {
+    title: `生命的起源（原核细胞）`,
+    body: `<div class="story">先回答一个最根本的问题：<b>什么算"生命"？</b>
+
+会动？石头在地震时也会动。会长大？晶体也在长大。会呼吸？那是后来进化出来的功能。
+
+把所有表面现象剥掉，生命只需要满足三个条件：
+① <b>能自我复制</b>——能照着某种模板造出自己的副本
+② <b>有边界</b>——被一层膜和外界隔开
+③ <b>是化学系统</b>——由分子互相作用驱动，不需要任何超自然力量
+
+为什么自我复制最关键？因为这是自然选择的前提。想象一个池塘里有一百种不同的分子团。其中99种不能复制自己→数量不增不减→最终被分解消失。有1种碰巧能复制→数量翻倍再翻倍→很快池塘里全是它。如果复制过程中出了错（突变），有些错误反而让复制更快→这些"错误版"会取代"原版"。这就是进化，连意识都不需要——纯粹的数学。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">第一步：海洋里的"化学汤"</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">38亿年前的海洋不是你想象的蓝色清水。它是一锅浑浊的<b>化学汤</b>：水里溶着矿物质（钠钾钙镁铁的离子）、气体（CO₂、N₂、H₂S）。
+
+同时有三种能量在不停地"搅拌"这锅汤：
+· <b>太阳紫外线</b>——直接射进海里（没有臭氧层挡）
+· <b>闪电</b>——在雷暴中劈入海水
+· <b>地热</b>——海底热泉，300-400°C的热水喷涌
+
+这些能量做了什么？它们给简单的小分子（CO₂、H₂O、N₂）<b>提供了足够的能量让它们重新组合</b>→产生了更复杂的<b>有机分子</b>：氨基酸、核苷酸等。
+
+这不是猜测——1952年米勒和尤素在实验室里模拟了这个条件，把甲烷、氨、水蒸气、氢气放在烧瓶里通电打火花，一周后烧瓶底部就出现了氨基酸。<b>化学汤→有机分子</b>是化学必然，不是奇迹。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">第二步：RNA——第一个能"复制自己"的分子</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">在这锅有机分子汤里，有一种特殊的分子慢慢出现了：<b>RNA</b>。
+
+RNA长什么样？想象一条很长的项链，上面穿了四种不同颜色的珠子（碱基A/U/C/G），顺序可以随便排。每颗珠子的学名叫<b>核苷酸</b>（=磷酸+糖+碱基，三个部件拼在一起）。
+
+RNA有一个其他分子没有的特殊能力：<b>它不仅能携带信息（珠子的排列顺序），还能催化化学反应</b>。大多数分子只能做其中一件事——要么存信息要么干活。RNA两样都能干。
+
+这意味着什么？如果一条RNA碰巧折叠成某种形状，使得它能催化周围散落的核苷酸连接起来→组装出一条和自己差不多的新RNA→那它就能<b>"复制自己"</b>。
+
+这是一个自我强化的循环：RNA存在→催化新RNA→更多RNA→更多催化→更更多RNA......池塘里的RNA浓度越来越高。
+
+<b>但这还不算生命</b>——因为缺少第二个条件：<b>边界</b>。
+
+为什么一定需要边界？没有边界的话，RNA和它需要的原料（核苷酸）分散在整个海洋里→浓度极低→两个需要碰面才能反应的分子可能相隔几公里→反应基本不可能发生。这就像你想做饭，但食材散落在整个城市各个角落——你永远做不成一顿饭。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">第三步：磷脂膜——生命的第一个"身体"</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">同一锅汤里，另一种分子也在自发形成：<b>磷脂</b>。
+
+磷脂长得很有意思：一头喜欢水（亲水头），另一头讨厌水（疏水尾巴）。当一堆磷脂扔到水里会发生什么？
+
+疏水尾巴想逃离水→互相靠拢→形成一个圈→亲水头朝外接触水→疏水尾巴躲在中间→自动排成一个<b>双层球壳</b>→中间是空心的→里面困住了一些海水和其中的分子。
+
+这个过程<b>完全是自发的</b>——你在实验室里把磷脂加到水里，几秒钟内就会形成这种小泡泡（囊泡）。不需要任何"指令"或"设计"。
+
+这层膜有一个关键性质：<b>选择通透性</b>。很小的分子（水、小离子）能穿过去，大的分子被挡住。这意味着泡泡内部可以和外部有不同的化学环境→有用的分子被困在里面→浓度变高→反应变快。
+
+所以：一个磷脂泡泡碰巧包住了一些RNA分子→里面RNA浓度很高→复制反应高效进行→<b>第一个"原始细胞"诞生了</b>。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">第四步：囊泡之间的竞争——生命前的自然选择</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">海洋里有无数个这样的小泡泡。每个里面的RNA都不太一样（随机变异）。
+
+它们需要消耗同样的原料（核苷酸、能量分子）来复制自己。但原料是有限的。
+
+结果：<b>复制快的泡泡会把原料用完→复制慢的泡泡因为抢不到原料而"饿死"</b>。
+
+这就是自然选择——在"生命"这个词出现之前，在任何意识出现之前，在任何目的出现之前，纯粹的化学竞争就已经在筛选"谁活下来"了。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">第五步：蛋白质和DNA的出现——分工</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">RNA虽然两样都能干（存信息+催化反应），但两样都干得不太好——就像一个人又当厨师又当服务员，都凑合。
+
+后来出现了<b>分工</b>：
+
+<b>蛋白质</b>接管了"干活"的工作。蛋白质是什么？就是20种不同的小分子（<b>氨基酸</b>）按特定顺序串成一条链→链条自动折叠成特定的三维形状→<b>形状决定功能</b>。有的形状能催化某个化学反应（酶），有的形状能搭建结构（支架），有的能运输东西，有的能传递信号。
+
+<b>为什么蛋白质干活比RNA强得多？</b>因为RNA只有4种碱基当"积木"，蛋白质有20种氨基酸当积木。积木种类越多→能折叠出的形状越多→能做的事越多。4种积木能搭的造型有限，20种积木能搭出几乎无限种造型。所以蛋白质在"干活"这件事上完全碾压RNA。
+
+<b>DNA</b>接管了"存信息"的工作。<b>为什么DNA比RNA更适合存信息？</b>两个原因：①DNA是<b>双链</b>结构——两条链像拉链一样互相咬合。如果一条链上的某个碱基被破坏了，另一条链上对应的碱基还在→可以照着修回来。RNA是单链→坏了就坏了没法修。就像重要文件你做了两份一模一样的备份，一份损坏了照着另一份抄回来。②DNA的糖骨架比RNA少了一个氧原子→化学上更稳定→不容易被分解。
+
+最终分工：
+<b>DNA</b> = 图纸档案馆（长期保存，极稳定）
+<b>RNA</b> = 施工图副本（临时使用，用完可以扔）
+<b>蛋白质</b> = 按图纸建的实际结构和工人（高效、多样化）
+<b>磷脂膜</b> = 工厂的围墙（保护内部、控制进出）
+
+这四样东西凑在一起→就是<b>原核生物</b>（最早的细菌和古菌）。
+
+它们的结构极其简单：一层膜包着一团细胞质，里面漂着一圈环形DNA和一些核糖体（读RNA造蛋白质的小机器）。<b>没有细胞核</b>（DNA没有被核膜包裹，直接漂在细胞质里），没有任何内部隔间。
+
+但它已经是完完整整的生命了——能自我复制、有边界、有代谢。而且它们极其成功——<b>统治了地球将近20亿年</b>。在这20亿年里，地球上只有细菌。没有动物，没有植物，没有真菌。只有细菌。</div></div></div>`
+  },
+  1: {
+    title: `早期生命的演化：光合作用和大氧化事件`,
+    body: `<div class="story">细菌已经存在了大约3亿年。它们在海洋里靠地热、化学物质（比如铁离子）、闪电获取能量。
+
+但有一个根本问题：<b>这些能量来源全是有限的</b>。地热会散失、铁离子被用完、闪电给的能量微乎其微。生命总量有个天花板——永远没法大规模繁荣。
+
+直到某个细菌找到了<b>太阳</b>。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">光合作用——找到了几乎无限的能量源</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">某个细菌的某个蛋白质，因为一个随机的基因突变，碰巧获得了捕捉太阳光子的能力。
+
+这给了它一个微小的能量优势→它繁殖比邻居快了一点点→几百万年后这个特性在种群中被不断优化→最终形成了完整的<b>光合系统</b>。
+
+光合作用做的事很简单：二氧化碳 + 水 + 光能 → <b>葡萄糖</b>（能量）+ <b>氧气</b>
+
+之前细菌必须在海底到处爬找稀缺的化学物质来"吃"→现在只要浮到海面晒太阳就行。太阳几乎取之不尽→<b>能量天花板被掀掉了</b>。
+
+<b>但为什么光合作用会释放氧气？</b>
+
+光合作用的核心动作是"搬运电子"。电子是什么？就是原子外面那些带负电的小东西——化学反应的本质就是电子在不同原子之间转移。
+
+光合系统需要电子来启动一连串化学反应（最终把CO₂和H₂O组装成葡萄糖）。它从哪里拿电子？从<b>水分子（H₂O）</b>里强行抽。太阳光提供了抽取所需的能量。
+
+水分子 = 2个氢 + 1个氧。电子被抽走后，剩下的氢被用来造葡萄糖，氧没人要→两个氧原子配对→变成O₂飘走了。
+
+所以O₂就是光合作用拆水之后剩下的"边角料"。对光合菌来说完全没用，直接排放。但这个"边角料"即将彻底改变地球。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">为什么氧气花了7亿年才在大气中积累？</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">光合菌越来越多，不停释放O₂。但奇怪的是，大气中的O₂浓度长期接近零。
+
+原因：地球上有一大堆"氧气吸收器"——<b>还原性物质</b>。海水里溶着大量的亚铁离子（Fe²⁺）、硫化氢（H₂S）、各种矿物。O₂一释放出来就跟它们反应→O₂被"吃掉"→变成了铁锈（Fe₂O₃，红色沉积物）。
+
+想象你往一个巨大的水池里加漂白剂，但水池里有几吨脏东西在不断吸收漂白剂→水池永远不会变干净→直到脏东西全被漂白完了→漂白剂才开始在水里积累。
+
+这个"缓冲期"持续了<b>7亿年</b>（距今35亿→28亿年）。光合菌不停产O₂→还原性物质不停吸收→双方打了7亿年的消耗战→最终还原性物质<b>耗尽了</b>。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">大氧化事件——地球历史上最大的环境灾难</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">约25亿年前，地球上的"氧气吸收器"用完了。O₂没有了天敌→开始在大气中疯狂积累。几百万年内（地质上一眨眼），大气O₂从接近0%飙到20-30%。
+
+<b>对当时的生命来说，这是一场灭世级灾难。</b>
+
+为什么？因为在无氧环境中进化了十几亿年的细菌，它们体内的化学系统完全不适应O₂。O₂是一个极其贪婪的"电子抢夺者"——它会从细胞内的分子上强行抢走电子→产生<b>活性氧物种</b>（ROS）。
+
+ROS怎么"攻击"细胞？它们继续到处抢电子——从DNA上抢→DNA的化学键断裂→遗传信息被破坏。从膜的磷脂上抢→膜出现破洞→细胞漏了。从蛋白质上抢→蛋白质形状改变→功能报废。<b>一个分子被抢走电子=它的结构就被改变了=它就废了</b>。一个细胞里到处都是这种抢劫→细胞死亡。
+
+全球微生物生物量可能下降了<b>90%以上</b>。
+
+但灾难同时也是机会。活下来的走了两条路：
+
+<b>①躲</b>：跑到深海、地底等没有O₂的地方→今天仍然有厌氧菌活在这些角落。
+
+<b>②利用</b>：某些细菌进化出了<b>超氧化物歧化酶</b>（SOD）→专门拆解活性氧→保护自己。然后它们更进一步——学会了<b>反过来利用O₂</b>。
+
+怎么利用？细胞把葡萄糖拆解的过程中会释放出电子。这些电子从高能状态一步步降到低能状态→<b>每降一步都会释放一点能量</b>→这些能量被用来造ATP。你可以想象成一个小瀑布阶梯——水（电子）从高处一级级往下流，每一级落差都带动一个小水车（造ATP）。
+
+但电子流到最底部后必须有个东西把它接走，否则整条链就堵住了。谁来接？<b>O₂</b>。O₂对电子极度渴望→它在链条末端拼命拽电子往下流→<b>正是因为末端有这个"极度饥渴的接收者"，整条电子链才能运转</b>。没有O₂→电子流不动→链条停→ATP不产生。
+
+葡萄糖+O₂→CO₂+H₂O+<b>大量ATP</b>
+
+有氧呼吸产的ATP是无氧发酵的<b>约18倍</b>。为什么差这么多？无氧发酵没有O₂在末端拉→电子链跑不起来→葡萄糖只被拆了一半就停了→里面一大半能量还锁着。有O₂在末端拼命拽→电子链全速运转→葡萄糖被<b>彻底拆解到底</b>→每一点化学能都被榨干。
+
+<b>能量×18→一切都变了。</b>更大的体型变得可能、更复杂的结构变得可能、后来的真核细胞、多细胞生物、直到你——全都建立在有氧呼吸提供的能量基础上。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">臭氧层——为登陆铺路</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">大气中O₂多了之后，在高空，紫外线会把O₂打断→两个氧原子分开→散落的氧原子碰到另一个O₂→粘在一起→O₃=<b>臭氧</b>。积累起来形成<b>臭氧层</b>。
+
+臭氧层能吸收大部分紫外线。之前没臭氧层→紫外线直射地表→DNA会被打碎→生命只能躲在水下。现在有了臭氧层→陆地变得宜居→几亿年后生命终于可以登陆了。</div></div></div>`
+  },
+  2: {
+    title: `真核生物的出现和内共生理论`,
+    body: `<div class="story">原核生物（细菌）统治地球将近20亿年。但它们有一个根本限制：<b>没有内部分工</b>。
+
+所有化学反应——复制DNA、转录RNA、造蛋白质、产能量、分解废物——全在同一个空间里同时进行。就像一个人在同一张桌子上同时做饭、写作业、修电脑。互相干扰→效率有上限→复杂度有天花板。
+
+<b>真核细胞</b>解决了这个问题：把不同的工作隔开到不同的房间里（细胞器）。DNA被包在<b>细胞核</b>的核膜里→安静地存信息和转录。能量生产搬到<b>线粒体</b>里。蛋白质加工搬到<b>内质网</b>里。垃圾处理搬到<b>溶酶体</b>里。
+
+<b>但真核细胞是怎么来的？</b></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">内共生——吞了但没消化，反而变成了器官</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">大约20亿年前，一个<b>大的原核细胞</b>把一个<b>小的、擅长有氧呼吸的细菌</b>吞进了自己体内。
+
+正常情况下，大的会消化小的。但这次没有。为什么？
+
+可能的原因：小细菌在大细胞里面不停地用O₂产ATP→大细胞白白多了一个能量来源。<b>留着它比吃掉它赚太多了</b>——就像你抓了一只会下金蛋的鸡，你不会杀了吃肉。
+
+时间一长→小细菌把很多自己用不上的基因丢掉了（反正大细胞会提供保护和原料）→大细胞也丢掉了自己产能的基因（反正小细菌在干这个活）→<b>双方在基因层面互相依赖→谁也没法独立活了</b>→小细菌变成了大细胞的永久器官=<b>线粒体</b>。
+
+证据极其充分：
+· 线粒体有<b>自己独立的DNA</b>——而且是环形的，跟细菌一模一样
+· 线粒体有<b>双层膜</b>——外层是当年大细胞包它时形成的，内层是它自己原来的膜
+· 线粒体的<b>分裂方式</b>跟细菌一样——自己一分为二，不跟细胞核的分裂同步
+
+后来同样的事又发生了一次：一个<b>会光合作用的蓝藻</b>被吞进去→变成了<b>叶绿体</b>（太阳能板）→也有自己独立的环形DNA。
+
+线粒体（所有真核生物都有）+ 叶绿体（只有植物和藻类有）→真核细胞的能量供应远远超过原核→<b>大型、复杂的生命从此成为可能</b>。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">细胞核是怎么来的？——膜内折</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">内共生解释了线粒体和叶绿体，但<b>细胞核</b>是怎么来的？
+
+最主流的假说：细胞膜向内<b>折叠</b>→一部分膜把DNA包裹起来→形成了核膜→DNA被关进了一个独立的"房间"。
+
+<b>为什么这是一个巨大的进步？</b>因为在原核细胞里，DNA转录（读取信息）和蛋白质翻译（制造产品）在同一个空间同时进行→没有"质检"环节→错误的RNA也会直接被造成蛋白质。
+
+有了核膜之后：转录在核内完成→RNA被"检查"和"修剪"→只有合格的RNA才被放出核膜→到细胞质里翻译成蛋白质。<b>等于在工厂里加了一道质检流程</b>→错误率大幅降低→基因调控变得更精细→能支撑更复杂的生命形式。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">"无聊的十亿年"——真核到多细胞之间的漫长等待</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">真核细胞出现在~20亿年前，多细胞生物直到~6亿年前才出现。中间这<b>14亿年</b>，地质学家叫它"无聊的十亿年"——化石记录几乎没什么变化，地球看起来一直是单细胞真核生物在海里飘。
+
+为什么这么久？因为从"一个细胞"到"多个细胞协作"不是简单的"粘在一起"。它需要进化出一整套全新的系统：
+
+<b>①细胞黏附</b>——需要专门的蛋白质（比如钙粘蛋白）把细胞牢牢粘在一起不散架。这种蛋白质在单细胞生物里完全没用→不会被自然选择保留→必须从零进化。
+
+<b>②细胞通讯</b>——细胞必须能互相发信号："你去当皮肤我去当肌肉"。这需要信号分子、受体、信号传导通路——一整套分子通讯基础设施。
+
+<b>③程序性细胞死亡</b>——多细胞生物里有些细胞必须主动"自杀"（比如你手指之间本来是连在一起的，是某些细胞主动死掉才分开的）。一个细胞要主动放弃生存→这在进化上是极其反直觉的→需要特殊的基因调控。
+
+<b>④基因调控的复杂化</b>——同一套DNA在不同细胞里需要读取不同的段落。肝细胞和脑细胞的DNA完全一样，但读取的基因不一样→需要复杂的"开关"系统来控制哪个基因在哪个细胞里被开启。
+
+这四套系统每一套都需要几亿年来进化和优化。所以这14亿年不是"什么都没发生"——它是在建造多细胞生命所需的全部基础设施。</div></div></div>`
+  },
+  3: {
+    title: `多细胞生物的进化和寒武纪大爆发`,
+    body: `<div class="story">基础设施终于就位了。多细胞生物开始出现。
+
+多细胞的核心逻辑：单个细胞什么都能干但什么都干得一般。一百亿个细胞各自专精一样→整体能做到单个细胞永远做不到的事（思考、奔跑、看见颜色）。<b>个体放弃全能性，换取集体的超能力。</b></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">从细胞到器官——分工的层级</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">层级：细胞 → 同类细胞聚成<b>组织</b>（肌肉组织、上皮组织）→ 不同组织组成<b>器官</b>（心脏=肌肉+结缔+神经）→ 器官配合成<b>系统</b>（循环系统）→ 整个生物体。
+
+<b>肌肉细胞</b>是个好例子：它放弃了很多功能（不能光合、不能感知光线），专门进化出了收缩和舒张的能力→把化学能直接变成机械运动→这是所有动物能"动"的物理基础。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">埃迪亚卡拉动物群——失败的初稿</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">距今约5.7亿年，出现了最早一批大型多细胞生物。化石告诉我们它们长得像扁平的叶子、圆盘、管子——<b>没有嘴没有腿没有眼睛</b>。大多数靠被动吸收海水中的营养物质生存。
+
+它们是多细胞生命的"第一版草稿"——证明了多细胞方案可行，但设计还很原始。寒武纪大爆发前它们几乎全部消失了。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">寒武纪大爆发——进化的军备竞赛</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">距今约5.4亿年，在地质尺度上"一眨眼"的功夫（几千万年），<b>几乎所有现代动物门类的祖先同时出现了</b>。眼睛、壳、爪、嘴、脊椎——身体构造的多样性在极短时间内爆发。
+
+为什么这个时间点？三个因素叠加了：
+
+<b>①氧气终于够了</b>。大型活跃动物需要大量能量→需要高效有氧呼吸→需要足够的O₂。之前O₂浓度不够支撑大体型动物→现在可以了。
+
+<b>②眼睛出现了</b>。这是关键的触发器。第一个进化出眼睛的捕食者→突然能"看见"猎物→猎物被大量捕杀→猎物中只有进化出<b>防御</b>的活下来（壳、刺、速度、自己的眼睛来看见捕食者）→捕食者又必须进化更好的攻击手段→<b>军备竞赛启动</b>→双方越来越复杂→爆发。
+
+<b>③基因调控网络成熟了</b>。一套叫<b>Hox基因</b>的控制系统→它不负责"造什么"而是负责"在哪里造什么"→一个小小的Hox基因突变可以让一个器官出现在新的位置、或者多长出一对腿→<b>小的基因变化产生大的身体结构变化</b>→加速了形态多样化。</div></div></div>`
+  },
+  4: {
+    title: `脊椎动物从海洋到陆地的进化`,
+    body: `<div class="story">生命在海洋里待了<b>30多亿年</b>。陆地一直是一片死寂——没有动物，只有一些苔藓和原始植物（植物比动物先登陆了）。
+
+登陆对海洋动物来说是一个巨大的工程挑战：
+
+<b>①重力</b>：在水里有浮力托着你，出了水你的身体会被重力压扁在地上。→需要强壮的骨骼和肌肉来支撑体重。
+
+<b>②呼吸</b>：鳃的工作原理是让水流过薄膜→O₂从水里渗进血液。但出了水，鳃的薄膜会粘在一起→无法工作。→需要新的呼吸器官（肺）。
+
+<b>③干燥</b>：海洋里全是水，皮肤随时泡着。陆地上身体会迅速脱水。→需要防水的皮肤。
+
+<b>④繁殖</b>：精子和卵子在水里游泳相遇。在空气里它们会干死。→要么回水里繁殖，要么进化出新方案。
+
+为什么要冒这么大风险登陆？因为<b>海岸边浅水区的竞争太激烈了</b>。而陆地上有资源（昆虫、植物）却没人竞争。能在岸上短暂觅食的鱼→比纯粹在水里的鱼多了一个食物来源→有优势。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">从鳃到肺——同一份工作，换了工作环境</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">鳃和肺本质上干的是<b>完全同一件事</b>：让O₂穿过一层很薄的膜进入血液，同时让CO₂从血液穿过膜排出去。区别只是一个在水里工作，一个在空气里工作。
+
+怎么从鳃变成肺的？某些生活在缺氧浅水中的鱼，进化出了一个"气囊"——能浮到水面吞一口空气→空气里的O₂通过气囊壁渗入血液→在别的鱼因缺氧而虚弱时，这种鱼精力充沛。
+
+这个气囊就是<b>鱼鳔的前身，也是肺的前身</b>。几千万年里，它越变越大、血管越来越多、气体交换效率越来越高→最终变成了真正的肺。
+
+同时，鱼鳍里的骨头也在变化：越来越粗、越来越强、关节越来越灵活→从"在水里划水的桨"变成了"在陆地上撑起身体的腿"。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">两栖→爬行→羊膜卵——彻底脱离水</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">最早登陆的动物是<b>两栖动物</b>（类似蝾螈）。它们能在陆地上走动呼吸，但有一个致命限制：<b>必须回水边繁殖</b>。它们的卵没有壳→暴露在空气中会干死→只能产在水里或者极潮湿的地方。
+
+这意味着两栖动物永远不能离海岸或河流太远——陆地内部对它们来说还是禁区。
+
+大约3.1亿年前，某些两栖动物进化出了一个革命性的发明：<b>羊膜卵</b>。
+
+卵的外面包了一层壳（防水），里面有液体（羊水），胚胎在里面发育——<b>相当于给胚胎自带了一个小池塘</b>。不需要回水边了。
+
+这彻底解放了陆地动物→可以深入内陆→占据全新的、没有任何竞争的生态位→<b>爬行动物诞生</b>→从此统治陆地。</div></div></div>`
+  },
+  5: {
+    title: `恐龙的出现和哺乳动物的兴起`,
+    body: `<div class="story">距今2.51亿年，地球经历了<b>史上最严重的灭绝事件</b>：95%的海洋物种和70%的陆地脊椎动物灭绝。
+
+可能的原因：西伯利亚超级火山持续喷发了几十万年→CO₂暴增→全球急剧升温→海洋酸化→海洋中的氧气减少→食物链从底层崩溃→一层层往上垮。
+
+之后地球花了约5000万年才恢复。在这个几乎空白的生态里，一个新的爬行动物谱系崛起了。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">二叠纪大灭绝——地球差点死了</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">距今2.51亿年，地球经历了<b>史上最严重的灭绝事件</b>：95%的海洋物种和70%的陆地脊椎动物灭绝。
+
+可能的原因：西伯利亚超级火山持续喷发了几十万年→CO₂暴增→全球急剧升温→海洋酸化→海洋中的氧气减少→食物链从底层崩溃→一层层往上垮。
+
+之后地球花了约5000万年才恢复。在这个几乎空白的生态里，一个新的爬行动物谱系崛起了。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">恐龙——一个看似微小的身体改动改变了一切</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">恐龙和其他爬行动物（鳄鱼、蜥蜴）的区别不在牙齿、不在体型，而在一个看起来不起眼的地方：<b>腿的角度</b>。
+
+普通爬行动物的腿从身体<b>两侧</b>伸出来→像做俯卧撑一样→走路时身体离地面很近→要靠肌肉一直用力撑着→累→走不远也走不快→体重一大就撑不住了。
+
+恐龙的腿<b>垂直放在身体正下方</b>→像柱子一样支撑→骨骼直接承重而不需要肌肉持续发力→省力→可以走得更远跑得更快→而且柱状支撑可以承受极大的体重。
+
+<b>就这么一个腿的角度变化</b>→三个巨大的优势叠加：
+· 能量效率更高（省力）
+· 速度更快（推进效率高）
+· 可以长到极大的体型（展肢姿势撑不住100吨，直立可以）
+
+这让恐龙在二叠纪大灭绝后的恢复期中迅速碾压了所有竞争者→占据了陆地生态的所有顶级位置→<b>统治了1.65亿年</b>。
+
+1.65亿年是什么概念？人类作为物种只存在了约30万年。恐龙统治的时间是人类存在时间的<b>550倍</b>。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">哺乳动物——在恐龙脚下生存了1.65亿年</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">哺乳动物跟恐龙几乎<b>同时出现</b>（都是~2.3亿年前）。但在恐龙统治期间，哺乳动物活得非常憋屈：
+
+· 体型极小——大多数不超过老鼠大小（大的生态位全被恐龙占了）
+· 夜行性——白天恐龙活跃时躲起来，晚上恐龙睡觉了才出来
+· 生活在缝隙里——灌木丛、洞穴、树上
+
+但在这些"缝隙"里，哺乳动物悄悄进化出了一些恐龙没有的东西：更复杂的大脑、更敏锐的嗅觉和听觉（夜行性需要的）、更精细的体温调节、更复杂的社会行为。
+
+距今6600万年，一颗<b>直径约10公里的小行星</b>撞击了地球（现在墨西哥尤卡坦半岛）→撞击能量是人类最大核弹的200万倍→全球性火灾→尘埃遮天蔽日→<b>阳光被挡住</b>→光合作用停止→植物大量死亡→食草恐龙没东西吃→食肉恐龙没猎物→食物链从底层往上一层层崩塌→<b>恐龙灭绝</b>（除了一支小型兽脚类恐龙演变成了鸟类）。
+
+<b>为什么大型恐龙死了，小型哺乳动物却活下来了？</b>
+
+大型动物每天需要大量食物→几周断粮就撑不住。而且体型大→没法躲进地洞→暴露在撞击初期的热浪和大火中。
+
+小型哺乳动物每天只需要一点点食物→能靠种子、昆虫、腐肉苟活几个月。体型小→<b>能钻进地洞</b>→躲过了热浪和火灾。等尘埃散去、植物重新生长→它们爬出来→发现<b>所有大型生态位全空了</b>→迅速填补→体型增大→多样化爆发→在几百万年内占据了恐龙留下的所有生态位。</div></div></div>`
+  },
+  6: {
+    title: `哺乳动物到人类的进化`,
+    body: `<div class="story">恐龙灭绝后地球被森林覆盖。某些小型哺乳动物开始在树上生活——树上食物丰富（果实、昆虫）、远离地面捕食者、竞争少。
+
+但在树枝之间跳来跳去是一件<b>技术含量极高的事</b>。你必须：精确判断距离（跳短了会摔死）、灵活抓握（树枝是圆的滑的）、快速做决定（哪根枝能撑住你的体重）。
+
+这些需求→催生了灵长类的核心特征：
+· <b>前向的眼睛</b>→两只眼睛看同一个东西→大脑可以算出深度和距离=<b>立体视觉</b>
+· <b>灵活的手指+指甲</b>（不是爪）→能精确抓握粗细不同的树枝
+· <b>旋转的手腕和肘部</b>→手臂能在各个方向活动
+· <b>更大的大脑</b>→视觉皮层（处理立体视觉）和运动皮层（协调复杂动作）都扩大了
+
+你现在做的每一件精细动作——写字、用筷子、弹琴——用的都是你祖先为了在树枝间跳跃而进化出来的硬件。</div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">灵长类——你的身体是为树上生活设计的</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">恐龙灭绝后地球被森林覆盖。某些小型哺乳动物开始在树上生活——树上食物丰富（果实、昆虫）、远离地面捕食者、竞争少。
+
+但在树枝之间跳来跳去是一件<b>技术含量极高的事</b>。你必须：精确判断距离（跳短了会摔死）、灵活抓握（树枝是圆的滑的）、快速做决定（哪根枝能撑住你的体重）。
+
+这些需求→催生了灵长类的核心特征：
+· <b>前向的眼睛</b>→两只眼睛看同一个东西→大脑可以算出深度和距离=<b>立体视觉</b>
+· <b>灵活的手指+指甲</b>（不是爪）→能精确抓握粗细不同的树枝
+· <b>旋转的手腕和肘部</b>→手臂能在各个方向活动
+· <b>更大的大脑</b>→视觉皮层（处理立体视觉）和运动皮层（协调复杂动作）都扩大了
+
+你现在做的每一件精细动作——写字、用筷子、弹琴——用的都是你祖先为了在树枝间跳跃而进化出来的硬件。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">类人猿——更大的大脑和更复杂的社会</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">距今约2500万年，某些灵长类变得更大更强壮：
+
+跟猴子比，类人猿<b>没有尾巴</b>（进化出了更强的脊柱和躯干肌肉来保持平衡）、手臂更长肩膀更灵活（能"臂行"——用手臂在树枝间摆荡，像在树上荡秋千）、大脑更大、社会结构更复杂、养育期更长。
+
+现代类人猿：大猩猩、黑猩猩、倭黑猩猩、长臂猿。<b>人类也是类人猿</b>——不是"像"类人猿，就是类人猿。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">直立行走——被气候变化踢下树</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">距今约700万年，<b>东非的气候开始变干</b>。森林退缩→稀树草原扩展→树越来越少越来越稀。
+
+对依赖树木的灵长类来说这是生存危机——你的家在消失。某些灵长类被迫花越来越多时间在地面上。
+
+在开阔的草原上，能<b>直立站起来</b>的个体有优势：
+· 站得高看得远→更早发现远处的捕食者或食物
+· 两条腿走→两只手腾出来→能一边走一边抱着食物或婴儿
+· 直立的身体在正午烈日下暴露在阳光中的面积更小→<b>散热更好</b>（非洲草原的中暑是致命的）
+· 两足行走在长距离上比四足<b>更省能量</b>
+
+慢慢地，能直立行走的个体活得更好→基因扩散→<b>南方古猿</b>出现。它们已经直立行走但大脑还很小（400-500cc，现代人是1300-1500cc）。</div></div></div>
+<div class="sub"><div class="sub-h" onclick="toggleSub(this)"><div class="sub-t">工具与大脑——正反馈循环把猿变成了人</div><span class="sub-a">▾</span></div>
+<div class="sub-body"><div class="sub-ct">距今约300万年，一个新物种出现了：<b>能人</b>（Homo habilis，"灵巧的人"）。
+
+能人是第一个<b>制造工具</b>的物种。最早的工具极简单——一块石头被另一块石头敲掉几片→出现了锋利的边缘→可以切肉、劈开骨头吃骨髓、挖块茎。
+
+工具带来了一个<b>正反馈循环</b>：
+有工具 → 能吃到更多高能食物（肉和骨髓比植物热量高得多）→ 更多能量支撑更大的大脑 → 更大的大脑能制造更好的工具 → 更好的工具获取更多食物 → 大脑继续增大 → ......
+
+距今约200万年，<b>直立人</b>（Homo erectus）出现——脑容量已经到了900cc左右。直立人做了两件改变一切的事：
+
+<b>①学会了用火</b>。火能干什么？烤熟食物。为什么这很重要？生肉很难消化——你的肠胃要花大量能量去分解它。烤熟之后蛋白质变性、纤维软化→<b>同样的食物，消化所需的能量大幅减少→净获取的能量增加</b>→同样的食量能养活更大的大脑。火还能取暖（扩展了活动范围）、吓跑捕食者、延长一天的活动时间（不用天一黑就睡觉）。
+
+<b>②走出了非洲</b>。直立人是第一个扩散到非洲以外的人类物种→到达了亚洲和欧洲。
+
+距今约30万年，<b>智人</b>（Homo sapiens）出现。智人有一个其他所有人类物种都没有的东西：<b>语言</b>。
+
+为什么语言是决定性的？因为语言让知识可以<b>脱离基因传递</b>。之前所有的"知识"只能通过基因遗传（太慢，要几十万年）或者手把手示范（效率低，一次只能教一个人）。有了语言→一个人的发现可以告诉一百个人→一百个人同时改进→改进结果又传给下一千个人。知识积累的速度从生物进化的速度（百万年级别）变成了<b>文化进化的速度（几代人）</b>。
+
+人类和黑猩猩的DNA有<b>98.8%是相同的</b>。仅仅1.2%的基因差异→在几百万年的自然选择中→被放大成了直立行走、语言、抽象思维、写字、建造城市、飞向月球的物种。</div></div></div>`
+  }
+};
+
+let globalSide = 'a';
+const savedA = {};
+let isFlipping = false;
+let flipTimer = null;
+
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest('.sub-h') || e.target.closest('.sub-body') || e.target.closest('.back-btn') || e.target.closest('.intro')) return;
+  flipTimer = setTimeout(() => { doFlipAll(); flipTimer = null; }, 600);
+}, { passive: true });
+document.addEventListener('touchmove', () => { if (flipTimer) { clearTimeout(flipTimer); flipTimer = null; } }, { passive: true });
+document.addEventListener('touchend', () => { if (flipTimer) { clearTimeout(flipTimer); flipTimer = null; } }, { passive: true });
+document.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.sub-h') || e.target.closest('.sub-body') || e.target.closest('.back-btn') || e.target.closest('.intro')) return;
+  flipTimer = setTimeout(() => { doFlipAll(); flipTimer = null; }, 600);
+});
+document.addEventListener('mouseup', () => { if (flipTimer) { clearTimeout(flipTimer); flipTimer = null; } });
+
+function doFlipAll() {
+  if (isFlipping) return;
+  isFlipping = true;
+  const wall = document.getElementById('timelineInner');
+  const epochs = wall.querySelectorAll('.epoch');
+  const nextSide = globalSide === 'a' ? 'b' : 'a';
+  wall.classList.add('wall-out');
+  setTimeout(() => {
+    epochs.forEach((epoch, idx) => {
+      const inner = epoch.querySelector('.flip-inner');
+      if (!inner || !bContent[idx]) return;
+      if (!savedA[idx]) {
+        savedA[idx] = { body: inner.innerHTML, title: epoch.querySelector('.epoch-title').textContent };
+      }
+      if (nextSide === 'b') {
+        inner.innerHTML = bContent[idx].body;
+        epoch.querySelector('.epoch-title').textContent = bContent[idx].title;
+      } else {
+        inner.innerHTML = savedA[idx].body;
+        epoch.querySelector('.epoch-title').textContent = savedA[idx].title;
+      }
+    });
+    globalSide = nextSide;
+    wall.classList.remove('wall-out');
+    wall.classList.add('wall-in');
+    setTimeout(() => { wall.classList.remove('wall-in'); isFlipping = false; }, 600);
+  }, 600);
+  if (navigator.vibrate) navigator.vibrate(30);
+}
+
+// ============ 生命演化音频（大提琴+钢琴，层层叠加）============
+class LifeAudio {
+  constructor() {
+    this.ctx = null;
+    this.started = false;
+    this.layers = [];
+    this.layerIndex = 0;
+    const start = () => { if (!this.started) this.init(); };
+    document.addEventListener('touchstart', start, { once:true });
+    document.addEventListener('click', start, { once:true });
+    document.addEventListener('scroll', start, { once:true });
+  }
+
+  init() {
+    this.started = true;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.ctx.resume();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.45;
+    this.master.connect(this.ctx.destination);
+    this.reverb = this.createWetReverb();
+    // 第一层：单根大提琴C2，10秒从无到有渗出来
+    this.addCelloLayer(65.41, 0.12, 10);
+    // 每15秒加一个新层
+    this.layerTimer = setInterval(() => this.addNextLayer(), 15000);
+  }
+
+  createWetReverb() {
+    const ctx = this.ctx;
+    const len = ctx.sampleRate * 4;
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 1.8));
+    }
+    const conv = ctx.createConvolver();
+    conv.buffer = buf;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.4;
+    conv.connect(wet);
+    wet.connect(this.master);
+    return conv;
+  }
+
+  // 大提琴：sawtooth + 重低通 + vibrato
+  addCelloLayer(freq, volume, attackTime) {
+    const ctx = this.ctx; const now = ctx.currentTime;
+    const osc = ctx.createOscillator(); osc.type = "triangle"; osc.frequency.value = freq;
+    const osc2 = ctx.createOscillator(); osc2.type = "triangle"; osc2.frequency.value = freq * 1.002;
+    const vib = ctx.createOscillator(); vib.type = 'sine'; vib.frequency.value = 0.8;
+    const vibG = ctx.createGain(); vibG.gain.value = 0.5;
+    vib.connect(vibG); vibG.connect(osc.frequency); vib.start(now);
+    const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 400; filter.Q.value = 0.8;
+    const gain = ctx.createGain(); gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(volume, now + attackTime);
+    osc.connect(filter); osc2.connect(filter); filter.connect(gain);
+    gain.connect(this.master); gain.connect(this.reverb);
+    osc.start(now); osc2.start(now);
+    this.layers.push({ osc, osc2, vib, gain, filter, freq });
+  }
+
+  // 钢琴：FM合成
+  playPianoNote(freq, volume) {
+    const ctx = this.ctx; const now = ctx.currentTime;
+    const mod = ctx.createOscillator(); mod.type = 'sine'; mod.frequency.value = freq * 2;
+    const modG = ctx.createGain(); modG.gain.value = freq * 0.5; mod.connect(modG);
+    const car = ctx.createOscillator(); car.type = 'sine'; car.frequency.value = freq; modG.connect(car.frequency);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(volume, now);
+    env.gain.exponentialRampToValueAtTime(volume * 0.3, now + 2);
+    env.gain.exponentialRampToValueAtTime(0.001, now + 6);
+    const flt = ctx.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = 800;
+    car.connect(flt); flt.connect(env); env.connect(this.master); env.connect(this.reverb);
+    mod.start(now); car.start(now); mod.stop(now + 7); car.stop(now + 7);
+  }
+
+  addNextLayer() {
+    this.layerIndex++;
+    switch(this.layerIndex) {
+      case 1: this.addCelloLayer(98.00, 0.08, 8); break;    // +15s: G2 五度
+      case 2: this.addCelloLayer(155.56, 0.06, 8); break;   // +30s: Eb3 小三度
+      case 3: this.startPianoArpeggio(); break;               // +45s: 钢琴琶音
+      case 4: this.addCelloLayer(130.81, 0.07, 6); break;   // +60s: C3 高八度
+      case 5: this.addCelloLayer(103.83, 0.05, 6); break;   // +75s: Ab2
+      case 6: this.openUp(); break;                           // +90s: 声音"打开"
+      default: clearInterval(this.layerTimer); break;
+    }
+  }
+
+  startPianoArpeggio() {
+    const notes = [261.63, 311.13, 392.00, 523.25];
+    let ni = 0;
+    this.pianoTimer = setInterval(() => {
+      this.playPianoNote(notes[ni % notes.length], 0.018); ni++;
+    }, 4000);
+  }
+
+  openUp() {
+    const now = this.ctx.currentTime;
+    this.layers.forEach(l => l.filter.frequency.linearRampToValueAtTime(900, now + 10));
+    if (this.pianoTimer) {
+      clearInterval(this.pianoTimer);
+      const notes = [261.63, 311.13, 392.00, 523.25, 392.00, 311.13];
+      let ni = 0;
+      this.pianoTimer = setInterval(() => {
+        this.playPianoNote(notes[ni % notes.length], 0.022); ni++;
+      }, 3000);
+    }
+  }
+}
+
+new LifeAudio();
+
+</script>
+</body>
+</html>

@@ -728,6 +728,7 @@ function handleTap(x, y, target) {
     if (t === 'item') {
       const key = hot.dataset.key;
       if (key === 'celestial') { window.location.href = './cosmos.html'; return; }
+      if (['microscope','diorama_oxygen','diorama_cambrian','diorama_dinosaur'].includes(key)) { window.location.href = './life.html'; return; }
       if (objectData[key]) openPanel(key);
     } else if (t === 'board') {
       openBoard(hot.dataset.board);
@@ -748,8 +749,8 @@ function handleTap(x, y, target) {
     if (t === 'item') {
       const key = hot.dataset.key;
       if (key === 'celestial') { window.location.href = './cosmos.html'; return; }
+      if (['microscope','diorama_oxygen','diorama_cambrian','diorama_dinosaur'].includes(key)) { window.location.href = './life.html'; return; }
       if (objectData[key]) openPanel(key);
-    } else if (t === 'goto-gallery' || t === 'goto-study') {
       gotoRoom(t === 'goto-gallery' ? 'gallery' : 'study');
     } else {
       walkBack();
@@ -944,24 +945,9 @@ setTimeout(() => document.getElementById('hint').classList.add('hide'), 5000);
   setTimeout(() => screenEl.classList.add('hidden'), 8000);
 })();
 
-// ============= Service Worker 暂时关闭（开发期间避免缓存问题）=============
-// 开发完毕后取消注释即可恢复
-// if ('serviceWorker' in navigator) {
-//   window.addEventListener('load', () => {
-//     navigator.serviceWorker.register('sw.js')
-//       .then(reg => console.log('SW已注册:', reg.scope))
-//       .catch(err => console.warn('SW注册失败:', err));
-//   });
-// }
-
-// 主动注销已有的 SW（清掉旧缓存）
+// ============= Service Worker（保持PWA身份，不缓存）=============
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => r.unregister());
-  });
-  caches.keys().then(keys => {
-    keys.forEach(k => caches.delete(k));
-  });
+  navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 </script>
 </body>
