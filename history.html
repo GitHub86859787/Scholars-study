@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chronicle Map — 世界历史地图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Mono:wght@300;400&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg: #0a0908;
+  --panel: rgba(18, 15, 12, 0.96);
+  --surface: rgba(30, 25, 18, 0.85);
+  --ink: #e8dcc8;
+  --ink-dim: #8a7d6b;
+  --ink-faint: #5a5040;
+  --gold: #c4a265;
+  --gold-bright: #e0c88a;
+  --gold-dim: #6b5a3a;
+  --accent: #6bc4b8;
+  --accent-glow: rgba(107, 196, 184, 0.3);
+  --accent-dim: rgba(107, 196, 184, 0.08);
+  --border: rgba(196, 162, 101, 0.12);
+  --border-hover: rgba(196, 162, 101, 0.3);
+  --shadow-deep: rgba(0,0,0,0.7);
+  --radius: 6px;
+  --font-display: 'Cormorant Garamond', 'Noto Serif SC', serif;
+  --font-body: 'Noto Serif SC', serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow: hidden;
+  width: 100vw; height: 100vh;
+}
+
+/* ===== Ambient Texture ===== */
+.ambient-layer {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+}
+.ambient-layer::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 15% 85%, rgba(196,162,101,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 15%, rgba(107,196,184,0.04) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 50%, rgba(196,162,101,0.02) 0%, transparent 70%);
+}
+.ambient-layer::after {
+  content: ''; position: absolute; inset: 0; opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+}
+
+/* Vignette */
+.vignette {
+  position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  box-shadow: inset 0 0 120px 60px rgba(10,9,8,0.85);
+}
+
+/* ===== HEADER ===== */
+header {
+  position: fixed; top: 0; left: 0; right: 0; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px; z-index: 100;
+  background: linear-gradient(to bottom, rgba(10,9,8,0.95) 0%, rgba(10,9,8,0.6) 70%, transparent 100%);
+  pointer-events: none;
+}
+header > * { pointer-events: auto; }
+
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  opacity: 0; animation: fadeSlideIn 0.8s 0.2s ease forwards;
+}
+.compass-icon { width: 34px; height: 34px; flex-shrink: 0; }
+.compass-icon svg {
+  width: 100%; height: 100%;
+  filter: drop-shadow(0 0 8px rgba(196,162,101,0.2));
+  animation: compassSpin 40s linear infinite;
+}
+@keyframes compassSpin { to { transform: rotate(360deg); } }
+
+.brand-text h1 {
+  font-family: var(--font-display);
+  font-size: 1.35rem; font-weight: 700; letter-spacing: 0.22em;
+  color: var(--gold);
+  text-shadow: 0 1px 12px rgba(0,0,0,0.5);
+}
+.brand-text p {
+  font-size: 0.62rem; color: var(--ink-dim); letter-spacing: 0.15em;
+  margin-top: 1px; font-family: var(--font-mono); font-weight: 300;
+}
+
+.nav-tabs {
+  display: flex; gap: 4px;
+  opacity: 0; animation: fadeSlideIn 0.8s 0.4s ease forwards;
+}
+.nav-tab {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 14px; border: 1px solid transparent;
+  background: transparent; color: var(--ink-dim);
+  font-family: var(--font-body); font-size: 0.72rem;
+  cursor: pointer; transition: all 0.35s ease; border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+.nav-tab:hover { color: var(--ink); background: rgba(196,162,101,0.06); }
+.nav-tab.active {
+  color: var(--accent); border-color: rgba(107,196,184,0.25);
+  background: var(--accent-dim);
+}
+.nav-tab svg { width: 13px; height: 13px; }
+
+/* ===== MAP STAGE ===== */
+#map-stage {
+  position: fixed; inset: 48px 0 100px 0;
+  display: flex; justify-content: center; align-items: center;
+  z-index: 2;
+  overflow: hidden;
+}
+#map-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%; height: 100%;
+}
+#map-image {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  background: #100e0b;
+  transition: opacity 0.9s cubic-bezier(0.4,0,0.2,1), transform 0.9s cubic-bezier(0.4,0,0.2,1);
+  opacity: 1; transform: scale(1);
+  display: block;
+}
+#map-image.fade-out { opacity: 0; transform: scale(1.02); }
+
+/* Hotspots - positioned dynamically by JS to match actual image bounds */
+#hotspots-overlay {
+  position: absolute;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.hotspot {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 3px;
+  transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+  display: flex; align-items: center; justify-content: center;
+}
+.hotspot::before {
+  content: attr(data-name);
+  font-family: var(--font-body);
+  font-size: 0.68rem; font-weight: 600;
+  color: var(--gold-bright);
+  opacity: 0; transform: translateY(4px);
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  text-shadow: 0 1px 8px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8);
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  background: rgba(10,9,8,0.7);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(196,162,101,0.15);
+}
+.hotspot:hover {
+  background: rgba(107,196,184,0.08);
+  border-color: rgba(107,196,184,0.3);
+  box-shadow: 0 0 30px rgba(107,196,184,0.1), inset 0 0 30px rgba(107,196,184,0.03);
+}
+.hotspot:hover::before { opacity: 1; transform: translateY(0); }
+.hotspot.pulse { animation: pulseGlow 3s ease-in-out infinite; }
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 20px rgba(107,196,184,0.08); }
+}
+
+/* Polygon hotspots - invisible by default, soft glow on hover */
+.hotspots-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.hotspot-poly {
+  fill: transparent;
+  stroke: none;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: fill 0.5s ease;
+}
+.hotspot-poly:hover {
+  fill: rgba(107,196,184,0.06);
+}
+.hotspot-poly.selected {
+  fill: rgba(107,196,184,0.1);
+}
+
+
+/* ===== LEFT PANEL ===== */
+#left-panel {
+  position: fixed; top: 0; left: 0; width: 400px;
+  height: 100vh;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  z-index: 110;
+  transform: translateX(-100%);
+  transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+  backdrop-filter: blur(40px) saturate(1.2);
+  box-shadow: 20px 0 80px rgba(0,0,0,0.7);
+}
+#left-panel.open { transform: translateX(0); }
+
+.panel-header {
+  padding: 28px 28px 20px; position: relative;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(196,162,101,0.04) 0%, transparent 100%);
+}
+.panel-close {
+  position: absolute; top: 20px; right: 20px;
+  width: 32px; height: 32px;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--ink-dim); border-radius: 50%;
+  cursor: pointer; font-size: 0.8rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.panel-close:hover {
+  border-color: var(--accent); color: var(--accent);
+  transform: rotate(90deg);
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem; font-weight: 700; color: var(--gold-bright);
+  letter-spacing: 0.08em; line-height: 1.2;
+}
+.panel-title-en {
+  font-size: 0.75rem; color: var(--ink-dim);
+  font-family: var(--font-display); font-style: italic;
+  margin-top: 4px; letter-spacing: 0.1em; font-weight: 400;
+}
+
+.panel-body { flex: 1; overflow-y: auto; padding: 24px 28px; }
+.panel-body::-webkit-scrollbar { width: 3px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+.info-section { margin-bottom: 24px; }
+.info-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.62rem; color: var(--ink-faint);
+  letter-spacing: 0.18em; margin-bottom: 8px;
+  text-transform: uppercase; font-family: var(--font-mono); font-weight: 300;
+}
+.info-label svg { width: 12px; height: 12px; opacity: 0.5; }
+.era-number {
+  font-size: 2.2rem; font-weight: 700; color: var(--accent);
+  font-family: var(--font-display); line-height: 1;
+  letter-spacing: 0.02em;
+}
+.era-unit { font-size: 0.8rem; color: var(--ink-dim); margin-left: 4px; }
+.desc-text {
+  font-size: 0.8rem; line-height: 1.9; color: var(--ink-dim);
+  text-align: justify;
+}
+
+.enter-btn {
+  width: 100%; padding: 14px; margin-top: 12px;
+  background: linear-gradient(135deg, var(--accent-dim) 0%, transparent 100%);
+  border: 1px solid rgba(107,196,184,0.25); color: var(--accent);
+  font-family: var(--font-body); font-size: 0.8rem; font-weight: 600;
+  letter-spacing: 0.12em; cursor: pointer; border-radius: 8px;
+  transition: all 0.35s ease;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.enter-btn:hover {
+  background: rgba(107,196,184,0.15);
+  box-shadow: 0 0 30px rgba(107,196,184,0.1);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.panel-footer {
+  height: 60px;
+  background: linear-gradient(to top, rgba(10,9,8,0.9) 0%, transparent 100%);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; color: var(--ink-faint); letter-spacing: 0.15em;
+  font-family: var(--font-mono); font-weight: 300;
+}
+
+/* ===== RIGHT PANEL ===== */
+#right-panel {
+  position: fixed; top: 50%; right: 20px; transform: translateY(-50%);
+  width: 190px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; z-index: 90;
+  backdrop-filter: blur(30px); box-shadow: 0 12px 50px var(--shadow-deep);
+  opacity: 0; animation: fadeSlideIn 0.8s 0.6s ease forwards;
+}
+.layer-title {
+  font-size: 0.65rem; font-weight: 600; color: var(--gold); margin-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  letter-spacing: 0.1em; font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+.layer-title svg { width: 14px; height: 14px; opacity: 0.4; }
+.layer-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+  cursor: pointer; transition: all 0.3s;
+}
+.layer-item:last-child { border-bottom: none; }
+.layer-icon {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; font-size: 0.75rem;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.04);
+}
+.layer-info h5 { font-size: 0.7rem; font-weight: 600; color: var(--ink); margin-bottom: 1px; }
+.layer-info p { font-size: 0.58rem; color: var(--ink-faint); font-family: var(--font-mono); }
+.eye-icon { margin-left: auto; width: 14px; height: 14px; opacity: 0.4; transition: all 0.3s; }
+.layer-item:hover .eye-icon { opacity: 1; }
+
+/* ===== TIMELINE ===== */
+#timeline-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 100px;
+  background: linear-gradient(to top, rgba(10,9,8,0.98) 0%, rgba(10,9,8,0.8) 60%, transparent 100%);
+  z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0 40px;
+  opacity: 0; animation: fadeSlideUp 0.8s 0.3s ease forwards;
+}
+.timeline-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.6rem; color: var(--ink-faint); margin-bottom: 8px;
+  letter-spacing: 0.18em; font-family: var(--font-mono); font-weight: 300;
+  text-transform: uppercase;
+}
+.timeline-label svg { width: 13px; height: 13px; opacity: 0.4; }
+
+.timeline-track-wrap {
+  position: relative; width: 100%; max-width: 900px; height: 38px;
+  display: flex; align-items: center;
+}
+.timeline-track {
+  position: absolute; left: 0; right: 0; height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold-dim), rgba(196,162,101,0.15), var(--gold-dim), transparent);
+  top: 50%; transform: translateY(-50%);
+}
+/* Progress fill */
+.timeline-progress {
+  position: absolute; left: 0; height: 2px;
+  background: linear-gradient(to right, var(--accent), rgba(107,196,184,0.3));
+  top: 50%; transform: translateY(-50%);
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  border-radius: 1px;
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.timeline-nodes {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  display: flex; justify-content: space-between; pointer-events: none;
+}
+.t-node {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  cursor: pointer; pointer-events: auto; transition: all 0.3s;
+  position: relative;
+}
+.t-node-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--bg); border: 1.5px solid var(--gold-dim);
+  transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+  position: relative; z-index: 2;
+}
+.t-node:hover .t-node-dot {
+  border-color: var(--gold); background: var(--gold);
+  box-shadow: 0 0 10px rgba(196,162,101,0.3);
+}
+.t-node.active .t-node-dot {
+  width: 12px; height: 12px; background: var(--accent); border-color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow), 0 0 40px rgba(107,196,184,0.1);
+}
+.t-node.visited .t-node-dot {
+  background: var(--gold-dim); border-color: var(--gold-dim);
+}
+.t-node-label {
+  font-size: 0.58rem; color: var(--ink-faint);
+  font-family: var(--font-mono); font-weight: 300;
+  transition: color 0.3s; white-space: nowrap; letter-spacing: 0.06em;
+}
+.t-node:hover .t-node-label { color: var(--ink); }
+.t-node.active .t-node-label { color: var(--accent); font-weight: 400; }
+
+#current-year-display {
+  position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+  background: var(--panel); border: 1px solid rgba(107,196,184,0.3); color: var(--accent);
+  padding: 4px 16px; border-radius: 14px;
+  font-size: 0.75rem; font-weight: 600;
+  font-family: var(--font-display); letter-spacing: 0.08em;
+  box-shadow: 0 0 20px rgba(107,196,184,0.08);
+  pointer-events: none; white-space: nowrap;
+  backdrop-filter: blur(12px);
+  transition: all 0.4s ease;
+}
+
+.play-btn {
+  position: absolute; right: -80px; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+  background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
+  font-family: var(--font-mono); font-size: 0.65rem; font-weight: 300;
+  cursor: pointer; border-radius: 20px; transition: all 0.35s;
+  letter-spacing: 0.08em;
+}
+.play-btn:hover {
+  border-color: var(--gold); color: var(--gold-bright);
+  box-shadow: 0 0 16px rgba(196,162,101,0.12);
+}
+.play-btn.playing { border-color: var(--accent); color: var(--accent); }
+.play-btn svg { width: 12px; height: 12px; }
+
+.timeline-hint {
+  margin-top: 8px; font-size: 0.55rem; color: var(--ink-faint); opacity: 0.5;
+  letter-spacing: 0.12em; font-family: var(--font-mono); font-weight: 300;
+}
+
+/* ===== OVERLAY ===== */
+#overlay {
+  position: fixed; inset: 0;
+  background: rgba(10,9,8,0.5);
+  z-index: 105;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.45s ease;
+  backdrop-filter: blur(2px);
+}
+#overlay.active { opacity: 1; pointer-events: auto; }
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== Era Transition Overlay ===== */
+.era-transition {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10,9,8,0.9);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease;
+  backdrop-filter: blur(8px);
+}
+.era-transition.active { opacity: 1; pointer-events: auto; }
+.era-transition-text {
+  font-family: var(--font-display);
+  font-size: 2.5rem; font-weight: 700;
+  color: var(--gold-bright);
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 40px rgba(196,162,101,0.3);
+  transform: scale(0.95);
+  transition: all 0.5s ease;
+}
+.era-transition.active .era-transition-text { transform: scale(1); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1200px) {
+  #right-panel { display: none; }
+  #left-panel { width: 360px; }
+}
+@media (max-width: 768px) {
+  .nav-tabs { display: none; }
+  header { padding: 0 16px; }
+  .brand-text p { display: none; }
+  #left-panel {
+    width: 100%; height: 60vh;
+    top: auto; bottom: 0;
+    border-right: none; border-top: 1px solid var(--border);
+    transform: translateY(100%);
+    border-radius: 16px 16px 0 0;
+  }
+  #left-panel.open { transform: translateY(0); }
+  .play-btn { right: 8px; padding: 7px 12px; font-size: 0.6rem; }
+  .play-btn span { display: none; }
+  #timeline-bar { padding: 0 20px; }
+  .timeline-track-wrap { max-width: 100%; }
+  .t-node-label { font-size: 0.5rem; }
+}
+
+
+/* ===== USA HISTORY FULLSCREEN PAGE ===== */
+#usa-history-page {
+  display:none; position:fixed; inset:0; z-index:10000;
+  background:#1a1612;
+  overflow:hidden;
+  animation: usaFadeIn 0.4s ease;
+}
+@keyframes usaFadeIn { from{opacity:0} to{opacity:1} }
+
+.usa-topbar {
+  position:relative; z-index:10;
+  background:rgba(26,22,18,0.97); backdrop-filter:blur(16px);
+  padding:14px 28px; display:flex; align-items:center; gap:16px;
+  border-bottom:1px solid rgba(107,196,184,0.12);
+}
+.usa-back-btn {
+  background:none; border:1px solid rgba(107,196,184,0.25); color:var(--accent);
+  padding:7px 16px; border-radius:20px; cursor:pointer;
+  font-family:var(--font-mono); font-size:0.68rem;
+  display:flex; align-items:center; gap:6px; transition:all 0.3s;
+}
+.usa-back-btn:hover { background:rgba(107,196,184,0.1); border-color:var(--accent); }
+
+.usa-mode-btn {
+  padding:5px 14px; border-radius:14px; border:none;
+  font-family:var(--font-mono); font-size:0.63rem; cursor:pointer;
+  transition:all 0.3s; background:transparent; color:rgba(227,217,195,0.4);
+}
+.usa-mode-btn.active { background:var(--accent)!important; color:#1a1612!important; font-weight:500; }
+.usa-mode-btn:hover:not(.active) { background:rgba(107,196,184,0.12); color:var(--accent); }
+
+.usa-body { display:flex; height:calc(100% - 54px); overflow:hidden; }
+
+/* Left chapter nav */
+.usa-nav {
+  width:220px; min-width:220px; background:rgba(26,22,18,0.8);
+  border-right:1px solid rgba(107,196,184,0.08);
+  overflow-y:auto; padding:16px 0;
+}
+.usa-nav::-webkit-scrollbar { width:3px; }
+.usa-nav::-webkit-scrollbar-thumb { background:rgba(107,196,184,0.12); border-radius:2px; }
+
+.usa-nav-label {
+  padding:0 16px 10px; font-family:var(--font-mono); font-size:0.55rem;
+  color:rgba(227,217,195,0.25); text-transform:uppercase; letter-spacing:2.5px;
+}
+.usa-ch-btn {
+  display:block; width:100%; text-align:left; background:none; border:none;
+  padding:11px 20px; font-family:var(--font-mono); font-size:0.68rem;
+  color:rgba(227,217,195,0.45); cursor:pointer; transition:all 0.25s;
+  border-left:2px solid transparent; line-height:1.6;
+}
+.usa-ch-btn:hover { background:rgba(107,196,184,0.04); color:rgba(227,217,195,0.7); }
+.usa-ch-btn.active {
+  border-left-color:var(--accent); color:var(--accent);
+  background:rgba(107,196,184,0.06);
+}
+.usa-ch-btn .ch-num {
+  font-size:0.5rem; color:rgba(227,217,195,0.2); display:block;
+  margin-bottom:2px; letter-spacing:1.5px; text-transform:uppercase;
+}
+
+/* Main content area */
+.usa-scroll {
+  flex:1; overflow-y:auto; background:linear-gradient(180deg, #1a1612 0%, #1e1a15 100%);
+}
+.usa-scroll::-webkit-scrollbar { width:5px; }
+.usa-scroll::-webkit-scrollbar-thumb { background:rgba(107,196,184,0.15); border-radius:3px; }
+
+.usa-content-inner {
+  max-width:720px; margin:0 auto; padding:40px 48px 120px;
+}
+
+/* Chapter blocks */
+.usa-chapter-block { margin-bottom:64px; }
+.usa-chapter-head {
+  margin-bottom:32px; padding-bottom:20px;
+  border-bottom:1px solid rgba(107,196,184,0.08);
+}
+.usa-chapter-num {
+  font-family:var(--font-mono); font-size:0.55rem;
+  color:var(--accent); letter-spacing:3px; text-transform:uppercase;
+  margin-bottom:6px; opacity:0.7;
+}
+.usa-chapter-title {
+  font-family:var(--font-serif); font-size:1.8rem;
+  color:rgba(227,217,195,0.9); line-height:1.3; margin-bottom:4px;
+}
+.usa-chapter-subtitle {
+  font-family:var(--font-mono); font-size:0.6rem;
+  color:rgba(227,217,195,0.2); letter-spacing:2px;
+}
+
+/* Timeline events (summary mode) */
+.usa-event {
+  position:relative; padding-left:32px; margin-bottom:28px;
+  border-left:1px solid rgba(107,196,184,0.1); padding-bottom:4px;
+}
+.usa-event::before {
+  content:''; position:absolute; left:-4px; top:8px;
+  width:7px; height:7px; border-radius:50%;
+  background:rgba(107,196,184,0.5);
+  transition:all 0.3s;
+}
+.usa-event:hover::before { background:var(--accent); box-shadow:0 0 8px rgba(107,196,184,0.3); }
+.usa-event.high::before {
+  width:9px; height:9px; left:-5px; top:7px;
+  background:var(--gold); box-shadow:0 0 10px rgba(218,165,32,0.3);
+}
+.usa-event-year {
+  font-family:var(--font-serif); font-size:1rem; color:var(--gold);
+  margin-bottom:3px; opacity:0.8;
+}
+.usa-event.high .usa-event-year { font-size:1.3rem; opacity:1; }
+.usa-event-title {
+  font-family:var(--font-serif); font-size:0.92rem;
+  color:rgba(227,217,195,0.85); margin-bottom:6px; line-height:1.4;
+}
+.usa-event-tags { display:flex; gap:5px; margin-bottom:8px; flex-wrap:wrap; }
+.usa-tag {
+  font-family:var(--font-mono); font-size:0.5rem; padding:2px 8px;
+  border-radius:10px; letter-spacing:0.5px;
+}
+.usa-tag.war { background:rgba(220,20,60,0.08); color:rgba(220,20,60,0.7); }
+.usa-tag.politics { background:rgba(107,196,184,0.08); color:rgba(107,196,184,0.7); }
+.usa-tag.economy { background:rgba(218,165,32,0.08); color:rgba(218,165,32,0.7); }
+.usa-tag.society { background:rgba(34,139,34,0.08); color:rgba(34,139,34,0.7); }
+
+.usa-event-desc {
+  font-family:var(--font-mono); font-size:0.72rem;
+  color:rgba(227,217,195,0.55); line-height:1.9; font-weight:300;
+}
+
+/* Full chapter text (full mode) */
+.usa-full-text {
+  font-family:var(--font-mono); font-size:0.75rem;
+  color:rgba(227,217,195,0.65); line-height:2.1; font-weight:300;
+  white-space:pre-wrap; word-wrap:break-word;
+}
+.usa-full-text p { margin-bottom:1.2em; }
+
+@media (max-width:768px) {
+  .usa-nav { display:none; }
+  .usa-content-inner { padding:24px 20px 80px; }
+  .usa-topbar { padding:10px 16px; }
+  .usa-chapter-title { font-size:1.3rem; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="ambient-layer"></div>
+<div class="vignette"></div>
+<div id="overlay"></div>
+
+<!-- Era Transition -->
+<div class="era-transition" id="era-transition">
+  <div class="era-transition-text" id="era-transition-text"></div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <div class="compass-icon">
+      <svg viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="46" stroke="var(--gold)" stroke-width="0.8" opacity="0.4"/>
+        <circle cx="50" cy="50" r="38" stroke="var(--gold)" stroke-width="0.3" opacity="0.15" stroke-dasharray="2,4"/>
+        <path d="M50,8 L53,42 L50,38 L47,42 Z" fill="var(--gold)"/>
+        <path d="M50,92 L53,58 L50,62 L47,58 Z" fill="var(--gold-dim)"/>
+        <path d="M8,50 L42,53 L38,50 L42,47 Z" fill="var(--gold-dim)"/>
+        <path d="M92,50 L58,53 L62,50 L58,47 Z" fill="var(--gold-dim)"/>
+        <text x="50" y="5" text-anchor="middle" fill="var(--gold)" font-size="8" font-family="Cormorant Garamond" font-weight="700">N</text>
+        <circle cx="50" cy="50" r="2" fill="var(--gold)"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <h1>CHRONICLE MAP</h1>
+      <p>drag through time — watch the world reshape</p>
+    </div>
+  </div>
+
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-mode="political">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
+      政治版图
+    </div>
+    <div class="nav-tab" data-mode="culture">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      文化区域
+    </div>
+    <div class="nav-tab" data-mode="trade">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-6 6"/></svg>
+      贸易交流
+    </div>
+  </div>
+</header>
+
+<!-- MAP -->
+<div id="map-stage">
+  <div id="map-container">
+    <img id="map-image" src="images/map_1000ce.png" alt="历史地图" />
+    <div id="hotspots-overlay"></div>
+  </div>
+</div>
+
+<!-- LEFT PANEL -->
+<div id="left-panel">
+  <div class="panel-header">
+    <button class="panel-close" onclick="closePanel()">✕</button>
+    <div class="panel-title" id="panel-title">伊比利亚</div>
+    <div class="panel-title-en" id="panel-title-en">Iberia</div>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+  <div class="panel-footer">CHRONICLE MAP · EXPLORE HISTORY</div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div id="right-panel">
+  <div class="layer-title">
+    LAYERS
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </div>
+  <div class="layer-item active" data-layer="geo">
+    <div class="layer-icon">⛰</div>
+    <div class="layer-info"><h5>地理区域</h5><p>Natural regions</p></div>
+    <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" fill="var(--accent)" stroke="none"/></svg>
+  </div>
+  <div class="layer-item" data-layer="political">
+    <div class="layer-icon">🛡</div>
+    <div class="layer-info"><h5>政治势力</h5><p>Political borders</p></div>
+    <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" fill="var(--accent)" stroke="none"/></svg>
+  </div>
+  <div class="layer-item" data-layer="trade">
+    <div class="layer-icon">🛤</div>
+    <div class="layer-info"><h5>贸易路线</h5><p>Trade routes</p></div>
+    <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" fill="none"/></svg>
+  </div>
+</div>
+
+<!-- TIMELINE -->
+<div id="timeline-bar">
+  <div class="timeline-label">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    TIMELINE
+  </div>
+  <div class="timeline-track-wrap">
+    <div class="timeline-track"></div>
+    <div class="timeline-progress" id="timeline-progress"></div>
+    <div class="timeline-nodes">
+      <div class="t-node" data-year="prehistoric"><div class="t-node-dot"></div><span class="t-node-label">史前</span></div>
+      <div class="t-node" data-year="3000bce"><div class="t-node-dot"></div><span class="t-node-label">前3000</span></div>
+      <div class="t-node" data-year="500bce"><div class="t-node-dot"></div><span class="t-node-label">前500</span></div>
+      <div class="t-node" data-year="200ce"><div class="t-node-dot"></div><span class="t-node-label">200</span></div>
+      <div class="t-node active" data-year="1000ce"><div class="t-node-dot"></div><span class="t-node-label">1000</span></div>
+      <div class="t-node" data-year="1400ce"><div class="t-node-dot"></div><span class="t-node-label">1400</span></div>
+      <div class="t-node" data-year="1800ce"><div class="t-node-dot"></div><span class="t-node-label">1800</span></div>
+      <div class="t-node" data-year="modern"><div class="t-node-dot"></div><span class="t-node-label">现代</span></div>
+    </div>
+    <div id="current-year-display">公元 1000 年</div>
+    <button class="play-btn" id="play-btn">
+      <span>PLAY</span>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+  </div>
+  <div class="timeline-hint">click a node to travel through time</div>
+</div>
+
+<script>
+// ==================== ERA CONFIG ====================
+const eras = [
+  { id: 'prehistoric', label: '史前', yearLabel: '史前时代', src: 'images/map_prehistoric.png', desc: '人类迁徙，文明尚未点燃' },
+  { id: '3000bce', label: '前3000', yearLabel: '约公元前 3000 年', src: 'images/map_3000bce.png', desc: '文明初现：美索不达米亚、尼罗河、印度河、黄河' },
+  { id: '500bce', label: '前500', yearLabel: '约公元前 500 年', src: 'images/map_500bce.png', desc: '古典时代：波斯、希腊、春秋、印度列国' },
+  { id: '200ce', label: '200年', yearLabel: '约公元 200 年', src: 'images/map_200ce.png', desc: '帝国时代：罗马、汉、帕提亚、贵霜' },
+  { id: '1000ce', label: '1000年', yearLabel: '公元 1000 年', src: 'images/map_1000ce.png', desc: '中世纪：宋、拜占庭、阿拉伯、维京' },
+  { id: '1400ce', label: '1400年', yearLabel: '约公元 1400 年', src: 'images/map_1400ce.png', desc: '蒙古遗产：明朝、帖木儿、奥斯曼崛起' },
+  { id: '1800ce', label: '1800年', yearLabel: '约公元 1800 年', src: 'images/map_1800ce.png', desc: '殖民时代：大英帝国、美国、大清、俄罗斯' },
+  { id: 'modern', label: '现代', yearLabel: '现代世界', src: 'images/map_modern.png', desc: '全球化时代：民族国家、联合国、数字文明' }
+];
+
+// ==================== HOTSPOT DATA ====================
+const hotspotsData = {
+  prehistoric: [
+    { type:'poly', id:'americas', name:'美洲', points:[{x:23.2,y:57.3},{x:20.7,y:54.9},{x:18.4,y:53.8},{x:15.7,y:51.2},{x:14.3,y:47.7},{x:11.9,y:38.8},{x:10.7,y:33},{x:9,y:30.4},{x:5.7,y:31.3},{x:3.8,y:33.4},{x:3.5,y:25.6},{x:5.4,y:22.9},{x:8.8,y:21.5},{x:11.5,y:22.6},{x:16,y:23.3},{x:21.2,y:23.8},{x:23.7,y:20.8},{x:25.6,y:21.8},{x:27.7,y:23.3},{x:29.3,y:25.6},{x:29.3,y:29.6},{x:29,y:31.2},{x:29.9,y:33},{x:31,y:35.2},{x:31.1,y:37.9},{x:31,y:39.1},{x:29.1,y:39.7},{x:27.5,y:40},{x:25.7,y:43.2},{x:23.8,y:46.9},{x:24.3,y:49.5},{x:26.6,y:52.1},{x:22.3,y:47.1},{x:20.1,y:48.2},{x:19.5,y:50.7},{x:19.9,y:51.7},{x:21.4,y:52.9},{x:22.1,y:51.7},{x:22.7,y:53.7},{x:23.1,y:55.4},{x:24.8,y:57},{x:26.3,y:55.3},{x:28.9,y:56.7},{x:31.1,y:59.5},{x:32.6,y:61.4},{x:34.8,y:62.8},{x:35.7,y:64.3},{x:35.5,y:66},{x:33.9,y:68.8},{x:33.3,y:71},{x:32.2,y:72.5},{x:31.3,y:73.6},{x:30.4,y:75.4},{x:29.7,y:76.7},{x:28.8,y:78.2},{x:27.5,y:80},{x:26.5,y:82.5},{x:26.7,y:87.2},{x:26.6,y:88.5},{x:24,y:85.9},{x:24,y:82.4},{x:24.5,y:78.9},{x:25.5,y:74.2},{x:25.3,y:70.4},{x:24.9,y:67.5},{x:23.8,y:65.2},{x:22.9,y:63},{x:22.9,y:60.3},{x:23.6,y:59.2},{x:23.8,y:58.2}], color:'#8fbc8f', desc:'末次冰期结束，冰川消退。克洛维斯猎人追踪猛犸与乳齿象，从白令陆桥向南扩散至整个美洲大陆。' },
+    { type:'poly', id:'eurasia', name:'欧亚大陆', points:[{x:42.6,y:41.2},{x:44.3,y:41.1},{x:44.7,y:39.7},{x:43.8,y:36.4},{x:42.1,y:35.3},{x:44.2,y:32.5},{x:45.1,y:33.1},{x:45.3,y:35.2},{x:46,y:36.3},{x:47.6,y:34.1},{x:48,y:32.4},{x:47.3,y:31.1},{x:47.4,y:29.1},{x:49.3,y:26.4},{x:51.6,y:23.3},{x:54.1,y:23.5},{x:55.2,y:24.8},{x:57,y:26.2},{x:59.9,y:24.3},{x:72.4,y:17.4},{x:74.1,y:18.9},{x:74.6,y:20.4},{x:78.1,y:20.7},{x:78.5,y:21.4},{x:79.8,y:21.9},{x:81,y:22},{x:83.2,y:22.9},{x:85.6,y:24.1},{x:88.8,y:24.8},{x:91.9,y:24},{x:94.6,y:25.1},{x:96.1,y:27},{x:95.8,y:28.7},{x:92.7,y:30.4},{x:87.9,y:30.9},{x:84.7,y:30.8},{x:82.2,y:31.9},{x:82.6,y:33.4},{x:83.9,y:34.6},{x:84.5,y:35.8},{x:84.7,y:37.8},{x:84.5,y:39.7},{x:81.8,y:41.1},{x:80.1,y:42.3},{x:80.7,y:43.9},{x:80.3,y:46.1},{x:78.5,y:44},{x:77.5,y:43.2},{x:77.4,y:45.6},{x:77.6,y:47.1},{x:77.9,y:48.9},{x:76.9,y:50.5},{x:75.9,y:51.6},{x:74.2,y:52},{x:74.3,y:52.2},{x:75.2,y:54.4},{x:74.6,y:57},{x:72.5,y:56.1},{x:72,y:56.2},{x:71.6,y:56.4},{x:71,y:54.6},{x:70.7,y:52.9},{x:69.7,y:51.8},{x:68.7,y:51.8},{x:67.8,y:53.4},{x:67.2,y:54.8},{x:66.7,y:56.1},{x:67,y:57.6},{x:66,y:57.3},{x:65.3,y:55.6},{x:64.3,y:53.4},{x:64.2,y:51.8},{x:63.7,y:51},{x:61.4,y:49.8},{x:60,y:49.5},{x:58.6,y:48.2},{x:58.2,y:48.9},{x:61.4,y:50.5},{x:61,y:52.4},{x:58,y:54.6},{x:56.6,y:54.5},{x:56.3,y:52.9},{x:54.8,y:49.5},{x:54.4,y:45.1},{x:50.9,y:44.3},{x:48.3,y:43.2},{x:42.5,y:44.9}], color:'#daa520', desc:'农业革命在肥沃新月地带酝酿。欧洲洞穴壁画记录狩猎与信仰，草原民族驯化马匹，社会分层初现端倪。' },
+    { type:'poly', id:'africa', name:'非洲', points:[{x:53.7,y:47.1},{x:50.8,y:46.1},{x:49.3,y:47.2},{x:47.5,y:45.4},{x:47.4,y:44.4},{x:43.4,y:45.4},{x:42.1,y:46.5},{x:41.2,y:48.2},{x:39.9,y:50.2},{x:39.7,y:53.9},{x:40.5,y:57.6},{x:42.1,y:59.4},{x:44.6,y:59.2},{x:46,y:59.3},{x:46.8,y:61.1},{x:46.5,y:62.7},{x:48,y:64.7},{x:48.2,y:67.2},{x:47.7,y:69.2},{x:48.4,y:72.2},{x:49.5,y:75.6},{x:50.4,y:76.4},{x:52.5,y:75.7},{x:53.7,y:72.9},{x:54.8,y:69.2},{x:55.3,y:66.3},{x:55.6,y:62.7},{x:57.4,y:59.3},{x:59.5,y:56.1},{x:59.4,y:54.9},{x:58.5,y:53.7}], color:'#cd5c5c', desc:'撒哈拉仍是绿色草原，尼罗河谷出现最早农业聚落。智人的故乡，班图人开始漫长的南迁之旅。' },
+    { type:'poly', id:'australia', name:'澳大利亚', points:[{x:76.9,y:70.9},{x:78.1,y:69.4},{x:79.1,y:67.8},{x:80.5,y:66.5},{x:81.7,y:66.3},{x:82.8,y:68.3},{x:84.1,y:69.3},{x:84,y:66.6},{x:84.9,y:68},{x:85.7,y:70.2},{x:86.7,y:72},{x:87.6,y:73.8},{x:87,y:77.1},{x:86.1,y:79.6},{x:84.5,y:80},{x:82.9,y:79.1},{x:81.8,y:77.9},{x:80.7,y:76.5},{x:79.2,y:76.4},{x:77.9,y:76.9},{x:76.9,y:77.6},{x:76.3,y:77.4},{x:76.5,y:75.4},{x:75.4,y:74.3},{x:75.7,y:72.2}], color:'#9370db', desc:'约五万年前抵达的先民发展出Dreamtime信仰。巨型动物群灭绝后，火棍农业管理着广袤的红土大地。' },
+    { type:'poly', id:'beringia', name:'白令陆桥', points:[{x:84,y:19.4},{x:90.4,y:18.9},{x:91.3,y:22},{x:90.2,y:24.2},{x:87.5,y:25.6},{x:84,y:25.3},{x:82.9,y:23.1},{x:83,y:20.4}], color:'#5dd9d0', desc:'海平面下降百米，暴露出连接亚洲与美洲的广阔苔原。猛犸、野马与人类在此迁徙，踏上新大陆的征程。' },
+    { type:'poly', id:'arctic_ocean', name:'北冰洋', points:[{x:50.2,y:9.2},{x:47.5,y:9.9},{x:46.9,y:14.3},{x:52,y:15.9},{x:55.7,y:15.5},{x:56.6,y:11.6},{x:55.9,y:9},{x:53.3,y:8.9}], color:'#5dd9d0', desc:'冰封的北方之海。冰期极盛时几乎完全冻结，海冰厚达数百米。北极熊与海豹在浮冰边缘生存。' },
+    { type:'poly', id:'pacific1', name:'太平洋', points:[{x:3.9,y:52.1},{x:2.3,y:55.1},{x:3,y:58.1},{x:11.2,y:58.1},{x:11.2,y:50.9},{x:11.2,y:50.7},{x:7.7,y:50.4}], color:'#5dd9d0', desc:'地球最大的水域，太平洋群岛上尚无人迹。波利尼西亚航海者的传奇要等待数千年后才会开始。' },
+    { id:'antarctic_sea', name:'南极海', top:82.6, left:47.1, w:9.4, h:6.5, color:'#5dd9d0', desc:'环绕南极的极寒海域，环极洋流隔绝了这片冰冻大陆。鲸鱼与企鹅是这里唯一的主人。' },
+    { id:'atlantic', name:'大西洋', top:43.9, left:28.9, w:9.5, h:7.6, color:'#5dd9d0', desc:'分隔旧大陆与新大陆的汪洋。史前人类只能望洋兴叹，跨越它要等待一万多年。' },
+    { id:'indian_ocean', name:'印度洋', top:64.7, left:62.8, w:8.9, h:7.6, color:'#5dd9d0', desc:'温暖的季风之海。沿海先民以贝壳和鱼骨为伴，印度洋的贸易网络尚在遥远的未来。' },
+    { id:'pacific2', name:'太平洋', top:46.3, left:85.4, w:11.2, h:9.7, color:'#5dd9d0', desc:'太平洋西部，未来的航海民族将从东南亚出发，踏上征服这片蓝色大陆的史诗旅程。' },
+    { type:'poly', id:'antarctica', name:'南极洲', points:[{x:32.2,y:96},{x:34.5,y:94.1},{x:38.8,y:92.2},{x:44.1,y:91.4},{x:48.6,y:90.3},{x:53.7,y:90.1},{x:59.1,y:90.1},{x:60.7,y:91.6},{x:66,y:91.3},{x:69.8,y:91.7},{x:75.6,y:95.6},{x:79.4,y:98.4},{x:77.2,y:99.4},{x:33.2,y:99.3},{x:31.9,y:98.3},{x:31.4,y:97.8}], color:'#5dd9d0', desc:'被冰盖覆盖的第七大洲，厚度达四千米的冰层下封存着远古的秘密。直到十九世纪才被人类发现。' }
+  ],
+  '3000bce': [
+    { type:'poly', id:'mesopotamia', name:'美索不达米亚', points:[{x:56.8,y:39.4},{x:55.5,y:38.4},{x:55.9,y:36.1},{x:57.9,y:34.8},{x:60.5,y:35.2},{x:63.4,y:35.6},{x:65.1,y:36.3},{x:64.7,y:38.4},{x:64.2,y:39.2},{x:63.6,y:41},{x:62.5,y:41.3},{x:61.9,y:43.9},{x:61.4,y:45.5},{x:59.4,y:46.3},{x:57.7,y:45.2},{x:57.4,y:43.6},{x:57.3,y:42.4},{x:57.3,y:41.9}], color:'#daa520', desc:'苏美尔城邦林立，乌鲁克可能是世界上第一座真正的城市。楔形文字刚刚诞生，吉尔伽美什的传说在两河之间流传。' },
+    { type:'poly', id:'egypt', name:'尼罗河流域', points:[{x:50.5,y:54.5},{x:49.3,y:53.5},{x:48.1,y:52.1},{x:48.9,y:50},{x:50.6,y:49.3},{x:53.1,y:49.1},{x:55.7,y:49.5},{x:57.2,y:50.7},{x:57.5,y:51.7},{x:57,y:53.4},{x:55.2,y:55},{x:54.2,y:55.7},{x:52,y:56.6},{x:51.5,y:56.6}], color:'#cd5c5c', desc:'上下埃及刚刚统一，法老戴上双冠。金字塔时代即将来临，尼罗河的周期性泛滥养育着人类最早的伟大文明之一。' },
+    { type:'poly', id:'aegean', name:'爱琴海', points:[{x:51.5,y:45.1},{x:49.7,y:41.9},{x:50.2,y:38.4},{x:52.4,y:38.3},{x:54.8,y:39.2},{x:55.6,y:40.7},{x:55.4,y:43.2},{x:55,y:44.4},{x:53.6,y:45.7}], color:'#ff8c00', desc:'基克拉泽斯群岛的海员在爱琴海穿梭。克里特岛上米诺斯文明正在酝酿，连接埃及与安纳托利亚的海上贸易初步形成。' },
+    { type:'poly', id:'indus', name:'印度河流域', points:[{x:65.3,y:52.2},{x:64.4,y:50},{x:65.1,y:47.2},{x:67.3,y:46.3},{x:68.7,y:46.8},{x:70.6,y:47.2},{x:74.2,y:47.1},{x:75.2,y:48.5},{x:75.3,y:51},{x:73.3,y:52},{x:72.4,y:51.6},{x:71.3,y:53.9},{x:68.9,y:53.4},{x:67.5,y:52.9},{x:66.8,y:53.1}], color:'#9370db', desc:'哈拉帕与摩亨佐-达罗拥有世界最早的城市排水系统。棋盘式街道、标准化砖块、神秘印章文字——高度组织化的文明悄然兴起。' },
+    { type:'poly', id:'yellow_river', name:'黄河流域', points:[{x:77.7,y:41.4},{x:77.9,y:39},{x:79,y:37.8},{x:81.3,y:38},{x:83.7,y:38},{x:85,y:38.4},{x:85.5,y:40.8},{x:85.1,y:42.9},{x:82.5,y:43.5},{x:79.4,y:43.5},{x:78.8,y:44.4},{x:77.1,y:45},{x:74.9,y:44.6},{x:75.2,y:41.9},{x:76.2,y:40.5}], color:'#5dd9d0', desc:'仰韶彩陶向龙山黑陶过渡，部落联盟日趋复杂。传说中的三皇五帝时代，华夏文明在黄河弯道处孕育成形。' }
+  ],
+  '500bce': [
+    { type:'poly', id:'persia', name:'波斯帝国', points:[{x:41.4,y:46.6},{x:41.1,y:45.7},{x:41,y:44.6},{x:41.2,y:42.3},{x:41,y:41.1},{x:42,y:41.8},{x:42.9,y:41.9},{x:43.6,y:39.7},{x:43.1,y:38.3},{x:44.3,y:37.3},{x:46.5,y:35.7},{x:47.5,y:34.1},{x:46.9,y:33.1},{x:45.8,y:32.4},{x:46.9,y:29.6},{x:48.1,y:26.8},{x:49.8,y:24.6},{x:51.7,y:24.3},{x:53.3,y:24.7},{x:54.4,y:25.7},{x:55,y:26.9},{x:55.2,y:27.5},{x:56.4,y:25.9},{x:57.9,y:25.8},{x:58.2,y:28},{x:60.1,y:27.9},{x:61.9,y:27.9},{x:59.9,y:30.2},{x:60.1,y:31.3},{x:61.1,y:33.5},{x:63.4,y:35.6},{x:64.5,y:35.9},{x:65.6,y:36.1},{x:66.3,y:37.3},{x:65.4,y:38.3},{x:65.1,y:39.4},{x:65.1,y:40.8},{x:65.5,y:42.4},{x:67.7,y:44},{x:69.5,y:44.1},{x:70.5,y:42.7},{x:71.2,y:42.9},{x:72.3,y:44.9},{x:74,y:46.6},{x:75.2,y:48},{x:75.2,y:50.5},{x:75.2,y:52.7},{x:75.2,y:54.6},{x:74.6,y:56.1},{x:72.8,y:55.7},{x:72.1,y:53.7},{x:70.4,y:52.9},{x:67.5,y:51.1},{x:66.8,y:49.6},{x:66.4,y:51.7},{x:65.4,y:53.5},{x:64.7,y:54.3},{x:63.2,y:53.7},{x:61.6,y:52.9},{x:60.5,y:51.6},{x:60.1,y:51.2},{x:60.1,y:52.9},{x:60.9,y:54.2},{x:62.2,y:54.8},{x:62.8,y:54.3},{x:63.2,y:55.4},{x:62.7,y:56.6},{x:61.6,y:58.4},{x:60.3,y:59.3},{x:59.4,y:59.5},{x:58.2,y:60},{x:57.5,y:57.6},{x:57,y:55.6},{x:56.4,y:54.3},{x:55.9,y:52.7},{x:55.7,y:51.7},{x:56,y:50.6},{x:56.4,y:49},{x:56.2,y:48.2},{x:54.6,y:48.2},{x:53.6,y:47.4},{x:52.8,y:46.8},{x:52.2,y:48.3},{x:50.9,y:46.8},{x:50.4,y:45.1},{x:49.3,y:43.6},{x:48,y:42.4},{x:47.6,y:43.4},{x:48.8,y:44.6},{x:49.3,y:45.5},{x:48.8,y:46.1},{x:47.8,y:44.3},{x:47.2,y:43.4},{x:46.7,y:42.8},{x:46,y:42.9},{x:45.2,y:43.8},{x:44.4,y:43.9},{x:43.8,y:45.4},{x:43.4,y:45.5},{x:43.2,y:45.5},{x:42.9,y:46.2},{x:42.3,y:46.3}], color:'#9370db', desc:'居鲁士大帝建立的帝国横跨三洲，从埃及到印度。波斯御道贯穿全境，万国之门见证多元共治的帝国实验。' },
+    { id:'greece', name:'希腊城邦', top:20, left:38, w:7, h:8, color:'#5dd9d0', desc:'雅典民主制萌芽，斯巴达军事国家鼎盛。马拉松战役即将上演，希腊人将以少胜多击退波斯入侵。' },
+    { type:'poly', id:'egypt', name:'埃及', points:[{x:47.3,y:57.8},{x:47.6,y:57.1},{x:47.3,y:56.2},{x:47.3,y:55.1},{x:48.4,y:54.9},{x:48.7,y:53.3},{x:48.8,y:51.7},{x:49.2,y:51},{x:49.6,y:50.2},{x:50.8,y:50},{x:51.6,y:49.8},{x:52.6,y:50.4},{x:53.3,y:50.7},{x:53.9,y:51.1},{x:53.9,y:51.8},{x:53.7,y:52.8},{x:53.7,y:54},{x:54.2,y:54.6},{x:54.6,y:55.6},{x:54.9,y:56.4},{x:54.8,y:57.8},{x:54.6,y:58.6},{x:54.4,y:59.2},{x:54.4,y:60},{x:54.2,y:61},{x:54.1,y:61.4},{x:53.9,y:62.1},{x:53.9,y:63.3},{x:53.9,y:64.4},{x:53.1,y:65.8},{x:52.9,y:66.5},{x:51.7,y:66.1},{x:51.1,y:64.2},{x:50.9,y:63.2},{x:50.7,y:62.2},{x:50.4,y:61.2},{x:50.1,y:60.5},{x:49.7,y:59.8},{x:49.2,y:59.7},{x:48.7,y:59.7},{x:47.6,y:58.8}], color:'#daa520', desc:'古老文明已历经三千年。波斯统治下的埃及仍在建造神庙，但法老时代的独立荣光已经暗淡。' },
+    { type:'poly', id:'india', name:'印度', points:[{x:68.4,y:67.2},{x:68,y:65.6},{x:67,y:63.4},{x:66.4,y:60.4},{x:66.2,y:57.7},{x:65.6,y:56.8},{x:65,y:56.6},{x:64.7,y:55.4},{x:64.3,y:54.3},{x:64.6,y:53.9},{x:65.4,y:53.1},{x:66,y:52.2},{x:66.7,y:50.7},{x:66.9,y:50},{x:67.9,y:51.2},{x:68.8,y:52.1},{x:69.8,y:52.6},{x:70.8,y:53.2},{x:71.7,y:52.9},{x:72.4,y:53.7},{x:73,y:55.5},{x:73,y:56.8},{x:72.5,y:57.8},{x:71.9,y:59.7},{x:71.3,y:61.2},{x:70.8,y:62.6},{x:70.3,y:64.2},{x:70.2,y:65},{x:69.8,y:66},{x:69.7,y:66.6},{x:69.5,y:66.9}], color:'#cd853f', desc:'十六大国并立，释迦牟尼在菩提树下觉悟。奥义书哲学与沙门思潮挑战婆罗门正统，印度思想的轴心时代。' },
+    { type:'poly', id:'gaul', name:'高卢', points:[{x:20.3,y:38.8},{x:19.6,y:37.8},{x:18.7,y:37.5},{x:18.2,y:35.8},{x:18.9,y:33.6},{x:19.6,y:32.4},{x:20.6,y:33},{x:22,y:33.7},{x:23.3,y:35.9},{x:23.7,y:36.6},{x:24,y:34.8},{x:24.4,y:33.3},{x:24.2,y:32.2},{x:24.4,y:30.4},{x:24.9,y:30.2},{x:25.9,y:30.3},{x:26.8,y:31.2},{x:26.8,y:32.6},{x:27.4,y:32.8},{x:27.8,y:32},{x:27.8,y:31.5},{x:28.4,y:32.9},{x:28.5,y:33.7},{x:29.1,y:34.6},{x:29.7,y:35.1},{x:30.2,y:35.8},{x:30,y:36.6},{x:29.2,y:37.3},{x:28.8,y:37.8},{x:27.8,y:38.3},{x:27.6,y:38.3},{x:27.7,y:39.2},{x:27.8,y:40},{x:29.1,y:40.5},{x:28.4,y:41.2},{x:27.3,y:41.4},{x:26.9,y:41.4},{x:26.6,y:41.9},{x:26,y:42.7},{x:25.3,y:43.4},{x:24,y:42.2},{x:23.5,y:42.4},{x:22.3,y:42.3},{x:21.7,y:42.1},{x:21.6,y:41.6},{x:21.6,y:41},{x:21.1,y:40.5},{x:20.7,y:40}], color:'#8fbc8f', desc:'凯尔特战士与德鲁伊祭司的土地。拉坦诺铁器工艺精美，他们的战斗力令地中海世界颤栗。' },
+    { type:'poly', id:'italia', name:'意大利', points:[{x:33.3,y:45.2},{x:33.7,y:44.4},{x:33.9,y:43.4},{x:34.1,y:42.4},{x:34.4,y:41.8},{x:34.6,y:40.5},{x:34.8,y:39.7},{x:35.4,y:39.7},{x:36.1,y:39.9},{x:36.5,y:40.3},{x:37.1,y:40.5},{x:37.8,y:40.6},{x:38.3,y:41.3},{x:38.8,y:41.7},{x:39.6,y:42.2},{x:40.1,y:42.2},{x:40.5,y:42.8},{x:40.9,y:43.4},{x:40.9,y:44.1},{x:40.3,y:45},{x:39.6,y:45.4},{x:39.2,y:45.6},{x:38.8,y:46.1},{x:38.5,y:46.6},{x:38.2,y:46.6},{x:36.3,y:47.1},{x:34.8,y:47.1},{x:35.4,y:46.1},{x:34.8,y:44.6},{x:34.6,y:44.5},{x:34.1,y:45}], color:'#ff8c00', desc:'伊特鲁里亚城市联盟鼎盛，罗马共和国刚刚驱逐最后一位国王。拉丁姆的七丘之城正蓄势待发。' },
+    { type:'poly', id:'phoenicia', name:'腓尼基', points:[{x:41.1,y:50.2},{x:41,y:52.2},{x:41.4,y:53.5},{x:44.6,y:53.7},{x:46.1,y:52.4},{x:46.2,y:50.4},{x:46.7,y:49.6},{x:47.3,y:48.8},{x:47.4,y:47.9},{x:46.8,y:47.1},{x:46.3,y:46.8},{x:44.7,y:46.8},{x:43.2,y:47.3},{x:41.8,y:47.8},{x:40.9,y:50}], color:'#4682b4', desc:'紫色染料之国的海上帝国。字母文字已传遍地中海，迦太基在北非崛起，即将与罗马争夺霸权。' },
+    { type:'poly', id:'zhou_states', name:'东周诸侯', points:[{x:58.5,y:26},{x:59.4,y:25.6},{x:60.3,y:25.2},{x:61.4,y:24.3},{x:62.4,y:22.9},{x:63.4,y:22.1},{x:64.2,y:22.6},{x:66.1,y:22.4},{x:66.7,y:21.6},{x:68.5,y:20.4},{x:69.5,y:20.2},{x:70.5,y:20.2},{x:73.2,y:19.1},{x:74.8,y:18.9},{x:76.3,y:19.9},{x:76.3,y:21.1},{x:77.2,y:21.8},{x:78,y:22},{x:78.5,y:20.9},{x:80.3,y:23},{x:81.2,y:23.1},{x:82.1,y:22},{x:83,y:21.5},{x:84.6,y:22.5},{x:86.1,y:23.1},{x:87.1,y:23.2},{x:88.2,y:23.7},{x:88.8,y:24.1},{x:89.7,y:25.3},{x:90.7,y:24.8},{x:91.6,y:25.7},{x:91.7,y:25.4},{x:92.2,y:24.8},{x:93.9,y:25.4},{x:94.8,y:25.7},{x:96.1,y:26.8},{x:96.6,y:28.2},{x:95.9,y:28.7},{x:94.6,y:28.5},{x:94,y:30.2},{x:93.5,y:30.6},{x:92.3,y:30.7},{x:91.9,y:31.9},{x:91.9,y:32.4},{x:90.6,y:32.2},{x:90.5,y:32},{x:89.1,y:30.9},{x:89.5,y:34.7},{x:88.3,y:36.4},{x:88.5,y:33.7},{x:88.2,y:31.5},{x:87.8,y:31.2},{x:86.5,y:32.6},{x:85.6,y:32.6},{x:84.5,y:32.4},{x:83.8,y:34.4},{x:83.9,y:35.2},{x:82.7,y:34.8},{x:82.1,y:35.2},{x:81.8,y:35.6},{x:81.2,y:35.9},{x:80.5,y:35.8},{x:80.2,y:36.8},{x:79.7,y:37.5},{x:78.8,y:36.7},{x:78.6,y:36.6},{x:77.5,y:36.3},{x:76.7,y:36.3},{x:76.2,y:36.6},{x:75.8,y:36.9},{x:75.6,y:37.7},{x:75.2,y:38.3},{x:75.1,y:39.2},{x:75.3,y:40.5},{x:75,y:41},{x:74.4,y:41.7},{x:74.4,y:42.8},{x:74.4,y:43.4},{x:74.8,y:44.3},{x:74.6,y:45.1},{x:72.8,y:44.6},{x:71.6,y:43.9},{x:70.2,y:42.4},{x:70.5,y:41.2},{x:71.1,y:40.8},{x:72,y:40.3},{x:71.1,y:38.3},{x:70.9,y:38},{x:69.3,y:37.2},{x:68,y:36.6},{x:66.5,y:36.2},{x:65.9,y:36.6},{x:63.9,y:35.3},{x:62.5,y:34.6},{x:61.5,y:33.4},{x:60.1,y:31.3},{x:60.5,y:30.1},{x:61.8,y:28.5},{x:59.7,y:27.8},{x:58.4,y:27.6},{x:58,y:27.5},{x:58.1,y:26.4},{x:58.1,y:26.3}], color:'#dc143c', desc:'礼崩乐坏，列国争雄。孔子周游列国传道，老子留下五千言。铁器普及催生军事革命，百家争鸣照亮思想的天空。' },
+    { type:'poly', id:'bactria', name:'巴克特里亚', points:[{x:65.6,y:40.8},{x:65.1,y:39.7},{x:65.1,y:38.5},{x:65.6,y:38.4},{x:66,y:37.5},{x:66.4,y:36.8},{x:67.3,y:36.8},{x:68.3,y:37},{x:69,y:37.2},{x:69.7,y:37.5},{x:70,y:38.3},{x:70.8,y:38.6},{x:71.7,y:39.1},{x:72,y:39.2},{x:72.2,y:39.4},{x:71.9,y:40.5},{x:71.4,y:41.3},{x:70.7,y:42.4},{x:70.1,y:42.9},{x:69.5,y:43.4},{x:68.8,y:43.9},{x:67.4,y:44},{x:66.6,y:43.6},{x:66,y:43},{x:65.6,y:42.5},{x:65.6,y:42.4},{x:65.5,y:42.1}], color:'#8b8682', desc:'波斯帝国东部行省，中亚文明的十字路口。希腊、波斯、印度文化在此交融，未来将绽放东西合璧的奇异之花。' },
+    { type:'poly', id:'zhao', name:'赵', points:[{x:75.6,y:45.6},{x:75.1,y:44.9},{x:74.7,y:44.5},{x:74.4,y:43.6},{x:74.1,y:42.8},{x:74.2,y:41.9},{x:74.5,y:41},{x:74.6,y:40},{x:74.6,y:39},{x:75,y:38},{x:75.2,y:37.3},{x:75.9,y:36.4},{x:76.9,y:36.2},{x:78.1,y:36.2},{x:78.7,y:36.7},{x:79.4,y:37.2},{x:79.7,y:37.7},{x:80,y:38.3},{x:79.8,y:39.5},{x:79.6,y:40.5},{x:79.4,y:41.2},{x:78.8,y:41.4},{x:78.5,y:41},{x:77.9,y:41.9},{x:77.4,y:42.7},{x:76.9,y:43.3},{x:76.3,y:44.5},{x:76.3,y:45.4},{x:76.3,y:45.6}], color:'#cd5c5c', desc:'北方军事强国，胡服骑射改革使赵国骑兵纵横草原。长平之战的悲剧尚在百年之后。' },
+    { type:'poly', id:'yan', name:'燕', points:[{x:80.1,y:37.5},{x:80.5,y:36.3},{x:80.8,y:35.8},{x:81.5,y:35.8},{x:81.6,y:35.2},{x:81.9,y:34.8},{x:82.9,y:34.8},{x:83.3,y:34.8},{x:83.9,y:35.3},{x:84,y:35.8},{x:84.2,y:36.3},{x:84.3,y:36.8},{x:84.4,y:38},{x:84.4,y:38.3},{x:84.4,y:39.1},{x:84.3,y:40.1},{x:84.3,y:40.3},{x:83.8,y:40.5},{x:83.4,y:40.2},{x:83,y:40.1},{x:82.6,y:40.5},{x:82.1,y:41.2},{x:81.9,y:41.4},{x:81.7,y:41.9},{x:81.4,y:42.2},{x:81.2,y:42.8},{x:80.7,y:42.4},{x:80.5,y:41.9},{x:80.1,y:41.9},{x:79.7,y:41.9},{x:78.5,y:41.8},{x:78.6,y:41.7},{x:79,y:41.3},{x:79.2,y:41},{x:79.5,y:40.6},{x:79.7,y:40},{x:79.7,y:39.4},{x:79.9,y:38.8},{x:80,y:37.9}], color:'#4682b4', desc:'燕赵之地多慷慨悲歌之士。燕国偏居东北，修筑长城抵御东胡，荆轲刺秦的故事将从这里开始。' },
+    { type:'poly', id:'qi', name:'齐', points:[{x:81.4,y:42.5},{x:81.4,y:42.9},{x:81.2,y:43.3},{x:81.2,y:43.6},{x:81.2,y:44.1},{x:81.7,y:44.5},{x:82.1,y:44.9},{x:82.4,y:46},{x:82.4,y:46.2},{x:82.5,y:46.6},{x:82.9,y:47.2},{x:83.2,y:47.8},{x:83.6,y:47.1},{x:84,y:46.3},{x:84.3,y:45.6},{x:85.1,y:44.6},{x:85.1,y:43.4},{x:85.1,y:42.4},{x:85,y:41.9},{x:85,y:40.7},{x:85,y:40},{x:84.2,y:40},{x:84.1,y:40.1},{x:83,y:40.3},{x:82.5,y:40.3},{x:81.8,y:41.6}], color:'#4682b4', desc:'东方大国，管仲变法使齐桓公成为春秋首霸。稷下学宫汇聚天下贤才，是中国最早的学术中心。' },
+    { type:'poly', id:'wei', name:'魏', points:[{x:77.2,y:46.6},{x:76.1,y:45.7},{x:76.5,y:44.1},{x:76.9,y:42.9},{x:77.6,y:42.4},{x:78.3,y:41.7},{x:79.2,y:41.6},{x:79.6,y:41.9},{x:80.3,y:42.7},{x:80.8,y:42.9},{x:81.3,y:44.1},{x:81.8,y:45},{x:81.9,y:45.4},{x:82.3,y:46.6},{x:82.3,y:47.1},{x:82.5,y:47.8},{x:82.9,y:48.7},{x:81.8,y:48.8},{x:80.1,y:48.7},{x:79.8,y:48.8},{x:79.9,y:47.6},{x:79.9,y:47.1},{x:79.6,y:46.6},{x:78.5,y:46.5},{x:77,y:46.1},{x:77.2,y:46.6}], color:'#8fbc8f', desc:'中原腹地，魏文侯率先变法称雄。李悝、吴起皆出于魏，但四战之地终将被秦蚕食。' },
+    { type:'poly', id:'han_state', name:'韩', points:[{x:77.1,y:48.5},{x:77.2,y:47.8},{x:77.4,y:47.1},{x:77.4,y:46.7},{x:78.6,y:45.8},{x:79.2,y:46.3},{x:80.1,y:46.7},{x:80.3,y:47.3},{x:80.2,y:48},{x:79.9,y:49.4},{x:79.4,y:50.1},{x:78.7,y:50.5},{x:78.1,y:50.2},{x:77.7,y:49.8},{x:77.5,y:49.6}], color:'#ff69b4', desc:'最小的战国七雄，夹在秦、楚、魏之间艰难求存。韩非子的法术势思想却成为秦统一天下的理论武器。' },
+    { type:'poly', id:'chu', name:'楚', points:[{x:77.4,y:49.5},{x:76.4,y:50},{x:76.1,y:50},{x:75.6,y:50.6},{x:75.2,y:51.7},{x:75.2,y:52.7},{x:75.2,y:53.7},{x:75.4,y:55},{x:75.7,y:55.6},{x:76.2,y:56.1},{x:77.8,y:56.5},{x:78,y:56.8},{x:78.5,y:55.5},{x:79.8,y:55.5},{x:80.1,y:55.3},{x:81,y:53.7},{x:81.6,y:52.9},{x:82,y:52.1},{x:82.4,y:51.5},{x:83,y:50.4},{x:83.4,y:49.6},{x:83.4,y:49.4},{x:83.2,y:48.7},{x:82.3,y:48.8},{x:81.2,y:49},{x:79.9,y:49.3},{x:79.4,y:50.2},{x:78.5,y:50.9},{x:78.3,y:50.6},{x:78.1,y:50.5}], color:'#228b22', desc:'南方霸主，楚文化瑰丽浪漫。屈原的离骚、曾侯乙编钟，楚人以蛮夷自居却创造了不亚于中原的灿烂文明。' }
+  ],
+  '200ce': [
+    { type:'poly', id:'rome', name:'罗马帝国', points:[{x:30,y:43.9},{x:31.1,y:46},{x:31.2,y:48},{x:31.9,y:50},{x:32.4,y:47.3},{x:32.6,y:47.8},{x:34.1,y:49.6},{x:35.1,y:48.8},{x:35.2,y:47.8},{x:35.7,y:47.3},{x:35.9,y:48.5},{x:36.3,y:50.2},{x:38.1,y:50.5},{x:39.7,y:50.5},{x:41,y:50.5},{x:41,y:50.9},{x:40.5,y:52.2},{x:39.6,y:53.8},{x:38.8,y:54.4},{x:37.7,y:54.9},{x:36.1,y:54.9},{x:33.6,y:54.2},{x:32.4,y:53.7},{x:31.4,y:54.4},{x:31.1,y:56},{x:30.7,y:57.9},{x:31.1,y:58.9},{x:32.7,y:59.3},{x:33.7,y:59.8},{x:35.4,y:60.3},{x:37.9,y:61.6},{x:38.8,y:61},{x:39.6,y:60.3},{x:40.2,y:60.1},{x:40.1,y:58.4},{x:39.9,y:56.6},{x:41.2,y:56.4},{x:40.7,y:54},{x:41.7,y:52},{x:42.2,y:50.7},{x:43.3,y:50},{x:44.8,y:49.5},{x:46.9,y:50},{x:47.4,y:48.8},{x:46.1,y:48.2},{x:44.2,y:48.2},{x:42.9,y:48},{x:43.2,y:47.4},{x:44,y:47.3},{x:44.6,y:46.1},{x:44,y:45.1},{x:43.9,y:43.9},{x:44.2,y:41.7},{x:42,y:41.7},{x:39.4,y:41.9},{x:39,y:42.7},{x:37.7,y:41.3},{x:35.2,y:41},{x:33.3,y:39.7},{x:32.5,y:39.6},{x:32,y:39.1},{x:31.1,y:36.8},{x:30.6,y:35.3},{x:29.4,y:33.3},{x:29.1,y:32.5},{x:28.1,y:31.4},{x:26.9,y:31.9},{x:26,y:30.7},{x:25,y:30.2},{x:24.5,y:32.8},{x:24.9,y:34.7},{x:24.4,y:36.1},{x:24.1,y:36.6},{x:23.5,y:35.1},{x:22.7,y:34.1},{x:22,y:33.3},{x:20.5,y:32.2},{x:21.2,y:30.9},{x:22.1,y:30.1},{x:23,y:29.7},{x:23.8,y:28},{x:23.7,y:27.8},{x:24.2,y:25.8},{x:23.6,y:25.2},{x:22.7,y:26.2},{x:22.2,y:26.4},{x:21.6,y:25.6},{x:20.9,y:24.8},{x:20.1,y:26.5},{x:18.7,y:26.2},{x:17.6,y:26},{x:16.8,y:26.3},{x:16.7,y:28.9},{x:16.3,y:30.4},{x:15.4,y:32.4},{x:14.9,y:33.4},{x:14.9,y:34.4},{x:15.4,y:36.1},{x:15.6,y:36.7},{x:15.6,y:38},{x:14.5,y:38.5},{x:13.5,y:39.2},{x:13.2,y:40.7},{x:13.1,y:42.3},{x:11.9,y:44.5},{x:13,y:45.1},{x:13,y:46.3},{x:12.7,y:46.9},{x:13.5,y:49},{x:13.9,y:50.2},{x:13.7,y:51.2},{x:15,y:52.9},{x:15.4,y:53.7},{x:16.3,y:55.1},{x:16.8,y:55.9},{x:18.5,y:56.2},{x:20.6,y:56.6},{x:21.3,y:57},{x:22.9,y:58.6},{x:23.6,y:59.4},{x:25.4,y:61},{x:24.7,y:59.5},{x:23.9,y:57.9},{x:23.7,y:57.2},{x:23.5,y:56.2},{x:22.6,y:55.9},{x:21.8,y:55.5},{x:22,y:53.9},{x:21.3,y:53.2},{x:20.8,y:53.5},{x:19.7,y:54},{x:19.1,y:53.9},{x:19,y:52.2},{x:19,y:50.5},{x:19.4,y:49.6},{x:20.1,y:49},{x:21.5,y:48.9},{x:22.7,y:48.8},{x:23.9,y:48.3},{x:24.4,y:48.8},{x:24.9,y:49.8},{x:25.2,y:50.7},{x:25.2,y:51},{x:25.6,y:51},{x:25.8,y:49.5},{x:26.6,y:48.3},{x:26.4,y:47.4},{x:27.1,y:46.5},{x:28.1,y:45.6},{x:28,y:44.9},{x:28.9,y:44.1},{x:29.9,y:44.4}], color:'#dc143c', desc:'图拉真时期帝国版图达到极盛，地中海成为罗马内湖。罗马法与拉丁语塑造西方文明，但三世纪危机的阴影已在边境聚集。' },
+    { type:'poly', id:'parthia', name:'帕提亚帝国', points:[{x:44,y:42.2},{x:44.7,y:41.2},{x:44.2,y:40},{x:44,y:39.7},{x:45.3,y:39},{x:46.1,y:38.1},{x:47.5,y:37},{x:48,y:36.2},{x:49.3,y:36.7},{x:50.9,y:37.5},{x:52,y:38},{x:52.6,y:38.8},{x:53.3,y:38.8},{x:55.9,y:39.9},{x:56.4,y:40.3},{x:57.5,y:41.2},{x:57.9,y:41.8},{x:57.9,y:42.7},{x:57.7,y:43.2},{x:57.8,y:43.6},{x:58.2,y:45.1},{x:58.6,y:45.7},{x:59,y:46.9},{x:58.6,y:47.8},{x:57.1,y:48.3},{x:56.4,y:48.8},{x:55.2,y:49.8},{x:55,y:50.5},{x:53.4,y:52},{x:52.5,y:51.7},{x:52.4,y:51},{x:52.5,y:49.4},{x:51.2,y:49.1},{x:50.1,y:48.9},{x:49.7,y:47.2},{x:49.4,y:46.9},{x:48.6,y:46.8},{x:48,y:45.6},{x:46.9,y:44.9},{x:45.6,y:44.7},{x:44.4,y:45.6},{x:44.2,y:45.4},{x:44.2,y:44}], color:'#9370db', desc:'安息帝国以回旋骑射闻名。卡莱战役击败克拉苏，控制丝绸之路中段。但萨珊波斯的崛起即将终结帕提亚的统治。' },
+    { type:'poly', id:'kushan', name:'贵霜帝国', points:[{x:53.1,y:53.4},{x:54.2,y:52.4},{x:55,y:51.7},{x:56.3,y:51},{x:57.4,y:49.8},{x:57.9,y:48.4},{x:58.9,y:47.6},{x:58.8,y:46.8},{x:58.4,y:45.6},{x:58.1,y:44.6},{x:58.7,y:43.4},{x:59.8,y:42.4},{x:60.7,y:41.9},{x:61.6,y:41.4},{x:62.7,y:41},{x:63.7,y:40.3},{x:64.4,y:40},{x:65.6,y:40},{x:66.4,y:40.3},{x:67.3,y:40.7},{x:68,y:41.2},{x:69,y:41.8},{x:69.7,y:41.9},{x:70.9,y:42.3},{x:71.3,y:42.3},{x:72.2,y:43.5},{x:72.9,y:44.4},{x:73.3,y:45.2},{x:73,y:46.3},{x:72.3,y:47.1},{x:70.9,y:47.3},{x:70.5,y:48.3},{x:70.5,y:49.3},{x:70.5,y:50.5},{x:70.8,y:52.2},{x:71.1,y:53.1},{x:71.1,y:54},{x:70,y:54.6},{x:69,y:55.6},{x:68.2,y:56.8},{x:67.6,y:58.2},{x:67.4,y:59.7},{x:67.1,y:61.2},{x:66.2,y:60},{x:65.7,y:58.4},{x:65.4,y:56.8},{x:64.9,y:55.1},{x:64.1,y:54.3},{x:63,y:53.4},{x:61.9,y:53.2},{x:59.4,y:52.4},{x:59.1,y:52.2},{x:58.8,y:51.5},{x:58.5,y:51.5},{x:59.6,y:54.2},{x:60.1,y:54.6},{x:61,y:54.9},{x:61,y:56.2},{x:60.1,y:58.1},{x:58.7,y:59},{x:56.9,y:59.8},{x:56.1,y:60.5},{x:55.7,y:59.4},{x:55.5,y:58.4},{x:54.7,y:56.4},{x:54.1,y:55.1},{x:53.7,y:54.3}], color:'#8fbc8f', desc:'大月氏后裔建立的中亚帝国。犍陀罗艺术融合希腊与印度，佛教经由此处传入中国，丝绸之路在此交汇。' },
+    { type:'poly', id:'han', name:'汉帝国', points:[{x:71.3,y:53.9},{x:71.9,y:54.9},{x:72.4,y:55.9},{x:73,y:56.8},{x:73.9,y:58.3},{x:75,y:59.3},{x:76.4,y:60},{x:77.3,y:59.8},{x:77.7,y:57.8},{x:77.2,y:56.4},{x:77,y:54.8},{x:78.1,y:53.4},{x:79.6,y:53.2},{x:80.3,y:53.2},{x:81.5,y:50.7},{x:81.9,y:49.5},{x:82.3,y:47.8},{x:82.5,y:45.1},{x:82.2,y:44.1},{x:83.1,y:45.4},{x:83.6,y:46.2},{x:83.7,y:44.1},{x:84,y:42.4},{x:85.2,y:41.4},{x:86.2,y:40.5},{x:86.8,y:39.2},{x:87.3,y:37},{x:86.7,y:35.7},{x:85.8,y:35},{x:85.8,y:32.9},{x:85.5,y:32.4},{x:83.6,y:32},{x:83.1,y:31.8},{x:82.3,y:31.5},{x:79.9,y:33},{x:79,y:33.6},{x:78.5,y:34.8},{x:77.9,y:36.7},{x:77.4,y:37.5},{x:76.8,y:39.4},{x:75.9,y:40.5},{x:75.3,y:41.4},{x:74.2,y:41.9},{x:73.3,y:41.7},{x:72.5,y:41.7},{x:73.5,y:43.4},{x:73.4,y:45.5},{x:73.1,y:46},{x:71.8,y:47.3},{x:71.9,y:49},{x:70.6,y:49.3},{x:70.8,y:50.6},{x:71.3,y:52.8},{x:71.6,y:53.9},{x:71.9,y:54.6}], color:'#daa520', desc:'东汉末年，外戚宦官交替专权。造纸术改变文明传播，但黄巾起义与军阀割据预示着四百年汉帝国的终结。' },
+    { type:'poly', id:'steppe', name:'草原诸部', points:[{x:62.5,y:28.4},{x:60.5,y:28.7},{x:60.3,y:29.7},{x:60.3,y:31.9},{x:61.2,y:32.6},{x:63.3,y:32.9},{x:64.7,y:33.1},{x:68,y:33.4},{x:70,y:32.5},{x:71.5,y:31.4},{x:71.5,y:29.2},{x:70.5,y:28.2},{x:67.5,y:28.2},{x:65.8,y:28},{x:64.4,y:27.4}], color:'#8b8682', desc:'匈奴分裂后，鲜卑、乌桓、丁零角逐欧亚草原。游牧民族的大迁徙浪潮即将重塑从罗马到长安的政治版图。' },
+    { type:'poly', id:'xiongnu', name:'匈奴', points:[{x:76.5,y:30.7},{x:75.2,y:29},{x:76,y:27.5},{x:77.7,y:26.8},{x:79.9,y:27},{x:81,y:27.4},{x:81.8,y:28},{x:81.9,y:29.5},{x:81.1,y:30.6},{x:80.2,y:30.7},{x:79,y:32.9},{x:77.5,y:32.3},{x:77.1,y:32}], color:'#cd5c5c', desc:'北匈奴西迁触发欧亚民族多米诺效应，南匈奴内附中原。草原帝国的组织模式影响了此后所有的游牧政权。' },
+    { type:'poly', id:'arabia', name:'阿拉伯部落', points:[{x:44.4,y:55},{x:43.4,y:56.6},{x:43.4,y:58.8},{x:44.3,y:60.1},{x:47.5,y:61.4},{x:49.8,y:60.9},{x:52.2,y:60.3},{x:52.8,y:58.9},{x:52.8,y:56.4},{x:52.1,y:54.9},{x:49.3,y:54.2},{x:47.3,y:54.9},{x:46.5,y:54.5}], color:'#4682b4', desc:'沙漠与绿洲间的部落世界。纳巴泰人控制乳香贸易路线，麦加尚是普通商镇。四百年后先知穆罕默德将改变一切。' },
+    { type:'poly', id:'nubia', name:'努比亚', points:[{x:39.4,y:64.4},{x:37.6,y:64.9},{x:37.6,y:67.4},{x:37.7,y:69.6},{x:38.5,y:70.5},{x:41.2,y:71},{x:43,y:69.6},{x:43.3,y:68.3},{x:42.5,y:65.2},{x:41.7,y:64.2},{x:41,y:64.2},{x:40.5,y:64.2}], color:'#ff8c00', desc:'麦罗埃王国拥有自己的金字塔与铁器工业。曾征服埃及的努比亚人，在尼罗河上游延续着独立文明。' },
+    { type:'poly', id:'silk_road', name:'丝绸之路', points:[{x:61,y:35.8},{x:60,y:35.8},{x:59.2,y:36.7},{x:58.9,y:37.3},{x:58.8,y:38.9},{x:59.4,y:40.3},{x:60.3,y:41.2},{x:62.3,y:40.8},{x:63.9,y:40.2},{x:64.9,y:38.8},{x:65.1,y:37.3},{x:64.6,y:36.3},{x:63.6,y:35.8},{x:62.7,y:35.5},{x:61.7,y:35.6}], color:'#c9a96e', desc:'连接长安与罗马的万里商道。丝绸、香料、宝石与思想在此流通，佛教东传、罗马玻璃入华，塑造欧亚文化交流的黄金时代。' }
+  ],
+  '1000ce': [
+    { type:'poly', id:'song', name:'宋朝', points:[{x:71.3,y:39.1},{x:70.4,y:38},{x:70.1,y:37.5},{x:70.2,y:36.3},{x:69.9,y:35.8},{x:70.2,y:35.3},{x:70.8,y:34.5},{x:71.2,y:34},{x:71.8,y:32.8},{x:72.5,y:32.8},{x:73.7,y:32.8},{x:74.2,y:32.9},{x:74.7,y:32.8},{x:75.4,y:32.2},{x:75.6,y:32.2},{x:76,y:32},{x:76,y:31.4},{x:76.2,y:30.9},{x:77,y:30.2},{x:77.1,y:30.1},{x:77.2,y:29.7},{x:77.7,y:30},{x:78.1,y:30.4},{x:78.3,y:30.6},{x:78.8,y:30.3},{x:79.1,y:30},{x:79.7,y:30},{x:80.4,y:29.6},{x:80.9,y:29.3},{x:81.6,y:30},{x:82.1,y:30.7},{x:82.1,y:31.2},{x:81.8,y:32.2},{x:81.8,y:32.6},{x:82,y:33.5},{x:81.7,y:34.2},{x:81.2,y:35.3},{x:81,y:36.6},{x:81.4,y:37.9},{x:81.4,y:39},{x:80.7,y:39.2},{x:80.2,y:39.2},{x:79.6,y:39.7},{x:79.4,y:40.2},{x:79.9,y:40.6},{x:80.5,y:40.7},{x:80.6,y:41},{x:80.5,y:41.4},{x:80.5,y:42.2},{x:80.8,y:42.9},{x:80.8,y:43.5},{x:80.5,y:44.6},{x:80,y:45.1},{x:79.8,y:46.1},{x:79.4,y:46.9},{x:78.6,y:47.3},{x:78.3,y:47.7},{x:77.3,y:47.6},{x:77,y:47.7},{x:76.4,y:48.5},{x:75.7,y:48},{x:75.3,y:47.8},{x:75.1,y:47.1},{x:74.7,y:46.3},{x:74.3,y:46.3},{x:73.3,y:45.4},{x:72.3,y:45.1},{x:72.1,y:44.6},{x:71.7,y:43.2},{x:71.8,y:42.7},{x:71.7,y:41.2},{x:71.6,y:40.7},{x:71.5,y:40.3}], color:'#dc143c', desc:'澶渊之盟后百年和平，开封人口过百万。' },
+    { type:'poly', id:'liao', name:'契丹（辽）', points:[{x:69.9,y:35.8},{x:68.5,y:35.8},{x:67.4,y:35.7},{x:67.4,y:34.4},{x:67.1,y:33.1},{x:66.7,y:32.6},{x:66.4,y:32.4},{x:66,y:32.8},{x:65.4,y:32.6},{x:65.2,y:32},{x:65.2,y:30.9},{x:65.1,y:29.7},{x:64.6,y:29.3},{x:64.5,y:27.5},{x:64.2,y:26.2},{x:63.9,y:25.8},{x:64.5,y:24.1},{x:64.8,y:23.1},{x:65.2,y:23.1},{x:65.2,y:21.5},{x:65.4,y:20.8},{x:66.1,y:21.4},{x:66.2,y:22.4},{x:66.5,y:23.1},{x:66.6,y:21.9},{x:67,y:21.4},{x:67.4,y:21.1},{x:67.6,y:21.3},{x:68.1,y:21.9},{x:68.4,y:22.1},{x:68.4,y:20.9},{x:69.2,y:20.5},{x:70.6,y:19.7},{x:71.5,y:19.6},{x:72.5,y:19.2},{x:73.3,y:19.1},{x:73.6,y:18.9},{x:74.4,y:18.5},{x:75.2,y:18},{x:76.2,y:18},{x:76.8,y:18.5},{x:77.2,y:19.1},{x:77,y:20},{x:76.8,y:21},{x:77.2,y:21.1},{x:78.1,y:20.9},{x:78.6,y:20.9},{x:79.2,y:21.4},{x:79.7,y:21},{x:80,y:20.8},{x:81,y:21.4},{x:81.2,y:22.1},{x:81.9,y:22.6},{x:82.8,y:22.6},{x:83.8,y:22.1},{x:84.1,y:21.4},{x:84.3,y:20.4},{x:84.8,y:20.3},{x:85.6,y:21.3},{x:86.2,y:21.6},{x:87.2,y:21.9},{x:87.5,y:21.9},{x:88.3,y:22.6},{x:88.5,y:23},{x:89.1,y:23.6},{x:89.5,y:23.6},{x:90.2,y:23.6},{x:91.7,y:23.5},{x:92.6,y:23.2},{x:93.3,y:23.8},{x:94.6,y:24.4},{x:95.4,y:25.1},{x:96.3,y:25.8},{x:96.8,y:27.1},{x:96.7,y:28.2},{x:95.8,y:28.2},{x:95,y:27.1},{x:94.4,y:28},{x:94.4,y:28.2},{x:93.9,y:28.5},{x:92,y:29.5},{x:91.5,y:29.7},{x:90.6,y:29.5},{x:90.4,y:31.2},{x:90,y:32.2},{x:89.5,y:34.1},{x:89.5,y:34.6},{x:88.4,y:34.1},{x:88.5,y:31.8},{x:88.9,y:30.7},{x:89.3,y:29.5},{x:89.5,y:28.9},{x:88.4,y:29.2},{x:87.8,y:29.8},{x:87.2,y:30},{x:86.5,y:29.6},{x:86,y:29.6},{x:85.8,y:29.6},{x:83.8,y:31.2},{x:84.2,y:32.4},{x:84,y:32.6},{x:83.7,y:33.1},{x:82.9,y:33.6},{x:82.3,y:33.4},{x:82.1,y:33.1},{x:82.3,y:31.9},{x:82.5,y:30.8},{x:82.6,y:30.1},{x:82.3,y:29.5},{x:81.2,y:29.3},{x:80.4,y:29.2},{x:79.7,y:29.5},{x:78.7,y:30},{x:78.5,y:30},{x:77.2,y:29.2},{x:76.6,y:29.7},{x:76.3,y:30.7},{x:76.3,y:31.4},{x:76.1,y:31.8},{x:75.7,y:31.8},{x:75.2,y:31.7},{x:74.9,y:32.4},{x:74.4,y:32.8},{x:73.5,y:32.8},{x:72.6,y:32.6},{x:71.7,y:32.4},{x:71.1,y:33.4},{x:70.7,y:33.9},{x:70.4,y:34.6}], color:'#4169e1', desc:'辽朝控制蒙古高原与东北。' },
+    { type:'poly', id:'byzantium', name:'拜占庭帝国', points:[{x:57.3,y:35.5},{x:56.7,y:36.6},{x:56.1,y:36.9},{x:55.4,y:36.6},{x:55.2,y:36.3},{x:54.8,y:36.1},{x:54.1,y:36.8},{x:53.8,y:37.3},{x:53.5,y:37.9},{x:53.4,y:38.6},{x:54.8,y:39.2},{x:56.1,y:39},{x:57,y:38.9},{x:58.1,y:39.5},{x:58.8,y:38.8},{x:58.5,y:37.5},{x:59.2,y:37.3},{x:60.1,y:38.3},{x:60.5,y:39.2},{x:60.3,y:40.3},{x:59.6,y:40.7},{x:58.6,y:40.7},{x:57,y:41.2},{x:56.5,y:41.3},{x:55.9,y:41.9},{x:54.4,y:42.7},{x:53.7,y:42.8},{x:52.9,y:42.8},{x:51.2,y:42.7},{x:50.7,y:42.4},{x:49.9,y:41.6},{x:49.7,y:40.6},{x:49.5,y:38.3},{x:49.2,y:37.3},{x:49.5,y:36.7},{x:51.1,y:36.1},{x:52,y:35.3},{x:53.3,y:35.8},{x:53.5,y:34},{x:53.2,y:33.1},{x:52.4,y:32.4},{x:50.9,y:31.7},{x:50.2,y:30.9},{x:50.7,y:29.7},{x:50.8,y:28.2},{x:52,y:27.5},{x:52.7,y:28},{x:53.3,y:28.6},{x:53.8,y:30.4},{x:54.6,y:30.6},{x:55.7,y:30.7},{x:56.1,y:31.1},{x:56.6,y:31.9},{x:57.2,y:32.6},{x:57.9,y:33.6},{x:58.1,y:34},{x:58.6,y:35.1},{x:58.6,y:36.3},{x:57.7,y:36.8}], color:'#9370db', desc:'巴西尔二世统治巅峰。' },
+    { type:'poly', id:'holy_roman', name:'神圣罗马帝国', points:[{x:50,y:30.4},{x:49.2,y:29.7},{x:48.4,y:29.6},{x:47.6,y:29.7},{x:46.7,y:29.7},{x:46.2,y:29.8},{x:45.4,y:30.8},{x:45.4,y:32.6},{x:46.5,y:32.9},{x:47.1,y:32.9},{x:47.3,y:34.4},{x:47.3,y:35.2},{x:47.3,y:35.8},{x:47.6,y:36.7},{x:48.2,y:37},{x:49.4,y:37.2},{x:50.2,y:35.9},{x:50.9,y:35.3},{x:51.7,y:35.5},{x:52.9,y:35.3},{x:53.4,y:34.6},{x:53.1,y:33.6},{x:52,y:32.9},{x:50.8,y:32},{x:49.8,y:31.7},{x:49.8,y:31.2}], color:'#8b4513', desc:'奥托王朝建立的中欧政治体。' },
+    { type:'poly', id:'france', name:'法兰西王国', points:[{x:38.9,y:36.1},{x:38.3,y:35.8},{x:37.8,y:34.8},{x:37,y:33.9},{x:37.7,y:32.8},{x:39.3,y:32.6},{x:40.7,y:32.6},{x:42.3,y:32.6},{x:42.9,y:32.8},{x:43.5,y:33.1},{x:43.9,y:34},{x:43.4,y:35.3},{x:42.5,y:35.9},{x:40.7,y:36.4},{x:40.3,y:36.4}], color:'#4682b4', desc:'卡佩王朝王权微弱，封建领主割据。' },
+    { type:'poly', id:'england', name:'英格兰王国', points:[{x:39.7,y:31.8},{x:39.9,y:30.4},{x:39.8,y:29.6},{x:39.3,y:29.1},{x:38.5,y:27.9},{x:38.6,y:25.9},{x:40.2,y:25.3},{x:41.7,y:25.2},{x:43.3,y:25.3},{x:44.5,y:26},{x:45,y:26.9},{x:45.6,y:28.6},{x:45.4,y:29.6},{x:45.1,y:31.2},{x:44.7,y:31.9},{x:43.9,y:33.1},{x:43.4,y:33.1},{x:42.1,y:32.9},{x:40.4,y:32.6}], color:'#dc143c', desc:'盎格鲁-撒克逊时代尾声。' },
+    { type:'poly', id:'kievan_rus', name:'基辅罗斯', points:[{x:54.2,y:30.4},{x:53.4,y:30},{x:53.1,y:29.6},{x:53.1,y:28.2},{x:53.4,y:27.3},{x:53.6,y:26.2},{x:54.1,y:24.8},{x:54.2,y:23.8},{x:54.6,y:22.9},{x:54.6,y:21.9},{x:54.6,y:20.7},{x:55.6,y:20.7},{x:56.9,y:21.8},{x:57.5,y:22.4},{x:58,y:23.2},{x:58.8,y:22.9},{x:59.7,y:22.6},{x:60.5,y:22.1},{x:61.7,y:22.1},{x:62.2,y:22.4},{x:63.4,y:22.5},{x:64.3,y:23},{x:64.7,y:23.1},{x:64.2,y:24.6},{x:63.9,y:25.3},{x:63.8,y:25.7},{x:64,y:26.5},{x:64.5,y:27.9},{x:64.5,y:28.5},{x:64.7,y:29.5},{x:64.9,y:30.4},{x:65,y:30.9},{x:64.7,y:31.8},{x:64.1,y:32.2},{x:63.4,y:33},{x:62.9,y:34.1},{x:61.7,y:33.4},{x:61.1,y:32.8},{x:60.4,y:33.6},{x:60.4,y:34.7},{x:60.3,y:35.8},{x:59.8,y:37},{x:58.9,y:36.7},{x:58.8,y:36.2},{x:58.6,y:35},{x:58.1,y:34.4},{x:57.5,y:34.1},{x:57.3,y:33.3},{x:56.8,y:32.5},{x:56.4,y:31.4},{x:56.1,y:30.9},{x:55.7,y:30.7},{x:55.3,y:30.7},{x:55,y:30.4}], color:'#4682b4', desc:'弗拉基米尔一世受洗，东斯拉夫世界皈依基督教。' },
+    { type:'poly', id:'abbasid', name:'阿拔斯哈里发', points:[{x:56.5,y:41.8},{x:56.3,y:43.2},{x:55.9,y:44.4},{x:55.5,y:45.6},{x:55.1,y:46.7},{x:55.3,y:47.8},{x:55.6,y:48.4},{x:56.3,y:50.7},{x:56.4,y:51.5},{x:56.8,y:52.1},{x:57.5,y:53.9},{x:58.1,y:54.9},{x:58.4,y:55.6},{x:58.5,y:56.8},{x:58.8,y:57.6},{x:60.3,y:56.8},{x:61.6,y:56.2},{x:62.9,y:55.1},{x:63.6,y:54.3},{x:64,y:53.4},{x:64.1,y:52.2},{x:63.9,y:51.5},{x:62.6,y:51.2},{x:61.5,y:50.6},{x:60.4,y:49.9},{x:60.1,y:48.8},{x:60.8,y:48.8},{x:61.9,y:49.8},{x:62.6,y:50},{x:63.6,y:50.1},{x:64.2,y:50.1},{x:65.4,y:51},{x:67.2,y:52.3},{x:68.1,y:51.8},{x:68.4,y:51.3},{x:68.7,y:50},{x:69.1,y:49},{x:69.8,y:47.8},{x:70.2,y:46.8},{x:70.4,y:46.1},{x:70.9,y:45.7},{x:71.4,y:45.5},{x:72.2,y:45},{x:72,y:44.1},{x:71.6,y:41.9},{x:71.5,y:40.6},{x:71.8,y:39.4},{x:70.8,y:38.9},{x:70.2,y:38.3},{x:69.7,y:36.3},{x:69.1,y:35.8},{x:67.3,y:35.6},{x:67.1,y:34.8},{x:66.7,y:33.6},{x:65.4,y:32.5},{x:64.5,y:32.5},{x:64.2,y:32.4},{x:63.2,y:33.9},{x:62.5,y:33.9},{x:61.9,y:33.3},{x:61.4,y:33.1},{x:60.8,y:33.4},{x:60.3,y:34.6},{x:60,y:35.2},{x:60,y:36.8},{x:60.1,y:37.3},{x:59.9,y:37.5},{x:59.8,y:37.8},{x:60.4,y:38.9},{x:60.5,y:40},{x:60.3,y:40.6},{x:59.2,y:40.7},{x:58.1,y:40.5},{x:56.8,y:40.7},{x:56.4,y:41.1}], color:'#228b22', desc:'巴格达仍是学术中心。' },
+    { type:'poly', id:'fatimid', name:'法蒂玛王朝', points:[{x:43.7,y:45},{x:43.8,y:44.3},{x:44.6,y:43.4},{x:46,y:42.9},{x:46.9,y:42.4},{x:47.9,y:42.3},{x:48,y:43.4},{x:47.7,y:43.9},{x:47.8,y:44.9},{x:48.9,y:45.8},{x:49.7,y:46.7},{x:50,y:46.1},{x:50,y:45.6},{x:50.2,y:45},{x:50.6,y:44.9},{x:51.4,y:45.4},{x:52.8,y:45.8},{x:53.5,y:45.8},{x:54.5,y:45.8},{x:54.9,y:46.1},{x:54.8,y:46.7},{x:54.8,y:47.4},{x:54.8,y:48.5},{x:54.7,y:49.5},{x:54.9,y:50.5},{x:54.8,y:51.7},{x:54.2,y:52.3},{x:53.4,y:53.2},{x:52.8,y:53.8},{x:51.3,y:53.9},{x:49.5,y:53.1},{x:48.6,y:52.4},{x:47.6,y:51.2},{x:46.5,y:50},{x:45.7,y:49.5},{x:45,y:47.9},{x:44.5,y:46.8}], color:'#daa520', desc:'开罗成为伊斯兰世界最大城市之一。' },
+    { type:'poly', id:'cordoba', name:'科尔多瓦哈里发国', points:[{x:39.9,y:43.6},{x:39.6,y:42.9},{x:39.2,y:41.1},{x:39.9,y:39.5},{x:39.9,y:37.3},{x:40.9,y:37},{x:41.8,y:37},{x:42.6,y:37},{x:44.1,y:37.2},{x:44.8,y:37.3},{x:45.4,y:38.5},{x:45.4,y:39.7},{x:45.4,y:40.8},{x:45.4,y:42.1},{x:44.8,y:42.7},{x:43.9,y:43.2},{x:42.1,y:43.4},{x:42.1,y:44.5},{x:42.8,y:44.9},{x:43.8,y:44.6},{x:42.1,y:46.1},{x:40.7,y:45.8},{x:40.3,y:45},{x:40,y:44.5}], color:'#c9a96e', desc:'后倭马亚王朝统治伊比利亚大部。' },
+    { type:'poly', id:'ghana', name:'加纳帝国', points:[{x:37.4,y:51},{x:37.9,y:49.8},{x:38.3,y:49},{x:38.5,y:48.2},{x:39.2,y:47.4},{x:39.8,y:46.7},{x:40.5,y:46.3},{x:41,y:46.2},{x:41.2,y:46.5},{x:41.2,y:47.8},{x:41.1,y:48},{x:40.7,y:48.8},{x:40.5,y:49.5},{x:40.9,y:50.5},{x:41.8,y:50.7},{x:42,y:51.8},{x:42.3,y:53.2},{x:43,y:55.1},{x:43.2,y:55.9},{x:42.8,y:57.1},{x:42.3,y:58.4},{x:41.9,y:59.3},{x:40.3,y:60},{x:38.9,y:59},{x:38.5,y:58.3},{x:37.7,y:56.8},{x:36.8,y:55.9},{x:36.7,y:54.6},{x:36.8,y:53.4},{x:36.8,y:52.8}], color:'#daa520', desc:'西非第一个大型帝国，控制黄金与盐贸易。' },
+    { type:'poly', id:'chola', name:'朱罗王朝', points:[{x:67.3,y:52.8},{x:68.6,y:52.2},{x:68.6,y:51.2},{x:68.9,y:50.2},{x:69.6,y:49.3},{x:69.8,y:48.7},{x:70.8,y:47.3},{x:71,y:45.8},{x:71.8,y:45.6},{x:72.1,y:46.2},{x:72.6,y:48.2},{x:72.8,y:49.8},{x:72.5,y:51},{x:72.4,y:52.7},{x:72.2,y:53.7},{x:72.1,y:54.5},{x:72.1,y:55.5},{x:71.9,y:55.7},{x:70.8,y:56.6},{x:70.4,y:57.3},{x:70.2,y:58.6},{x:69.8,y:59.9},{x:69.2,y:60.8},{x:68.8,y:60.3},{x:68.4,y:58.3},{x:68,y:56.6},{x:67.6,y:55.1},{x:67.5,y:54.2}], color:'#ff8c00', desc:'南印度海上强权，控制印度洋贸易。' },
+    { id:'khmer', name:'高棉帝国', top:48.6, left:74.6, w:5, h:7, color:'#8fbc8f', desc:'吴哥窟的缔造者。' },
+    { type:'poly', id:'goryeo', name:'高丽', points:[{x:81.4,y:38.4},{x:81.4,y:37},{x:81.2,y:36.3},{x:81.4,y:35.3},{x:81.8,y:34.5},{x:82.4,y:33.9},{x:82.9,y:33.5},{x:83.4,y:33.6},{x:84,y:33.7},{x:84.2,y:33.4},{x:84.2,y:34.4},{x:84.3,y:35.6},{x:84.4,y:36.8},{x:84.4,y:37.5},{x:84,y:38.5},{x:83.6,y:39},{x:83.2,y:38.8},{x:82.7,y:38.8},{x:82.5,y:38.8},{x:82.7,y:39.2},{x:82.9,y:39.9},{x:82.9,y:41.2},{x:82.5,y:42.2},{x:82.2,y:42.2},{x:81.9,y:42.2},{x:81.9,y:41.2},{x:81.6,y:40.3},{x:81.6,y:39.2},{x:81.7,y:39}], color:'#9370db', desc:'高丽王朝。' },
+    { type:'poly', id:'japan', name:'日本', points:[{x:83,y:41.7},{x:83.6,y:40.8},{x:84.3,y:41.2},{x:84.8,y:40.7},{x:85,y:39.6},{x:85.1,y:39.2},{x:85.2,y:38.3},{x:85.3,y:37.2},{x:85.6,y:36.3},{x:86.3,y:36.8},{x:86.7,y:37.3},{x:86.6,y:38},{x:86.2,y:38.3},{x:86.2,y:39},{x:86,y:40.2},{x:86,y:41},{x:85.8,y:41.6},{x:85.5,y:42.2},{x:84.6,y:42.4},{x:84.1,y:42.7},{x:83.5,y:43.4},{x:83.2,y:44.1},{x:82.6,y:43.2},{x:82.8,y:42.4},{x:82.8,y:42.2}], color:'#ff69b4', desc:'平安时代巅峰，藤原氏摄关政治。' },
+    { type:'poly', id:'viking', name:'维京世界', points:[{x:38.5,y:19.4},{x:38.7,y:18.5},{x:39.9,y:17.7},{x:42.5,y:17.5},{x:44.6,y:17.2},{x:46.1,y:18.8},{x:46.2,y:20.2},{x:45.6,y:21.4},{x:44.5,y:22.4},{x:39.9,y:22.9},{x:39,y:21.4},{x:38.8,y:21}], color:'#708090', desc:'维京时代尾声。' },
+    { type:'poly', id:'various_tribal', name:'诸多部落联盟', points:[{x:13,y:34.4},{x:12.8,y:31.9},{x:12.5,y:30.7},{x:12,y:29},{x:12.3,y:28.1},{x:13.6,y:29.8},{x:14.5,y:30.2},{x:15.4,y:28.5},{x:16.2,y:28.6},{x:16.8,y:30.3},{x:17.8,y:31.4},{x:18.4,y:32.4},{x:18.9,y:32.9},{x:20.5,y:31.7},{x:21.6,y:31.4},{x:21.6,y:29.7},{x:21.6,y:32.4},{x:21.4,y:33.5},{x:21.9,y:34.1},{x:22.7,y:34.2},{x:23.3,y:35.3},{x:24,y:36.3},{x:24.6,y:36.7},{x:26,y:36.3},{x:27.4,y:35.1},{x:28,y:35},{x:27.6,y:36.3},{x:25.8,y:37.7},{x:24.8,y:39.1},{x:24.4,y:40.7},{x:24.4,y:42.1},{x:23.8,y:43},{x:23.6,y:44.7},{x:23.6,y:46},{x:22.2,y:43.4},{x:21.6,y:43.3},{x:20.4,y:43.6},{x:19.5,y:43.9},{x:18.9,y:45},{x:18.4,y:46.3},{x:18.1,y:47.3},{x:17.4,y:47.4},{x:16.1,y:47.4},{x:15.7,y:46},{x:14.9,y:44.5},{x:14.3,y:44.1},{x:13.9,y:42.8},{x:13.5,y:41.3},{x:12.8,y:40.1},{x:12.6,y:38},{x:12.8,y:36.9},{x:13,y:36.4}], color:'#8fbc8f', desc:'北美原住民诸部落。' },
+    { id:'maya', name:'玛雅城邦', top:66.1, left:12.1, w:5, h:5, color:'#cd5c5c', desc:'城邦各自为政的古典文明。' },
+    { id:'taino', name:'泰诺', top:47.7, left:27, w:4, h:4, color:'#daa520', desc:'加勒比海的泰诺人。' },
+    { id:'andean', name:'安第斯诸国', top:59.2, left:25.1, w:7, h:12, color:'#9370db', desc:'印加帝国崛起前的安第斯文明。' },
+    { id:'inuit', name:'因纽特人', top:24.9, left:15.2, w:8, h:6, color:'#8b8682', desc:'北极地区的因纽特人。' },
+    { id:'inupiat', name:'伊努皮亚特人', top:21.5, left:5.1, w:7, h:5, color:'#8b8682', desc:'阿拉斯加的原住民。' },
+    { type:'poly', id:'aboriginal', name:'诸多原住民部落联盟', points:[{x:77.8,y:75.4},{x:78.1,y:73},{x:78.8,y:71.8},{x:80.4,y:70.3},{x:81.2,y:68.8},{x:82.1,y:68.1},{x:82.6,y:67.6},{x:83.1,y:67.4},{x:83.7,y:66.4},{x:84,y:65.9},{x:84.4,y:65.9},{x:85.1,y:65.9},{x:85.3,y:67.2},{x:85.4,y:68.2},{x:86.2,y:69.4},{x:87.1,y:69.8},{x:87.4,y:67.6},{x:87.7,y:66.6},{x:88.2,y:69.2},{x:88.4,y:71.1},{x:88.8,y:72.2},{x:89.3,y:73.2},{x:89.7,y:74.7},{x:89.6,y:76.5},{x:89.2,y:78},{x:88.8,y:79.7},{x:88.4,y:81.2},{x:87.4,y:81.9},{x:86.7,y:82},{x:85.1,y:81.5},{x:84.8,y:81.2},{x:84,y:79.8},{x:83.4,y:79.6},{x:82.9,y:78.1},{x:82.3,y:77.9},{x:81.5,y:78.1},{x:80.5,y:79},{x:79.6,y:79.3},{x:78.3,y:79.8},{x:77.9,y:79.8},{x:78.4,y:78.6},{x:78.4,y:77.6},{x:77.8,y:76.7}], color:'#cd853f', desc:'澳大利亚原住民。' }
+  ],
+  '1400ce': [
+    { type:'poly', id:'ming', name:'明朝', points:[{x:68.7,y:35.8},{x:69,y:33.4},{x:70.2,y:32.5},{x:71.5,y:32.2},{x:72.6,y:32.4},{x:73,y:32},{x:73.8,y:31.2},{x:74.5,y:30.7},{x:75.7,y:30},{x:76.3,y:29.5},{x:78,y:29.1},{x:78.7,y:29.2},{x:79.4,y:29.8},{x:80.2,y:30.4},{x:81.6,y:31.5},{x:81.8,y:32.2},{x:82.5,y:32.5},{x:83,y:33.9},{x:84,y:34.4},{x:83.9,y:36.1},{x:83.6,y:38},{x:82.7,y:39.5},{x:82.3,y:40.6},{x:81.4,y:41.4},{x:80.2,y:42.2},{x:79.6,y:41.2},{x:79.3,y:41.2},{x:78.7,y:42.7},{x:79.6,y:43.2},{x:79.6,y:44.3},{x:80,y:46},{x:79.6,y:48},{x:79.1,y:48.8},{x:78.5,y:49.8},{x:78.2,y:50.2},{x:77.4,y:50.5},{x:76.7,y:50.7},{x:76.1,y:50.9},{x:76,y:51},{x:75.7,y:51.7},{x:75.7,y:52.6},{x:75.5,y:53.3},{x:74.3,y:51.7},{x:73.3,y:51.2},{x:73,y:49.9},{x:72.6,y:48.4},{x:72.1,y:48},{x:71.6,y:47.9},{x:71.1,y:47.6},{x:70.8,y:46.8},{x:70.4,y:46.5},{x:70,y:45.4},{x:70,y:43.6},{x:70.4,y:41.9},{x:70.8,y:41.2},{x:70.6,y:40.5},{x:69.7,y:39.2},{x:69.3,y:38.8},{x:68.5,y:37.9},{x:68.2,y:37.5},{x:68.1,y:37},{x:68,y:37}], color:'#dc143c', desc:'永乐大帝迁都北京，郑和下西洋。' },
+    { type:'poly', id:'golden_horde', name:'金帐汗国', points:[{x:54.3,y:38.8},{x:53.3,y:38.5},{x:51.9,y:38.8},{x:51.2,y:38.4},{x:50.4,y:37.5},{x:51,y:36.2},{x:51.7,y:35.2},{x:52,y:34.4},{x:52.4,y:33.4},{x:53,y:32.2},{x:53,y:31.1},{x:53.1,y:29.5},{x:53.1,y:28.6},{x:53.7,y:28.1},{x:54.2,y:27.8},{x:55.3,y:27.1},{x:55.5,y:26.8},{x:56,y:26.7},{x:56.3,y:25.7},{x:56.9,y:26},{x:57.2,y:26.3},{x:58,y:25.4},{x:59,y:25.3},{x:59.7,y:25.3},{x:60.3,y:25.3},{x:60.7,y:24.8},{x:61.6,y:24.2},{x:62.1,y:24.6},{x:62.5,y:22.9},{x:63.4,y:22.1},{x:64.3,y:22.6},{x:64.5,y:22.7},{x:65.6,y:21.5},{x:66.9,y:20.9},{x:68.7,y:20.3},{x:69.6,y:20},{x:71.5,y:18.8},{x:72.8,y:18.7},{x:73.7,y:18.2},{x:74.5,y:18.8},{x:75.5,y:19.2},{x:75.6,y:20.5},{x:76,y:21.1},{x:77,y:21.1},{x:78.3,y:21.1},{x:79,y:21.8},{x:79.9,y:22.5},{x:80.6,y:22.5},{x:81.7,y:21.9},{x:82.1,y:21.1},{x:82.2,y:20.9},{x:83.5,y:21.9},{x:84.8,y:22.4},{x:86.1,y:22.6},{x:86.7,y:23.5},{x:88.2,y:23.6},{x:89.5,y:23.6},{x:92.2,y:23.6},{x:94.7,y:25.3},{x:95.7,y:27},{x:96.2,y:28.1},{x:94,y:27.9},{x:93.7,y:28.1},{x:93.3,y:29.2},{x:92.8,y:30.1},{x:91.8,y:31.3},{x:90.2,y:31.5},{x:89.9,y:31.4},{x:89.5,y:32.2},{x:89.1,y:33.4},{x:88.9,y:34.5},{x:88.7,y:35.1},{x:88.2,y:35.9},{x:87.8,y:35.9},{x:87.4,y:34.2},{x:87.6,y:32.2},{x:88.4,y:30.9},{x:88.5,y:30.3},{x:87.8,y:30.3},{x:86.9,y:31.3},{x:86.3,y:31.9},{x:85.4,y:32.3},{x:84.6,y:32.2},{x:84,y:32.6},{x:83.4,y:33.4},{x:83.2,y:33.6},{x:82.3,y:32.2},{x:81.8,y:31.3},{x:80.9,y:30.7},{x:80.2,y:30.6},{x:79,y:30.2},{x:78.6,y:29.8},{x:78.1,y:29.7},{x:76.8,y:29.8},{x:76.3,y:29.7},{x:75.4,y:29.7},{x:74.8,y:30.4},{x:74.6,y:30.8},{x:73.7,y:31.2},{x:73.3,y:32.2},{x:72.7,y:32.3},{x:71.5,y:32.2},{x:70.8,y:32.2},{x:70.3,y:32.4},{x:69.6,y:32.8},{x:69.5,y:33.3},{x:69.1,y:33.7},{x:68.7,y:34.1},{x:68.2,y:33.7},{x:67.6,y:33.4},{x:66.5,y:33.3},{x:65.1,y:33.4},{x:64.3,y:33.5},{x:63.8,y:33.4},{x:63,y:32.8},{x:62.1,y:32.6},{x:61.4,y:32.5},{x:61.1,y:31.7},{x:61.5,y:30.7},{x:60.9,y:30.3},{x:60.3,y:30.7},{x:59.8,y:30.9},{x:59.6,y:31.4},{x:59.1,y:32.2},{x:59,y:32.6},{x:58.9,y:33.4},{x:58.7,y:33.7},{x:57.9,y:34.1},{x:57.1,y:34.1},{x:56.8,y:34},{x:56.9,y:34.8},{x:56.9,y:35.3},{x:57.2,y:36.1},{x:57,y:36.8},{x:56.5,y:37.2},{x:55.5,y:37.4},{x:55.3,y:37.5},{x:55.3,y:38.4}], color:'#daa520', desc:'蒙古帝国的西北遗产。' },
+    { type:'poly', id:'chagatai', name:'察合台汗国', points:[{x:56.7,y:39.4},{x:57.2,y:37.8},{x:57.4,y:37.4},{x:57.6,y:39},{x:58.1,y:39.6},{x:59.6,y:39.2},{x:59.9,y:39.2},{x:60.7,y:40.5},{x:61.3,y:41.3},{x:62.3,y:41.7},{x:63.4,y:42.1},{x:64.5,y:41.1},{x:65.4,y:40.5},{x:66.4,y:39.9},{x:66.9,y:39.6},{x:67.1,y:38.1},{x:68,y:36.9},{x:68.7,y:36.7},{x:68.6,y:35.9},{x:68.6,y:34.1},{x:68.5,y:33.9},{x:67.1,y:33.6},{x:66.2,y:33.4},{x:65.3,y:33.5},{x:63.5,y:33},{x:62.1,y:32.6},{x:61.1,y:32.2},{x:61,y:30.9},{x:60.8,y:30.6},{x:59.7,y:30.9},{x:58.8,y:32.4},{x:58.8,y:32.9},{x:58.8,y:33.7},{x:57.9,y:33.9},{x:57.2,y:34.1},{x:56.8,y:35.2},{x:56.8,y:36.7},{x:56.3,y:37.4},{x:55,y:37.5},{x:55.3,y:39.1},{x:55.5,y:39.7},{x:55.7,y:40}], color:'#9370db', desc:'蒙古帝国的中亚遗产。' },
+    { type:'poly', id:'timurid', name:'帖木儿帝国', points:[{x:57.6,y:39.9},{x:58,y:41.4},{x:57.5,y:42.3},{x:56.8,y:42.4},{x:56.7,y:41.6},{x:56.3,y:41.2},{x:55.5,y:41.2},{x:55.5,y:42.8},{x:55.5,y:44},{x:56.2,y:44.6},{x:56.7,y:45.7},{x:57.5,y:46.3},{x:58.6,y:47.1},{x:59.3,y:48.2},{x:59.6,y:48.7},{x:61.1,y:48.9},{x:62.4,y:49.5},{x:63.1,y:49.9},{x:63.7,y:50.4},{x:64.3,y:50.7},{x:64.9,y:50.5},{x:65.6,y:49},{x:66.4,y:48.4},{x:67.2,y:47.8},{x:67.3,y:46.2},{x:67.6,y:45.8},{x:69.3,y:46.6},{x:69.7,y:46.9},{x:70.2,y:46.3},{x:69.9,y:45.2},{x:69.9,y:44},{x:70.2,y:42.4},{x:70.5,y:42.1},{x:70.8,y:40.6},{x:69.9,y:39.7},{x:68.9,y:38.8},{x:67.9,y:37.5},{x:67.5,y:37.5},{x:66.5,y:39.5},{x:65.9,y:40.1},{x:64.5,y:40.8},{x:64.3,y:41.7},{x:63.1,y:41.8},{x:61.2,y:41.1},{x:60.6,y:40.6},{x:60.1,y:39.7},{x:59.2,y:39.6},{x:58.1,y:39.9},{x:58.1,y:40}], color:'#cd5c5c', desc:'撒马尔罕成为最辉煌的城市之一。' },
+    { id:'ottoman', name:'奥斯曼苏丹国', top:30, left:44, w:8, h:8, color:'#228b22', desc:'奥斯曼帝国崛起。' },
+    { type:'poly', id:'mamluk', name:'马穆鲁克苏丹国', points:[{x:39.5,y:51.7},{x:39.6,y:49.5},{x:40.1,y:48.3},{x:41.1,y:47.2},{x:41.1,y:46.2},{x:42,y:45.2},{x:42.1,y:44.1},{x:42.9,y:43.6},{x:43.6,y:43.6},{x:44.5,y:42.8},{x:46.1,y:42.5},{x:46.8,y:42.7},{x:47.1,y:44.1},{x:47.8,y:45.1},{x:48.8,y:46},{x:49.2,y:45.4},{x:49.2,y:45},{x:50.6,y:45},{x:52,y:45.8},{x:52.8,y:46.3},{x:52.8,y:47.6},{x:53,y:49},{x:53.1,y:49.8},{x:53.5,y:50.9},{x:54,y:52.3},{x:54.1,y:53.1},{x:54.1,y:53.2},{x:53.1,y:53.9},{x:53,y:55.1},{x:52.3,y:55.4},{x:51.5,y:57.1},{x:51.5,y:57.6},{x:51.7,y:59.8},{x:50.9,y:61},{x:50,y:58.8},{x:49.7,y:58.3},{x:48.1,y:57.6},{x:47.8,y:57.3},{x:47.5,y:56.8},{x:48.2,y:55.7},{x:47.8,y:54.5},{x:47.1,y:54.4},{x:46.4,y:53.7},{x:45.3,y:53.3},{x:43.9,y:52.7},{x:42.8,y:52.1},{x:41.6,y:52},{x:40.3,y:52.2}], color:'#daa520', desc:'马穆鲁克苏丹国。' },
+    { type:'poly', id:'mali', name:'马里帝国', points:[{x:39,y:53.7},{x:39.3,y:52.7},{x:39.7,y:51.7},{x:40.3,y:52},{x:41.4,y:51.6},{x:42,y:51.5},{x:43.1,y:52.2},{x:44.1,y:52.4},{x:45.3,y:52.9},{x:45.6,y:53.5},{x:46.5,y:54.2},{x:47,y:54.9},{x:48.1,y:55.1},{x:48.2,y:55.3},{x:47.6,y:55.9},{x:47,y:56.6},{x:46.3,y:57.7},{x:44.8,y:58.8},{x:44.7,y:58.9},{x:43.8,y:58.3},{x:43,y:58.8},{x:42.1,y:59},{x:41.2,y:59},{x:40.3,y:58.2},{x:39.7,y:56.8},{x:39.2,y:55.6},{x:39.1,y:55.1}], color:'#ff8c00', desc:'曼萨·穆萨的帝国。' },
+    { type:'poly', id:'ethiopia', name:'埃塞俄比亚', points:[{x:51.5,y:59.3},{x:51.5,y:57.7},{x:51.7,y:56.4},{x:52.2,y:55.1},{x:52.6,y:54.9},{x:53.3,y:54.2},{x:53.6,y:54},{x:54.3,y:54.5},{x:55,y:55.4},{x:55.3,y:56.1},{x:56.2,y:56.4},{x:57.1,y:55.4},{x:57.5,y:56},{x:57,y:57.2},{x:56.6,y:58.8},{x:56.3,y:59.8},{x:55.9,y:60.9},{x:55.5,y:61.7},{x:55.1,y:62.5},{x:54.2,y:63.4},{x:53.9,y:64.2},{x:53.8,y:65.2},{x:53.9,y:66.9},{x:54,y:68.8},{x:53.5,y:69.9},{x:52.8,y:68.8},{x:52.2,y:66.7},{x:52.1,y:64.5},{x:52.1,y:62.3},{x:51.8,y:61.5},{x:50.9,y:61},{x:50.9,y:60.4}], color:'#228b22', desc:'所罗门王朝的基督教帝国。' },
+    { type:'poly', id:'delhi', name:'德里苏丹国', points:[{x:64.2,y:51.6},{x:64.4,y:50.5},{x:64.9,y:50.2},{x:65.4,y:49.4},{x:65.6,y:48.8},{x:66.6,y:48.3},{x:67.1,y:47.7},{x:67.1,y:46.6},{x:67.5,y:46.1},{x:68.5,y:47.1},{x:69.7,y:47.3},{x:70.3,y:47.8},{x:71.1,y:47.6},{x:71.2,y:47.4},{x:71.7,y:47.3},{x:72.2,y:47.8},{x:72.8,y:49.4},{x:73.4,y:50.7},{x:74,y:51.5},{x:74.5,y:52.2},{x:75.1,y:52.9},{x:75,y:54.4},{x:74.1,y:55.6},{x:73,y:55.6},{x:72.3,y:54.5},{x:71.9,y:53.2},{x:71.7,y:52.4},{x:71.3,y:52.2},{x:70.8,y:52.9},{x:69.6,y:53.7},{x:68.3,y:55.1},{x:68,y:55.5},{x:68.2,y:56.6},{x:68.2,y:58.3},{x:67.3,y:58.8},{x:66.7,y:58.4},{x:66.6,y:57.8},{x:66.4,y:55.5},{x:66,y:54.2},{x:65.3,y:53.3},{x:65.1,y:52.9},{x:64.5,y:52.7}], color:'#5dd9d0', desc:'图格鲁克王朝统治。' },
+    { id:'england', name:'英格兰王国', top:28.2, left:39, w:5, h:6, color:'#dc143c', desc:'百年战争期间。' },
+    { id:'france', name:'法兰西王国', top:36.1, left:37.2, w:5, h:6, color:'#4682b4', desc:'百年战争中最黑暗的时期。' },
+    { id:'lithuania', name:'立陶宛大公国', top:18.6, left:51, w:8, h:8, color:'#9370db', desc:'东欧大国。' },
+    { type:'poly', id:'joseon', name:'朝鲜', points:[{x:80.5,y:41.4},{x:80.7,y:43.4},{x:81,y:44.1},{x:81.4,y:44.5},{x:82.7,y:44.1},{x:82.9,y:43.9},{x:83.4,y:43},{x:83.5,y:41.7},{x:83.5,y:41},{x:83.3,y:40.5},{x:82.7,y:40.7}], color:'#4682b4', desc:'朝鲜王朝。' },
+    { type:'poly', id:'japan', name:'日本', points:[{x:82.1,y:47.3},{x:82.1,y:45.6},{x:82.3,y:44.7},{x:82.9,y:44.1},{x:83.3,y:43.9},{x:83.7,y:43.5},{x:83.7,y:42.3},{x:84,y:41.3},{x:84.2,y:40.3},{x:84.7,y:41.9},{x:85,y:42.9},{x:85.1,y:44.4},{x:85,y:45.1},{x:84.9,y:45.8},{x:85.9,y:46.8},{x:86.2,y:48},{x:86.1,y:49.8},{x:84.1,y:49.8},{x:83.4,y:48.8},{x:83.1,y:48}], color:'#ff69b4', desc:'室町幕府时代。' },
+    { type:'poly', id:'algonquin', name:'阿尔贡昆人', points:[{x:10,y:28},{x:10.2,y:25.6},{x:10.1,y:23.1},{x:10.3,y:21.4},{x:12,y:21.5},{x:13.4,y:21.6},{x:14.6,y:21.8},{x:16.2,y:22.6},{x:17.4,y:23.1},{x:18.6,y:22.6},{x:20.2,y:22.6},{x:20.2,y:22.2},{x:21.4,y:21.9},{x:22.7,y:22.1},{x:23.8,y:22.5},{x:24.6,y:23.7},{x:24,y:24.6},{x:22.8,y:26.3},{x:22.2,y:27.1},{x:21.8,y:28.7},{x:22.2,y:30.2},{x:22.9,y:31.1},{x:24.1,y:32.5},{x:24.8,y:32.9},{x:24.9,y:30.9},{x:25,y:28.7},{x:25.1,y:27.1},{x:26.6,y:27},{x:28.2,y:28.6},{x:30,y:30.4},{x:30.8,y:32.5},{x:31.2,y:34.1},{x:30.4,y:34.8},{x:28.7,y:35.6},{x:26.9,y:37},{x:26.7,y:38.3},{x:26,y:39.7},{x:25,y:41.4},{x:24.9,y:43},{x:24.3,y:44.5},{x:23.9,y:46.1},{x:23.2,y:44.4},{x:21,y:43.2},{x:19.8,y:41.4},{x:19,y:39.6},{x:17.6,y:39.2},{x:16.5,y:38.8},{x:15.2,y:36.8},{x:13.8,y:35.3},{x:12.8,y:34.5},{x:11.7,y:32.4},{x:11.2,y:30},{x:11.1,y:29.7}], color:'#8fbc8f', desc:'阿尔贡昆语系各部落。' },
+    { type:'poly', id:'aztec', name:'墨西哥谷城邦', points:[{x:13,y:36.1},{x:13,y:36.6},{x:12.6,y:37.7},{x:12.7,y:38.9},{x:13,y:40.2},{x:13.2,y:41.6},{x:13.7,y:43},{x:14.3,y:45},{x:14.8,y:47.2},{x:15,y:48.4},{x:15.6,y:49.3},{x:16.5,y:50.2},{x:17.7,y:50.9},{x:18.2,y:51.2},{x:18.9,y:51.5},{x:19.3,y:51.5},{x:19.4,y:50.6},{x:19.2,y:49.6},{x:18.9,y:48.5},{x:18.9,y:47.8},{x:19.5,y:47.3},{x:20.5,y:47.3},{x:22.1,y:48},{x:22.1,y:47.4},{x:22.2,y:46.2},{x:22.8,y:44.7},{x:22.5,y:43.9},{x:21.2,y:43},{x:20.5,y:41.6},{x:19.1,y:39.5},{x:17.2,y:39},{x:16.2,y:38.3},{x:14.6,y:36.3},{x:14.1,y:35.2},{x:12.6,y:34.1},{x:12.1,y:34.1},{x:12.3,y:34.8}], color:'#cd5c5c', desc:'阿兹特克文明。' },
+    { type:'poly', id:'andean', name:'安第斯诸国', points:[{x:23.7,y:60.1},{x:24.3,y:57.8},{x:24.5,y:55.5},{x:25.2,y:54.5},{x:25.8,y:53.9},{x:26.6,y:53.7},{x:28.2,y:54.2},{x:29.5,y:55.1},{x:30.6,y:56.2},{x:31.4,y:57.3},{x:32.6,y:58.7},{x:33.9,y:60.5},{x:35,y:61.5},{x:36.6,y:62.8},{x:37.1,y:64.2},{x:35.7,y:67.2},{x:34,y:70.5},{x:33.1,y:72.7},{x:32.4,y:74.8},{x:31.1,y:76.7},{x:30.7,y:77},{x:30.3,y:78.2},{x:29.9,y:78.7},{x:27.9,y:78.9},{x:27.2,y:80.1},{x:26.6,y:82.4},{x:26.4,y:84.7},{x:26.2,y:86.7},{x:26.2,y:87.7},{x:25.5,y:87.4},{x:24.9,y:86.3},{x:24.4,y:84.4},{x:24.4,y:82.5},{x:24.9,y:78.9},{x:24.9,y:77.1},{x:25.6,y:74.1},{x:25.6,y:72.5},{x:25.3,y:70},{x:25,y:68.9},{x:23.8,y:68.1},{x:23.3,y:66.4},{x:22.9,y:64.5},{x:22.9,y:62.1}], color:'#9370db', desc:'安第斯文明。' },
+    { type:'poly', id:'inuit', name:'因纽特人', points:[{x:30.4,y:17.2},{x:29.4,y:16.7},{x:28.5,y:16.6},{x:27.5,y:16.7},{x:27.7,y:16},{x:27,y:15.6},{x:27,y:15.4},{x:27.8,y:15},{x:28.2,y:14.5},{x:28.4,y:14.1},{x:28.5,y:13.4},{x:29,y:13.3},{x:30,y:13},{x:30.6,y:12.3},{x:32.2,y:12.3},{x:32.8,y:11.9},{x:33.9,y:11.6},{x:35,y:11.4},{x:35.8,y:11.1},{x:37.1,y:11.2},{x:37.4,y:11.4},{x:38.1,y:12.3},{x:38.3,y:12.7},{x:39.5,y:12.3},{x:40.6,y:12.6},{x:41,y:13},{x:39.9,y:13.9},{x:39.5,y:14.5},{x:39.1,y:15.8},{x:39.2,y:16.7},{x:39.4,y:17.5},{x:38.8,y:18.7},{x:38.6,y:19.7},{x:38.6,y:20.8},{x:38.5,y:22.1},{x:37.9,y:22.4},{x:36.3,y:22.9},{x:35.4,y:23.6},{x:34.7,y:24.1},{x:34.4,y:24.8},{x:34.3,y:25.8},{x:34.1,y:27},{x:33.7,y:28.2},{x:33.6,y:28.5},{x:32.7,y:28},{x:31.6,y:27},{x:31.3,y:25.8},{x:31.2,y:24.9},{x:31.1,y:23.1},{x:31.1,y:21.8},{x:31.1,y:20.5},{x:31,y:19.9},{x:30.4,y:18.9},{x:30.3,y:18.5},{x:30.1,y:18.2}], color:'#8b8682', desc:'因纽特人。' },
+    { type:'poly', id:'aboriginal', name:'澳大利亚原住民', points:[{x:76.9,y:76},{x:76.6,y:74.1},{x:77,y:72.4},{x:77.4,y:71.4},{x:78.3,y:70.8},{x:79,y:70},{x:79.4,y:69.6},{x:80.2,y:68.5},{x:80.9,y:66.9},{x:81.9,y:66},{x:82.8,y:65.9},{x:83.4,y:66.6},{x:83.7,y:67.6},{x:84.9,y:68.3},{x:85.9,y:69.3},{x:85.9,y:67.6},{x:86.9,y:70},{x:87.5,y:71.1},{x:87.8,y:72.6},{x:87.9,y:73.7},{x:87.9,y:74.3},{x:87.7,y:76.2},{x:87.1,y:77.8},{x:86.9,y:79.3},{x:86.4,y:80.8},{x:85.3,y:81.4},{x:83.7,y:80.4},{x:83,y:79.1},{x:82.2,y:78.5},{x:81.2,y:77.6},{x:80.4,y:78.1},{x:78.9,y:78.1},{x:78.1,y:78.7},{x:76.7,y:79.2},{x:76.4,y:78.4},{x:76.4,y:77.9},{x:76.4,y:77.3}], color:'#cd853f', desc:'澳大利亚原住民。' }
+  ],
+  '1800ce': [
+    { type:'poly', id:'british_empire', name:'大英帝国', points:[{x:43.2,y:30.4},{x:42.1,y:30.7},{x:40.5,y:30.9},{x:38.9,y:30.8},{x:38.2,y:30.7},{x:38.8,y:29},{x:39.4,y:27.5},{x:41.2,y:27.1},{x:42.5,y:27},{x:43.6,y:25.7},{x:45.1,y:25.2},{x:45.9,y:26.3},{x:46.2,y:27.5},{x:46.2,y:28.4},{x:46.4,y:29.5},{x:46.5,y:30},{x:45.3,y:31.3},{x:44.9,y:31.4},{x:43.9,y:31.5},{x:43.6,y:31.2}], color:'#dc143c', desc:'工业革命发源地。' },
+    { type:'poly', id:'british_n_america', name:'大英北美殖民地', points:[{x:11.2,y:19.9},{x:13.1,y:19.9},{x:14.3,y:19.9},{x:15.2,y:20.3},{x:16.5,y:20.4},{x:16,y:19.3},{x:15.4,y:18.5},{x:16,y:17.1},{x:16.6,y:17.7},{x:17.4,y:18.2},{x:18.9,y:18.3},{x:19,y:18.2},{x:19.2,y:18},{x:19.8,y:17.6},{x:17,y:16.3},{x:18.3,y:15},{x:19.5,y:14.8},{x:20.6,y:14.3},{x:21.8,y:13.8},{x:23.7,y:12.8},{x:25.4,y:12.7},{x:27.6,y:11.7},{x:29.5,y:11.7},{x:30.3,y:13.1},{x:29.7,y:14.5},{x:29.2,y:14.8},{x:27.8,y:14.8},{x:27.3,y:15},{x:26.5,y:17},{x:26.9,y:18.5},{x:27.3,y:19.4},{x:28.2,y:20.8},{x:28.7,y:21.6},{x:29.4,y:22.6},{x:29.7,y:24.1},{x:28.9,y:24.7},{x:27,y:24.9},{x:25.9,y:24.2},{x:25,y:23.8},{x:24.4,y:24.1},{x:23.5,y:24.2},{x:21.8,y:24.8},{x:22.2,y:26.5},{x:23.1,y:27.6},{x:23.7,y:28.5},{x:24.8,y:30.2},{x:25.5,y:30.4},{x:26.2,y:28.7},{x:26.3,y:27.4},{x:26.7,y:25.6},{x:28,y:25.6},{x:28.9,y:26.9},{x:30.1,y:27.6},{x:30.6,y:29.6},{x:31.5,y:31.1},{x:31.3,y:32.2},{x:30,y:32.2},{x:29.2,y:32.4},{x:29.2,y:33.5},{x:28.4,y:33.9},{x:26.9,y:33.9},{x:25.6,y:34.4},{x:24.7,y:35.6},{x:24.4,y:35.1},{x:23.3,y:33.9},{x:22,y:33.4},{x:19.6,y:32.9},{x:18.3,y:32.8},{x:16.7,y:32.8},{x:15,y:32.9},{x:13.3,y:32.4},{x:12.8,y:31.5},{x:12.1,y:28.5},{x:10.6,y:26.5},{x:10.6,y:25.1},{x:10.7,y:23.3},{x:10.8,y:20.8},{x:10.8,y:20.3}], color:'#dc143c', desc:'加拿大殖民地。' },
+    { type:'poly', id:'usa', name:'美国', points:[{x:12.9,y:35.7},{x:13.7,y:34.6},{x:13.7,y:33.6},{x:13.7,y:32.6},{x:14.5,y:32.6},{x:15,y:32.5},{x:16,y:32.5},{x:17.3,y:32.5},{x:18.6,y:32.4},{x:19.7,y:32.4},{x:20.3,y:32.8},{x:21.9,y:33},{x:22.6,y:33.5},{x:23.3,y:33.9},{x:24.2,y:35.1},{x:24.5,y:35.6},{x:26.1,y:34.6},{x:27.5,y:34.4},{x:28,y:33.5},{x:27.2,y:35.6},{x:26,y:36.3},{x:25.6,y:36.8},{x:25.1,y:37.8},{x:24.7,y:38.6},{x:24.6,y:39.2},{x:24.5,y:39.7},{x:24.7,y:41.6},{x:24.5,y:43.2},{x:24.3,y:43.5},{x:23.3,y:41.6},{x:22.2,y:41.4},{x:20.5,y:42.1},{x:20.1,y:42.8},{x:19.7,y:42.9},{x:19.2,y:41.9},{x:18.3,y:40.6},{x:17.8,y:40},{x:16.7,y:39.5},{x:15.9,y:38.9},{x:14.8,y:37.8},{x:14,y:37},{x:13.4,y:36.3},{x:13.2,y:36.2}], color:'#4169e1', desc:'年轻共和国向西扩张。' },
+    { type:'poly', id:'new_spain', name:'新西班牙', points:[{x:15,y:45.4},{x:14.3,y:43.6},{x:14,y:42.7},{x:13.4,y:40.8},{x:13.2,y:40},{x:12.6,y:38.1},{x:12.8,y:37},{x:13.1,y:36.1},{x:13.7,y:36.1},{x:14.3,y:37},{x:14.6,y:37.8},{x:15.6,y:38.8},{x:16.3,y:39},{x:17.5,y:39},{x:18.1,y:39},{x:18.7,y:39.9},{x:19.2,y:41},{x:19.4,y:41.8},{x:19.6,y:42.5},{x:19.7,y:43.2},{x:19.5,y:44.3},{x:19.4,y:45.4},{x:19.2,y:46.1},{x:19.8,y:47.3},{x:20.1,y:47.8},{x:20.7,y:48},{x:21.4,y:47.3},{x:21.9,y:46.8},{x:22.4,y:46.6},{x:23,y:47.6},{x:22.7,y:48.2},{x:22.5,y:48.9},{x:22.6,y:49.3},{x:23,y:49.3},{x:23.3,y:50},{x:23.3,y:51},{x:23.4,y:52.1},{x:24.2,y:52.1},{x:24.6,y:52.8},{x:23.8,y:53.2},{x:22.3,y:52.3},{x:21.8,y:52},{x:21.2,y:51.6},{x:20.8,y:51.2},{x:19.9,y:50.5},{x:19.1,y:50.1},{x:17.9,y:49.5},{x:16.3,y:48.2},{x:16.1,y:47.3},{x:15.7,y:45.4},{x:15.7,y:44.5},{x:14.8,y:42.3},{x:14.8,y:43.2},{x:15.2,y:44.6},{x:14.8,y:45}], color:'#daa520', desc:'新西班牙总督区。' },
+    { type:'poly', id:'spanish_america', name:'西班牙美洲', points:[{x:24.5,y:53.8},{x:25.3,y:52.9},{x:26,y:51.2},{x:27,y:51.1},{x:27.7,y:51.8},{x:28.8,y:52},{x:29.2,y:52.6},{x:29.7,y:54.2},{x:29.9,y:54.9},{x:29.9,y:57},{x:30.1,y:58.3},{x:30.1,y:58.9},{x:30,y:59},{x:30,y:59.5},{x:30.4,y:60.5},{x:30.5,y:61.1},{x:30.5,y:62.6},{x:30.3,y:63.3},{x:30.4,y:64.4},{x:30.6,y:65.4},{x:30.6,y:66.1},{x:31,y:67.4},{x:31,y:68.3},{x:30.8,y:69.3},{x:30.6,y:70},{x:30.4,y:70.9},{x:30.2,y:71.8},{x:30.5,y:72.6},{x:30.6,y:73.5},{x:30,y:74.7},{x:29.5,y:75.2},{x:28.9,y:76},{x:28.1,y:76.8},{x:28,y:77.4},{x:27.3,y:78.6},{x:26.7,y:79.8},{x:26.5,y:80.9},{x:26.3,y:82.5},{x:26,y:84},{x:26,y:84.7},{x:24.6,y:84.1},{x:24.2,y:83.5},{x:24,y:81.3},{x:23.9,y:79.3},{x:24.2,y:77.6},{x:24.4,y:75.6},{x:25,y:73.3},{x:25.1,y:72.1},{x:25.4,y:70.7},{x:25.5,y:68.3},{x:25.6,y:67},{x:25.4,y:66.1},{x:24.7,y:64.8},{x:24.4,y:63.4},{x:23.6,y:61.2},{x:23.3,y:59.4},{x:23.1,y:57.9},{x:23.6,y:56.5},{x:24.2,y:55.5},{x:24.3,y:55.1},{x:24.3,y:54.9}], color:'#daa520', desc:'独立运动暗流涌动。' },
+    { type:'poly', id:'brazil', name:'葡萄牙巴西', points:[{x:30,y:56},{x:32.1,y:55.7},{x:32.4,y:55.1},{x:33.1,y:56.8},{x:33.2,y:57.6},{x:35.2,y:58.1},{x:35.9,y:58.7},{x:36.6,y:60},{x:36.8,y:60.4},{x:37,y:62},{x:36.5,y:63.1},{x:35.7,y:64.3},{x:35.5,y:66.4},{x:35.4,y:67.7},{x:34.4,y:68.6},{x:33.3,y:68.8},{x:32.8,y:69.6},{x:32.4,y:70.7},{x:31.9,y:72},{x:31.6,y:73.1},{x:31,y:74.3},{x:30.2,y:73},{x:30.1,y:71.1},{x:30.6,y:68},{x:30.6,y:66.1},{x:30.6,y:63.7},{x:30.4,y:61.2},{x:29.9,y:59.7},{x:29.6,y:57.6},{x:29.6,y:57}], color:'#228b22', desc:'葡属巴西。' },
+    { type:'poly', id:'russia', name:'俄罗斯帝国', points:[{x:50.8,y:35.2},{x:49.9,y:33.7},{x:49.3,y:32.6},{x:49,y:32.3},{x:48.7,y:30.9},{x:49.2,y:28.4},{x:49.8,y:28.4},{x:51.1,y:29.2},{x:52.2,y:26.7},{x:52.8,y:25.7},{x:53.5,y:25.3},{x:53.1,y:24.4},{x:51.8,y:23.2},{x:52,y:21.9},{x:52.8,y:19.9},{x:52.8,y:19.3},{x:53,y:16.9},{x:53.9,y:15.9},{x:54.6,y:16.3},{x:56.3,y:17},{x:57.4,y:18},{x:58.1,y:19.3},{x:58.3,y:19.9},{x:57.5,y:20.5},{x:57.1,y:20.4},{x:57,y:22},{x:57.5,y:22.1},{x:58.6,y:20.7},{x:59.9,y:21},{x:59.9,y:19.7},{x:61.7,y:20.9},{x:62.8,y:19.8},{x:61.8,y:18.3},{x:62.8,y:17},{x:63.3,y:16.3},{x:64.9,y:15.6},{x:64.7,y:16.7},{x:63.4,y:17.8},{x:63,y:18.5},{x:62.8,y:19.6},{x:64,y:20.9},{x:64.5,y:18.7},{x:64.9,y:18.2},{x:66.3,y:18},{x:66.5,y:18.7},{x:67,y:18},{x:68.6,y:17.5},{x:70.1,y:16.9},{x:71.3,y:16.3},{x:72.9,y:16},{x:73.1,y:15},{x:73,y:14.5},{x:72.6,y:13.8},{x:73.3,y:13.3},{x:75.2,y:15.3},{x:75.5,y:15.4},{x:76.3,y:16.3},{x:76.8,y:17.1},{x:77.5,y:17.6},{x:79,y:18.7},{x:79.8,y:18.9},{x:80.8,y:18.9},{x:81.8,y:18.9},{x:82.1,y:17.7},{x:83.5,y:17.7},{x:85,y:18.5},{x:85.5,y:19.2},{x:86.4,y:19.8},{x:88.4,y:20.2},{x:89.3,y:20.9},{x:90.9,y:21},{x:91.7,y:20.3},{x:93.9,y:20.9},{x:96.8,y:23},{x:96.8,y:23.1},{x:96.5,y:24.6},{x:94.8,y:24.6},{x:93.6,y:24.8},{x:92.8,y:26.4},{x:91.4,y:26.7},{x:90.6,y:27.9},{x:90.5,y:28.4},{x:90,y:31.9},{x:88.9,y:32.4},{x:88.4,y:32.8},{x:87.2,y:31.9},{x:87.4,y:27.1},{x:87.9,y:26.3},{x:88.5,y:25.8},{x:86.5,y:26.7},{x:85,y:27.1},{x:85,y:28.1},{x:84.7,y:28.4},{x:84.7,y:30.4},{x:84.7,y:32.3},{x:84.6,y:33.3},{x:83.5,y:34.8},{x:83.2,y:35},{x:82.8,y:33.4},{x:81.3,y:30.8},{x:80.5,y:29.7},{x:79.6,y:28.2},{x:79.4,y:28.1},{x:78.1,y:30},{x:77.9,y:30.7},{x:77.4,y:31.3},{x:76.7,y:31.7},{x:75.2,y:31.9},{x:74.6,y:31.5},{x:73.9,y:32.2},{x:72.2,y:31.8},{x:71.1,y:32.6},{x:71.1,y:32.9},{x:68.6,y:33.1},{x:66,y:33.6},{x:65.8,y:33.5},{x:65.2,y:32.3},{x:63.3,y:31.8},{x:62.9,y:31.8},{x:60.2,y:34.2},{x:61.4,y:37},{x:60.8,y:37.3},{x:59.7,y:34.2},{x:59.3,y:34.1},{x:57.1,y:33.9},{x:56.2,y:31.5},{x:54.6,y:31.4},{x:54.4,y:31.4},{x:53.3,y:31.7},{x:52,y:33},{x:51.9,y:34.2},{x:51.5,y:34.1},{x:51.4,y:34.1}], color:'#228b22', desc:'俄罗斯帝国。' },
+    { type:'poly', id:'qing', name:'大清帝国', points:[{x:70.1,y:33.6},{x:71.2,y:32.2},{x:71.1,y:31.8},{x:72.7,y:31.4},{x:73,y:32.5},{x:74.5,y:32.4},{x:75.1,y:31.5},{x:75.6,y:31.4},{x:77,y:31.5},{x:77,y:30.7},{x:77.8,y:29.3},{x:79,y:28},{x:79.4,y:28},{x:80.5,y:29.2},{x:81.8,y:30.6},{x:82.7,y:32.8},{x:83,y:34.4},{x:82.3,y:35.8},{x:81.8,y:36.6},{x:80.3,y:37.2},{x:79.4,y:38},{x:79.4,y:38.6},{x:79.9,y:40},{x:79.7,y:42.2},{x:79.1,y:43.2},{x:79,y:43.5},{x:79.4,y:44.9},{x:78.8,y:46.3},{x:77.7,y:46.6},{x:75.5,y:46.8},{x:74.1,y:46.3},{x:74.2,y:45.7},{x:74.1,y:44.4},{x:72.2,y:43.9},{x:71.9,y:43.6},{x:70.6,y:43.5},{x:70.1,y:43.3},{x:68.4,y:40.2},{x:68.1,y:39.5},{x:68.3,y:37.5},{x:68.7,y:36.6},{x:69.1,y:35.3},{x:69.3,y:34.6}], color:'#daa520', desc:'乾隆盛世余晖。' },
+    { type:'poly', id:'france_1800', name:'法国', points:[{x:43.8,y:33.3},{x:44.2,y:32},{x:44.5,y:31.9},{x:45.1,y:31.7},{x:46.2,y:30.8},{x:46.6,y:30.9},{x:47.2,y:31.7},{x:47.7,y:32.2},{x:48.2,y:32.9},{x:48.3,y:33.9},{x:48.6,y:34.2},{x:48.7,y:34.6},{x:48,y:35.1},{x:47.3,y:36.1},{x:47.3,y:37},{x:45.2,y:36.7},{x:44.9,y:36.7},{x:44.3,y:35.7},{x:44.3,y:35.3},{x:44.3,y:34.5}], color:'#4682b4', desc:'法兰西王国。' },
+    { type:'poly', id:'spain_1800', name:'西班牙', points:[{x:44,y:35.8},{x:43.4,y:35.8},{x:42.7,y:35.8},{x:42.1,y:35.6},{x:41.8,y:35.8},{x:41.8,y:36.9},{x:41.8,y:38},{x:41.4,y:39.2},{x:41.7,y:40.5},{x:42.5,y:40.8},{x:43.2,y:41.1},{x:44.3,y:41.3},{x:44.9,y:40.5},{x:45.3,y:39.2},{x:45.4,y:38.1},{x:46.1,y:37.8},{x:46,y:37},{x:46,y:36.7},{x:44.9,y:36.1},{x:44.3,y:35.8},{x:44,y:35.8}], color:'#daa520', desc:'波旁王朝。' },
+    { id:'portugal', name:'葡萄牙', top:35.8, left:37.6, w:3, h:4, color:'#228b22', desc:'布拉干萨王朝。' },
+    { type:'poly', id:'ottoman_1800', name:'奥斯曼帝国', points:[{x:51.8,y:37.4},{x:50.9,y:36.6},{x:50.7,y:35.6},{x:50.9,y:34.6},{x:51.7,y:33.4},{x:52.8,y:32.8},{x:53.4,y:32.3},{x:54.1,y:31.9},{x:54.9,y:31.8},{x:55.9,y:31.8},{x:57,y:32.8},{x:58.3,y:33.9},{x:59.1,y:34.7},{x:59.6,y:35.5},{x:60.5,y:36.8},{x:60.9,y:38.1},{x:61,y:39.2},{x:60.5,y:40.2},{x:60.3,y:41.2},{x:60.7,y:42.4},{x:61.2,y:44},{x:61.2,y:44.4},{x:59.2,y:42.7},{x:59,y:43.2},{x:58.8,y:45.4},{x:58.5,y:45.8},{x:58.5,y:46},{x:58.3,y:46.8},{x:58.5,y:48.3},{x:58.8,y:49.4},{x:60,y:51.8},{x:58.3,y:50.5},{x:57.5,y:48.5},{x:56.4,y:46.2},{x:55.9,y:45.4},{x:55.5,y:43.8},{x:56.7,y:43},{x:57.2,y:41.7},{x:56.1,y:40.7},{x:54.4,y:40.5},{x:53,y:40.2},{x:52.2,y:39.6},{x:51.9,y:39.1},{x:51.9,y:39}], color:'#cd853f', desc:'奥斯曼帝国。' },
+    { type:'poly', id:'persia_1800', name:'波斯', points:[{x:61.5,y:39.2},{x:61.3,y:38.5},{x:61.2,y:37.3},{x:61.3,y:35.8},{x:61.4,y:33.9},{x:61.6,y:32.5},{x:62,y:31.9},{x:62.8,y:31.9},{x:63.4,y:31.9},{x:64.2,y:32.2},{x:64.5,y:32.6},{x:65.3,y:33.3},{x:66.5,y:33.9},{x:67,y:33.9},{x:68.2,y:33.4},{x:69.2,y:33.6},{x:70,y:33.6},{x:70.1,y:34.1},{x:69.3,y:35.7},{x:68.7,y:36.4},{x:68.2,y:37.4},{x:68.2,y:38},{x:68.4,y:39},{x:68.4,y:39.5},{x:67.3,y:39.7},{x:66.9,y:40.1},{x:66.4,y:41.1},{x:66.4,y:41.4},{x:66,y:42.5},{x:65.6,y:43.4},{x:65,y:42.9},{x:64.5,y:41.1},{x:64,y:40.7},{x:62.7,y:40.7},{x:62.1,y:39.7},{x:62,y:39.6},{x:61.9,y:39.6}], color:'#9370db', desc:'波斯。' },
+    { id:'british_india', name:'英东印度公司', top:42, left:65, w:8, h:14, color:'#dc143c', desc:'东印度公司控制。' },
+    { type:'poly', id:'japan_1800', name:'日本', points:[{x:81.8,y:40.7},{x:82.4,y:39.2},{x:83.4,y:38.3},{x:83.8,y:37.3},{x:84.3,y:36.3},{x:84.5,y:34.8},{x:84.7,y:34.4},{x:85.2,y:35.1},{x:85.6,y:35.1},{x:86.2,y:34.5},{x:87,y:34.4},{x:86.9,y:35.8},{x:86.3,y:37.3},{x:86.2,y:37.8},{x:87.3,y:38.1},{x:88,y:39},{x:88.2,y:40.7},{x:87.6,y:41.4},{x:86,y:41.8},{x:85.4,y:41.6},{x:84.3,y:41.6},{x:83.4,y:41.9},{x:82.9,y:42.7},{x:82.8,y:42.7}], color:'#ff69b4', desc:'日本。' },
+    { id:'egypt_1800', name:'埃及', top:43.1, left:52.2, w:5, h:8, color:'#daa520', desc:'埃及。' },
+    { type:'poly', id:'ethiopia_1800', name:'埃塞俄比亚帝国', points:[{x:52,y:53.7},{x:52.6,y:52},{x:53.1,y:50.6},{x:54,y:50.5},{x:55.3,y:49.8},{x:56.4,y:49.4},{x:56.6,y:49.1},{x:57.3,y:49.1},{x:57.5,y:50.6},{x:57.8,y:51.7},{x:58.6,y:52.9},{x:59.3,y:53.7},{x:59.7,y:54.5},{x:61,y:55.1},{x:61,y:55.6},{x:59.8,y:56.8},{x:59.7,y:58.4},{x:58.8,y:59.7},{x:57.2,y:59.3},{x:56.1,y:59},{x:53.7,y:59},{x:53.5,y:60},{x:52.6,y:57.6},{x:52.2,y:55.9},{x:52.1,y:55.1},{x:52,y:54.8}], color:'#228b22', desc:'埃塞俄比亚帝国。' },
+    { id:'morocco', name:'摩洛哥', top:41.1, left:36.9, w:4, h:5, color:'#cd853f', desc:'摩洛哥。' },
+    { id:'algeria', name:'阿尔及利亚', top:40.8, left:44.6, w:4, h:5, color:'#cd853f', desc:'阿尔及利亚。' },
+    { id:'tripolitania', name:'的黎波里塔尼亚', top:43.1, left:48.8, w:4, h:4, color:'#cd853f', desc:'的黎波里塔尼亚。' },
+    { id:'french_guinea', name:'法属几内亚', top:50.9, left:40, w:6, h:6, color:'#4682b4', desc:'法属几内亚。' },
+    { id:'british_west_africa', name:'英属西非海岸', top:56.7, left:41.5, w:6, h:6, color:'#dc143c', desc:'英属西非。' },
+    { id:'portuguese_angola', name:'葡萄牙安哥拉', top:63.4, left:43.6, w:5, h:8, color:'#228b22', desc:'葡属安哥拉。' },
+    { id:'portuguese_east_africa', name:'葡萄牙东非', top:67.9, left:55.6, w:5, h:8, color:'#228b22', desc:'葡属东非。' },
+    { id:'cape_colony', name:'开普殖民地（大英）', top:74, left:49, w:5, h:6, color:'#dc143c', desc:'开普殖民地。' },
+    { type:'poly', id:'dutch_east_indies', name:'荷属东印度', points:[{x:74.4,y:59.7},{x:74,y:58.6},{x:73.6,y:57.6},{x:73.2,y:56.4},{x:73,y:55.7},{x:74.2,y:56.8},{x:74.9,y:57.8},{x:75.3,y:58.3},{x:75.5,y:58.4},{x:76.4,y:57.9},{x:77,y:58.1},{x:77.7,y:56.1},{x:78.6,y:55.5},{x:79,y:56.8},{x:79.1,y:58.1},{x:79.6,y:58.3},{x:80.4,y:57.7},{x:82,y:58.7},{x:82.7,y:58.9},{x:83.4,y:58.9},{x:84.4,y:59},{x:85.4,y:59.8},{x:86.2,y:61},{x:86.9,y:61.4},{x:88,y:62.5},{x:86.9,y:62.5},{x:85.8,y:62.2},{x:84.6,y:62.2},{x:84,y:61.4},{x:83.5,y:60.1},{x:82.8,y:59.8},{x:81.4,y:59.5},{x:80.5,y:59.4},{x:80.5,y:60.3},{x:80,y:60.6},{x:79.3,y:60.6},{x:79,y:60},{x:78.7,y:59.3},{x:78.5,y:61},{x:77.7,y:59.5},{x:77,y:59.3},{x:76.7,y:59},{x:76.5,y:59.9},{x:77.5,y:61},{x:78.3,y:61.6},{x:79.7,y:62},{x:80.7,y:62.2},{x:80.6,y:62.7},{x:80.2,y:63.2},{x:79.7,y:63.9},{x:79.7,y:64.8},{x:79.2,y:65.4},{x:77.9,y:65.6},{x:76.9,y:65.4},{x:74,y:65.2},{x:73.5,y:65.2},{x:74.1,y:63.2},{x:74.4,y:62.1},{x:75.1,y:61.7},{x:75.7,y:61.5},{x:74.3,y:60.6},{x:74.3,y:60.5}], color:'#4682b4', desc:'荷属东印度。' },
+    { type:'poly', id:'australia_1800', name:'英属澳大利亚', points:[{x:79.6,y:66.6},{x:80.2,y:65.6},{x:81.1,y:64.5},{x:81.6,y:64.1},{x:82.4,y:64.2},{x:82.4,y:63.1},{x:83.4,y:62.8},{x:84,y:63.2},{x:84.3,y:63.9},{x:84.3,y:64.7},{x:84.6,y:65.4},{x:85.1,y:65.8},{x:85.4,y:65.4},{x:85.8,y:64.1},{x:85.8,y:63},{x:86.3,y:64.8},{x:86.7,y:65.6},{x:87.1,y:66.6},{x:87.5,y:67.6},{x:87.8,y:68.5},{x:88.4,y:70.2},{x:88.5,y:71},{x:88.5,y:72},{x:88.2,y:72.7},{x:88.1,y:73.7},{x:87.7,y:74.9},{x:87.3,y:75.9},{x:86.9,y:76.4},{x:86.4,y:77.1},{x:85.1,y:77.1},{x:84.4,y:77},{x:83.4,y:74.9},{x:82.8,y:74.4},{x:82.1,y:73.7},{x:81.8,y:73.6},{x:81.2,y:73.6},{x:80.2,y:74.2},{x:79.1,y:74.3},{x:78.3,y:74.2},{x:77.4,y:74.2},{x:77.4,y:72.6},{x:77.5,y:71.5},{x:77.4,y:70.4},{x:77.3,y:69.2},{x:77.5,y:68.3},{x:78.1,y:67.7},{x:78.7,y:67.6},{x:78.8,y:67.5}], color:'#dc143c', desc:'英属澳大利亚。' },
+    { type:'poly', id:'russian_america', name:'俄属美洲', points:[{x:3.4,y:24.6},{x:3.4,y:23.6},{x:3.9,y:22.2},{x:4.3,y:21.5},{x:4.7,y:19.8},{x:5.8,y:19.3},{x:6.7,y:19.2},{x:7.9,y:18.9},{x:9.3,y:19.4},{x:10.1,y:19.8},{x:10.6,y:20.5},{x:10.7,y:21.9},{x:10.4,y:23.8},{x:10.1,y:25.6},{x:10,y:26.5},{x:9,y:27.3},{x:7.4,y:26.3},{x:5.8,y:27.6},{x:5.7,y:28.1},{x:4,y:27.8},{x:3.6,y:26.8},{x:3.5,y:26.5},{x:3.5,y:26}], color:'#228b22', desc:'俄属美洲。' },
+    { type:'poly', id:'greenland_1800', name:'格陵兰（丹麦）', points:[{x:29.8,y:16.4},{x:29.1,y:16.1},{x:28.6,y:14.8},{x:28.9,y:14.2},{x:29.5,y:13.3},{x:30,y:12.2},{x:31.5,y:11.7},{x:33.5,y:11.4},{x:35.5,y:10.6},{x:36.3,y:10.6},{x:38.1,y:10.4},{x:38.8,y:10.8},{x:39.9,y:11},{x:40.9,y:12.1},{x:41.2,y:12.2},{x:41,y:13.6},{x:40.4,y:13.8},{x:40.5,y:16.5},{x:40,y:17.2},{x:39.5,y:20.5},{x:38.8,y:21.3},{x:38.1,y:21.8},{x:37.4,y:22.5},{x:37,y:23.1},{x:35.9,y:23.3},{x:35.5,y:24.1},{x:35.4,y:25.6},{x:34.9,y:26.5},{x:33.5,y:26.4},{x:33.3,y:24.4},{x:32.8,y:22.1},{x:32.2,y:20},{x:31.8,y:18.9},{x:31.2,y:17.8},{x:30.8,y:16.9}], color:'#8b8682', desc:'丹麦格陵兰。' },
+    { id:'iceland', name:'冰岛', top:22.5, left:38.8, w:3, h:3, color:'#8b8682', desc:'冰岛。' },
+    { type:'poly', id:'spanish_philippines', name:'菲律宾（西班牙）', points:[{x:80.2,y:54.3},{x:79.6,y:53.2},{x:79.3,y:52},{x:78.9,y:50.9},{x:78.8,y:49.9},{x:79,y:48.2},{x:79.6,y:47.6},{x:79.9,y:47.4},{x:80.7,y:48.3},{x:80.8,y:49.8},{x:81.2,y:50.2},{x:81.9,y:50.4},{x:83.1,y:49.5},{x:85.5,y:49.5},{x:86.4,y:49.4},{x:88,y:49.8},{x:88.4,y:50.2},{x:88.6,y:51.3},{x:88.6,y:52.2},{x:88.2,y:53.3},{x:85.7,y:53.1},{x:84,y:53.1},{x:83,y:52.9},{x:82.9,y:53.5},{x:82.7,y:54.4},{x:82.3,y:55.1},{x:81.2,y:56.1},{x:80.5,y:55.6},{x:80.3,y:54.9}], color:'#daa520', desc:'西班牙菲律宾。' }
+  ],
+  modern: [
+    { type:'poly', id:'usa', name:'美国', points:[{x:13.4,y:33.4},{x:13.2,y:35.2},{x:13.2,y:36.1},{x:12.9,y:37.5},{x:13,y:38.8},{x:13.3,y:39.7},{x:13.5,y:40.7},{x:14.1,y:41.9},{x:15.1,y:42.1},{x:15.9,y:42.5},{x:17,y:43.6},{x:17.5,y:44.3},{x:18.5,y:44.1},{x:20,y:43.9},{x:21,y:43.2},{x:22.2,y:43.3},{x:22.9,y:43.6},{x:23.3,y:44.5},{x:23.9,y:45.8},{x:24.2,y:45.6},{x:24.4,y:42.7},{x:24.5,y:41.4},{x:25.8,y:40},{x:25.9,y:38.4},{x:26.4,y:36.8},{x:26.9,y:36.3},{x:27.5,y:35.3},{x:27.5,y:34.6},{x:26.9,y:34.7},{x:25.6,y:35.8},{x:24.8,y:36.6},{x:23.5,y:35.8},{x:23.1,y:35.3},{x:22.3,y:34.4},{x:21.1,y:33.3},{x:20.2,y:33.1},{x:18.3,y:32.9},{x:16.8,y:32.9},{x:15,y:33.1},{x:14.3,y:33.3},{x:13.9,y:33.3}], color:'#daa520', desc:'冷战后唯一超级大国，科技、军事、文化全球领先。政治极化与社会撕裂是当代挑战。' },
+    { type:'poly', id:'canada', name:'加拿大', points:[{x:10.4,y:26.9},{x:10.8,y:24.4},{x:10.4,y:22.4},{x:10.4,y:21.3},{x:12.1,y:22},{x:13.3,y:20.9},{x:14.5,y:20.8},{x:15.6,y:21.5},{x:16.1,y:20.9},{x:15.4,y:19.9},{x:15.6,y:18.5},{x:16.3,y:17.8},{x:16.5,y:17.8},{x:16.8,y:16.3},{x:17.8,y:15.8},{x:19.4,y:14.8},{x:21.2,y:13.8},{x:22.9,y:12.8},{x:26.2,y:12},{x:28,y:11.6},{x:29.9,y:11.2},{x:30.3,y:11.9},{x:28.9,y:13.1},{x:28,y:14.1},{x:27.5,y:15.3},{x:26.6,y:15.5},{x:26.1,y:17.2},{x:26,y:17.8},{x:26.1,y:18.8},{x:26.7,y:19.7},{x:27.2,y:20.4},{x:28.3,y:21.8},{x:28.9,y:22.9},{x:29.5,y:24.3},{x:29.3,y:25.1},{x:28.2,y:26},{x:26.8,y:25.1},{x:26.6,y:24},{x:25.9,y:22.4},{x:25.4,y:22.4},{x:24.8,y:24.2},{x:24.2,y:24.6},{x:23.3,y:26.2},{x:22.9,y:26.9},{x:22.6,y:27.8},{x:22.9,y:28.7},{x:24.2,y:30.2},{x:24.7,y:31.2},{x:25.6,y:30.2},{x:25.6,y:28.1},{x:25.6,y:26.8},{x:26.5,y:26.5},{x:27.3,y:27.4},{x:27.9,y:27.9},{x:28.4,y:28},{x:28.9,y:27.6},{x:29.7,y:29.3},{x:30.8,y:30.7},{x:31.2,y:31.9},{x:31.5,y:33},{x:31.5,y:33.9},{x:30.4,y:33.7},{x:29.9,y:33.9},{x:29.5,y:35.5},{x:28,y:35.3},{x:27.8,y:34.4},{x:26.2,y:35},{x:25.8,y:36.1},{x:24.4,y:36.6},{x:23.6,y:35.9},{x:23.6,y:35.1},{x:22.2,y:34.4},{x:21.1,y:33.5},{x:18,y:33.1},{x:17.6,y:32.9},{x:15.2,y:33.4},{x:13.9,y:33.4},{x:13.2,y:33.5},{x:12.6,y:31.3},{x:12,y:29.5},{x:11.6,y:28.7},{x:11.3,y:28.4},{x:11.2,y:28.1}], color:'#8fbc8f', desc:'枫叶国度，多元文化与福利国家典范。资源丰富，国际维和积极参与者。' },
+    { type:'poly', id:'mexico', name:'墨西哥', points:[{x:16.1,y:45.6},{x:15.6,y:44.9},{x:15.4,y:43.8},{x:15,y:43},{x:14.9,y:42.2},{x:15.5,y:42.4},{x:15.9,y:42.7},{x:16.9,y:43},{x:17.7,y:43.6},{x:18.1,y:44.3},{x:18.6,y:44.7},{x:18.7,y:45.1},{x:18.7,y:46.1},{x:18.9,y:47.6},{x:19.4,y:48.5},{x:19.8,y:49},{x:20.1,y:49.5},{x:19.6,y:49.8},{x:19,y:50},{x:18.3,y:49.9},{x:16.6,y:48.9},{x:16.1,y:48.5},{x:15.9,y:48},{x:15.8,y:47.2},{x:15.7,y:46.6}], color:'#cd853f', desc:'拉美大国，古老文明与现代工业交融。毒品战争与移民议题影响深远。' },
+    { type:'poly', id:'cuba', name:'古巴', points:[{x:24.4,y:45.5},{x:24.8,y:43.8},{x:26.5,y:43.4},{x:27.6,y:43.6},{x:28.1,y:45},{x:28.4,y:46.2},{x:28.4,y:47.2},{x:27.2,y:47.8},{x:26.9,y:49},{x:26,y:49},{x:24.4,y:48.8},{x:22.6,y:47.8},{x:22,y:46.6},{x:22.2,y:46.3},{x:22.9,y:46.3}], color:'#dc143c', desc:'加勒比最大岛国，社会主义体制延续至今。雪茄、朗姆酒与革命遗产。' },
+    { type:'poly', id:'guatemala', name:'危地马拉', points:[{x:15.2,y:50.5},{x:14.4,y:50.2},{x:13.2,y:50},{x:13,y:49.5},{x:13.3,y:48.3},{x:14.3,y:47.4},{x:15.2,y:47.7},{x:15.9,y:48.2},{x:16.3,y:48.5},{x:16.4,y:50},{x:15.8,y:50.6}], color:'#8fbc8f', desc:'中美洲国家，玛雅文明后裔。咖啡出口与社会不平等并存。' },
+    { type:'poly', id:'colombia', name:'哥伦比亚', points:[{x:24.7,y:57.3},{x:24,y:56.2},{x:23.8,y:55.4},{x:23.8,y:54.2},{x:24.2,y:52.9},{x:24.7,y:51.7},{x:25.5,y:51.6},{x:26.3,y:52.1},{x:26.9,y:52.2},{x:27.1,y:52.6},{x:27.3,y:54},{x:27.5,y:55.5},{x:26.7,y:56.5},{x:26.4,y:57.1},{x:26,y:58.2},{x:25.2,y:59},{x:25,y:58.9}], color:'#daa520', desc:'南美门户，从内战走向和平进程。咖啡、翡翠与生物多样性。' },
+    { type:'poly', id:'peru', name:'秘鲁', points:[{x:25.3,y:65.4},{x:23.3,y:63.8},{x:23.1,y:63},{x:22.7,y:61.4},{x:22.6,y:60.3},{x:22.6,y:59.2},{x:23.3,y:58.6},{x:24,y:58.8},{x:24.7,y:57.8},{x:25.1,y:57.3},{x:25.6,y:58.1},{x:25.4,y:59},{x:25.2,y:60.3},{x:25.6,y:61.4},{x:26.1,y:62.2},{x:26.7,y:63.2},{x:26.6,y:63.9},{x:26.4,y:64.3}], color:'#cd853f', desc:'安第斯文明传承者，马丘比丘守护国。矿业经济与原住民文化共存。' },
+    { type:'poly', id:'brazil', name:'巴西', points:[{x:26.6,y:57.5},{x:26.7,y:56.6},{x:26.7,y:56},{x:27.3,y:56},{x:27.7,y:56},{x:28.2,y:56.7},{x:28.8,y:56.1},{x:29.7,y:56.2},{x:30.2,y:56.2},{x:31.2,y:56},{x:31.3,y:54.9},{x:32.1,y:56.5},{x:32.2,y:56.7},{x:32.9,y:57.3},{x:33.3,y:57.6},{x:34.3,y:58.1},{x:35.2,y:58.7},{x:35.7,y:58.8},{x:36.3,y:59.3},{x:36.2,y:59.8},{x:36.2,y:60.3},{x:36.2,y:61.2},{x:35.8,y:62.5},{x:35.5,y:63.3},{x:35.5,y:63.9},{x:35.7,y:65.4},{x:35.5,y:65.9},{x:34.7,y:67.5},{x:34.4,y:67.8},{x:33.9,y:68.6},{x:33.3,y:69.1},{x:33,y:69.3},{x:32.7,y:70.2},{x:32.6,y:71.1},{x:32.2,y:71.8},{x:31.9,y:73},{x:31.7,y:73.6},{x:30.8,y:74.3},{x:30.5,y:74.7},{x:29.7,y:73.8},{x:30.2,y:72.4},{x:30.4,y:71.3},{x:31,y:69.9},{x:29.3,y:69.4},{x:28.9,y:67.6},{x:29.1,y:66.6},{x:29.9,y:65.9},{x:29.5,y:65},{x:28.9,y:63.6},{x:28.1,y:62.5},{x:27.8,y:62},{x:26.1,y:61.7},{x:25.6,y:61.4},{x:25.3,y:60.3},{x:26,y:58.8},{x:26.4,y:58.6},{x:26.4,y:58.3}], color:'#228b22', desc:'南美最大国家，金砖成员。亚马逊雨林守护者，足球与桑巴的故乡。' },
+    { type:'poly', id:'bolivia', name:'玻利维亚', points:[{x:26.1,y:65.6},{x:27,y:64.2},{x:26.6,y:63},{x:26.7,y:62.1},{x:27.5,y:62.6},{x:28.6,y:63.8},{x:29,y:64.4},{x:29.5,y:65.4},{x:29.3,y:67.2},{x:28.9,y:67.6},{x:28,y:68.2},{x:26.7,y:67.8},{x:26.2,y:67.5}], color:'#daa520', desc:'南美内陆国，高原之国。锂矿资源丰富，原住民文化深厚。' },
+    { type:'poly', id:'chile', name:'智利', points:[{x:24.9,y:84.2},{x:24.5,y:83},{x:24.4,y:80.6},{x:24.4,y:79},{x:24.7,y:77.9},{x:24.7,y:76.3},{x:24.7,y:75.1},{x:24.5,y:73.6},{x:23.3,y:72.2},{x:22.8,y:70.5},{x:23.5,y:69.2},{x:24.2,y:68.7},{x:25.1,y:68.2},{x:25.3,y:67.4},{x:25.7,y:66.1},{x:26,y:66.1},{x:26.3,y:67.1},{x:26.6,y:68.2},{x:26.6,y:69.1},{x:26.2,y:70.3},{x:26.1,y:71.3},{x:25.8,y:72.7},{x:25.8,y:74.2},{x:25.7,y:75.4},{x:25.6,y:77.4},{x:25.3,y:79},{x:25.3,y:80.3},{x:25.2,y:81.5},{x:25.1,y:83.5},{x:25.3,y:84.5}], color:'#dc143c', desc:'南美狭长国度，从沙漠到冰川。铜矿大国，拉美经济模范。' },
+    { type:'poly', id:'argentina', name:'阿根廷', points:[{x:25.5,y:76.4},{x:25.6,y:74.7},{x:25.8,y:73.6},{x:25.9,y:72.5},{x:26.2,y:71.4},{x:26.4,y:70.7},{x:26.7,y:69.8},{x:26.8,y:68.9},{x:27.3,y:68.3},{x:28.3,y:68.8},{x:28.8,y:69.3},{x:29.5,y:69.8},{x:29.7,y:70.3},{x:29.8,y:71.5},{x:29.8,y:72.2},{x:29.8,y:73.5},{x:29.9,y:75.1},{x:29.9,y:75.7},{x:29.5,y:76.4},{x:28.7,y:77.1},{x:27.8,y:78.6},{x:27.1,y:79.8},{x:27,y:82},{x:26.5,y:83.1},{x:26.3,y:84.5},{x:25.6,y:84.1},{x:25.2,y:82.4},{x:25.1,y:81.1},{x:25.5,y:79},{x:25.4,y:78.5}], color:'#8fbc8f', desc:'探戈与潘帕斯之国。农业出口大国，经济起伏剧烈。' },
+    { type:'poly', id:'russia', name:'俄罗斯', points:[{x:57.9,y:33.3},{x:57.8,y:32.2},{x:57.4,y:31.7},{x:56.4,y:30.4},{x:55.8,y:29.7},{x:54.9,y:28.5},{x:54.4,y:28},{x:54.1,y:27.3},{x:54.1,y:25.8},{x:54.8,y:24},{x:55.5,y:23.5},{x:57,y:22.6},{x:58.6,y:22.4},{x:61.1,y:21.8},{x:63.1,y:21.6},{x:63.9,y:20.8},{x:65.4,y:19.9},{x:65.5,y:19.6},{x:67.3,y:19.7},{x:68.3,y:18.8},{x:70.8,y:18},{x:73.1,y:17.1},{x:74.5,y:16.6},{x:75.2,y:16.1},{x:76.5,y:16.9},{x:77,y:17.6},{x:76.7,y:18.5},{x:78.5,y:19.3},{x:79.6,y:19.9},{x:81.9,y:20.2},{x:82.9,y:20.2},{x:85.2,y:19.7},{x:86.7,y:20},{x:88.4,y:21.1},{x:90,y:21.8},{x:92.4,y:22.1},{x:94.4,y:22.9},{x:95.4,y:24.1},{x:95,y:24.8},{x:93.9,y:25.7},{x:92.2,y:26.5},{x:90.9,y:28.6},{x:90.6,y:28.6},{x:90.5,y:28.4},{x:89.8,y:30.1},{x:89.3,y:30.6},{x:88.6,y:31.9},{x:88,y:33},{x:87.6,y:30.8},{x:88.4,y:28},{x:88.7,y:26.8},{x:87.3,y:28.5},{x:85.7,y:28},{x:84.7,y:28.1},{x:83.7,y:30},{x:83.4,y:30.7},{x:84,y:31.1},{x:84.4,y:32},{x:84,y:34.7},{x:83.2,y:36.3},{x:82.8,y:36.8},{x:81.8,y:36.2},{x:81.9,y:34.2},{x:81.5,y:33.7},{x:80.5,y:31.7},{x:80,y:30.9},{x:79.7,y:30.7},{x:79.1,y:30.3},{x:78.1,y:31.8},{x:77.7,y:32.3},{x:77.4,y:33.4},{x:77,y:32.6},{x:76.9,y:32.4},{x:75.1,y:32.4},{x:74.1,y:32.3},{x:73.1,y:31.2},{x:71.3,y:31.3},{x:70.8,y:31.7},{x:69.6,y:31.4},{x:68.7,y:31.2},{x:68.1,y:30.6},{x:67,y:29.7},{x:65.6,y:29.2},{x:64.5,y:29},{x:63.8,y:29.2},{x:62.9,y:29.7},{x:62.6,y:30.4},{x:62.1,y:30.9},{x:60.6,y:30.7},{x:60,y:30.9},{x:59.6,y:31.4},{x:59.2,y:32.9},{x:59.3,y:33.7},{x:59.8,y:34.6},{x:59.6,y:36.1},{x:59.6,y:37.2},{x:58.6,y:36.2},{x:58,y:35.3},{x:57.7,y:34.1}], color:'#dc143c', desc:'横跨欧亚的联邦，能源与军事大国。乌克兰危机后地缘格局重塑。' },
+    { type:'poly', id:'china', name:'中国', points:[{x:68.3,y:35.1},{x:68.7,y:34.7},{x:68.9,y:34.4},{x:69.5,y:34},{x:69.5,y:33.6},{x:69.8,y:33.6},{x:70.2,y:34.6},{x:70.7,y:35.2},{x:71.1,y:35.8},{x:72.6,y:36.3},{x:73.5,y:36.3},{x:74.1,y:36.3},{x:74.9,y:36.3},{x:75.2,y:36.3},{x:75.9,y:36.1},{x:76.3,y:35.8},{x:77,y:35.3},{x:77.4,y:35.2},{x:77.7,y:34.8},{x:77.4,y:33.5},{x:77.5,y:32.8},{x:78.1,y:32.5},{x:78.2,y:31.5},{x:78.6,y:31.1},{x:79.4,y:30.9},{x:79.7,y:30.9},{x:80.2,y:31.3},{x:80.7,y:32.2},{x:81,y:32.8},{x:81,y:33.3},{x:81.1,y:34},{x:81.1,y:34.5},{x:81.2,y:35},{x:81.4,y:35.3},{x:81.1,y:35.6},{x:80.5,y:36.2},{x:80.1,y:36.6},{x:79.9,y:37},{x:79.7,y:37.7},{x:78.8,y:37.8},{x:78.1,y:38.1},{x:77.9,y:38.3},{x:77.9,y:38.9},{x:78.2,y:39.2},{x:78.8,y:39.9},{x:78.8,y:40.5},{x:78.6,y:41.3},{x:78.9,y:42.2},{x:79,y:43},{x:78.9,y:44.3},{x:78.8,y:44.6},{x:78.6,y:45.2},{x:77.9,y:45.6},{x:77.6,y:46.2},{x:77.2,y:46.7},{x:76.1,y:47.1},{x:75.7,y:47.1},{x:75,y:46.7},{x:74.7,y:46.6},{x:73.6,y:46.9},{x:73,y:46.7},{x:72.8,y:46.2},{x:72.7,y:45.2},{x:72.6,y:44.6},{x:72.4,y:44.4},{x:71.7,y:43.6},{x:71.3,y:43.6},{x:70.8,y:44.1},{x:70,y:43.6},{x:68.9,y:42.9},{x:68.3,y:42.5},{x:68.4,y:41.8},{x:68.4,y:41.4},{x:68.1,y:40.5},{x:67.7,y:40},{x:67.2,y:40},{x:67.1,y:39},{x:66.9,y:38.3},{x:67.5,y:37.8},{x:68,y:36.8},{x:68,y:36.6},{x:68,y:36.3},{x:68.1,y:36.1}], color:'#dc143c', desc:'改革开放四十余年，世界工厂与最大市场。高铁、移动支付、航天工程标志崛起。' },
+    { type:'poly', id:'mongolia', name:'蒙古', points:[{x:70,y:34.2},{x:69.8,y:33.6},{x:69.6,y:32.9},{x:69.7,y:32.2},{x:70.2,y:31.7},{x:70.7,y:31.5},{x:71.1,y:31.4},{x:71.7,y:31.4},{x:72,y:31.4},{x:72.7,y:31.4},{x:73.3,y:31.7},{x:74.1,y:31.8},{x:74.8,y:32.2},{x:75,y:32.2},{x:75.5,y:32.4},{x:76.3,y:32.6},{x:76.6,y:32.8},{x:76.8,y:33.1},{x:77.1,y:33.7},{x:77.4,y:34.4},{x:77.5,y:34.6},{x:76.9,y:34.8},{x:76.6,y:35.6},{x:76.1,y:35.7},{x:75.7,y:35.7},{x:75.4,y:36.3},{x:74.6,y:36.6},{x:74.1,y:36.6},{x:73.3,y:36.6},{x:72.8,y:36.6},{x:72.2,y:36.6},{x:71.7,y:36.3},{x:71.5,y:36.1},{x:71,y:35.3},{x:70.8,y:35.1},{x:70.6,y:34.8}], color:'#cd853f', desc:'草原之国，游牧文明传承。中俄之间的缓冲带，矿产资源丰富。' },
+    { type:'poly', id:'kazakhstan', name:'哈萨克斯坦', points:[{x:60.7,y:34.2},{x:60.2,y:34},{x:59.7,y:33.9},{x:59.4,y:33.5},{x:59.4,y:32.3},{x:60.2,y:31.9},{x:60.5,y:31.2},{x:61.2,y:31.3},{x:61.7,y:31.3},{x:62.3,y:31.3},{x:62.5,y:30.7},{x:62.6,y:30.4},{x:63,y:30},{x:63.8,y:29.6},{x:64.3,y:29},{x:65.1,y:29},{x:65.6,y:29},{x:65.8,y:29},{x:66.2,y:29.5},{x:66.8,y:29.6},{x:67,y:29.6},{x:67.7,y:30},{x:68,y:30.8},{x:68.4,y:31.1},{x:68.7,y:31.3},{x:69.1,y:31.5},{x:69.6,y:32},{x:69.5,y:32.6},{x:69.1,y:33.1},{x:69.1,y:33.6},{x:68.7,y:34.7},{x:68.6,y:35},{x:68.4,y:35.3},{x:68.4,y:36.1},{x:68.1,y:36.4},{x:67.6,y:36.7},{x:67.3,y:36.7},{x:66.7,y:36.7},{x:66.3,y:37.3},{x:66.2,y:37.5},{x:65.8,y:37.5},{x:65.3,y:37.3},{x:65.1,y:37.2},{x:64.8,y:36.3},{x:64.5,y:36.1},{x:63.8,y:35.7},{x:63.2,y:35.8},{x:62.7,y:34.8},{x:62.6,y:34.7},{x:62.5,y:34.4},{x:62.3,y:34.8},{x:61.9,y:35},{x:61.6,y:35.1},{x:61,y:35.6},{x:60.5,y:35.3},{x:60.1,y:34.8}], color:'#daa520', desc:'中亚最大国家，苏联遗产与现代化转型。石油天然气储量巨大。' },
+    { type:'poly', id:'india', name:'印度', points:[{x:65.9,y:45.4},{x:66.2,y:44.4},{x:66.6,y:43.9},{x:66.9,y:42.9},{x:67.1,y:42.1},{x:67.1,y:41.4},{x:66.9,y:40.3},{x:67.4,y:40.5},{x:67.6,y:40.7},{x:67.8,y:40.8},{x:68.1,y:41.6},{x:68.5,y:42.7},{x:68.6,y:42.7},{x:69,y:43.2},{x:69.7,y:43.6},{x:70.2,y:44.1},{x:70.4,y:44.6},{x:70.5,y:45.1},{x:70.4,y:46.1},{x:70.4,y:46.7},{x:70.4,y:47.6},{x:69.9,y:48.2},{x:69.4,y:48.5},{x:69.1,y:49},{x:68.7,y:49.8},{x:68.5,y:50.2},{x:68.5,y:51.7},{x:68.5,y:52.7},{x:68.5,y:53.5},{x:68,y:53.4},{x:67.5,y:52.7},{x:67.2,y:51.5},{x:66.7,y:50},{x:66.3,y:48.9},{x:65.8,y:47.7},{x:65.3,y:46.6}], color:'#ff8c00', desc:'世界人口最多的国家，IT与制药强国。多元文明与民主实验的交汇。' },
+    { type:'poly', id:'japan', name:'日本', points:[{x:81.2,y:41.7},{x:81.4,y:41.1},{x:81.9,y:40.8},{x:82.5,y:40.6},{x:82.9,y:40.1},{x:83.1,y:39.9},{x:83.4,y:39.2},{x:83.5,y:38.6},{x:83.6,y:38},{x:83.8,y:37.5},{x:84,y:36.9},{x:84.1,y:35.8},{x:84.1,y:35.2},{x:84.3,y:34.6},{x:84.3,y:33.5},{x:84.3,y:32.6},{x:84.2,y:31.4},{x:84.5,y:30.7},{x:84.7,y:31.9},{x:84.9,y:32.9},{x:85.1,y:33.6},{x:84.8,y:34.8},{x:84.9,y:35.6},{x:85.1,y:35.8},{x:85.4,y:36.3},{x:85.4,y:36.8},{x:85.1,y:37.5},{x:85.1,y:38},{x:85.2,y:38.5},{x:85.8,y:38.8},{x:86.3,y:39},{x:86.5,y:39.9},{x:86.5,y:40.2},{x:86.6,y:41.2},{x:86,y:42.2},{x:85.1,y:42.3},{x:84.3,y:42.2},{x:83.9,y:42.1},{x:83.2,y:41.9},{x:82.6,y:42.1},{x:82.2,y:42.4},{x:81.9,y:43},{x:81.3,y:43.9},{x:80.8,y:43.2},{x:80.9,y:42.4}], color:'#dc143c', desc:'科技与文化输出大国。动漫、游戏、精密制造全球领先。老龄化社会的挑战。' },
+    { type:'poly', id:'south_korea', name:'韩国', points:[{x:80.1,y:40.6},{x:79.7,y:40.2},{x:79.6,y:39},{x:79.6,y:38.5},{x:79.7,y:37.9},{x:80.2,y:37.2},{x:80.7,y:36.9},{x:81.8,y:36.2},{x:81.9,y:36.6},{x:82.6,y:38.3},{x:82.7,y:39.1},{x:82.2,y:40.3},{x:81.8,y:40.8},{x:80.7,y:41.1},{x:80.5,y:41.1}], color:'#4682b4', desc:'K-pop与半导体强国，从汉江奇迹到文化输出。朝韩分裂是未愈伤痕。' },
+    { type:'poly', id:'myanmar', name:'缅甸', points:[{x:71.1,y:50.6},{x:71.1,y:49.5},{x:70.6,y:48.4},{x:70.2,y:47.8},{x:70.1,y:46.8},{x:70.8,y:46.2},{x:71.1,y:46.1},{x:71.3,y:46.1},{x:71.5,y:45.4},{x:71.9,y:44.9},{x:72.4,y:44.5},{x:72.6,y:45.2},{x:72.8,y:46.1},{x:73,y:46.8},{x:73.1,y:48},{x:73.1,y:48.7},{x:72.6,y:49.5},{x:71.9,y:50.1},{x:71.5,y:50.5}], color:'#8fbc8f', desc:'东南亚国家，佛塔之国。军政府与民主运动的拉锯。' },
+    { type:'poly', id:'thailand', name:'泰国', points:[{x:72.6,y:52.1},{x:72.6,y:50.7},{x:72.6,y:49.8},{x:72.8,y:48.5},{x:73.1,y:47.8},{x:73.3,y:48},{x:73.7,y:48.7},{x:74,y:48.9},{x:74.4,y:49.1},{x:74.6,y:49.5},{x:74.8,y:50.7},{x:74.9,y:51.2},{x:75.2,y:52.4},{x:74.8,y:52.7},{x:74.2,y:52.9},{x:73.7,y:52.6},{x:73.3,y:52.4}], color:'#daa520', desc:'微笑之国，旅游胜地。君主立宪制，东南亚第二大经济体。' },
+    { id:'vietnam', name:'越南', top:48.6, left:75.6, w:2, h:5, color:'#dc143c', desc:'越南，革新开放后快速工业化。' },
+    { type:'poly', id:'malaysia', name:'马来西亚', points:[{x:77,y:56.2},{x:77.1,y:54.9},{x:77.3,y:54.3},{x:76.7,y:54},{x:74.8,y:54.4},{x:74.1,y:54.6},{x:73.4,y:54.4},{x:73.2,y:55.5},{x:73.3,y:56.1},{x:73.7,y:56.7},{x:74.1,y:57.6},{x:74.3,y:58.1},{x:75,y:58.1},{x:75.9,y:57.6},{x:77.4,y:57.5},{x:77.3,y:56.6}], color:'#daa520', desc:'东南亚联邦，多元种族社会。棕榈油与电子产品出口大国。' },
+    { type:'poly', id:'indonesia', name:'印尼', points:[{x:75.4,y:59},{x:75.2,y:57.7},{x:75.9,y:57.1},{x:76,y:57.1},{x:76.7,y:56.4},{x:77.2,y:56.2},{x:77.7,y:56.6},{x:78.3,y:57.3},{x:78.4,y:57.7},{x:78.7,y:58.4},{x:79,y:59.3},{x:79.4,y:59.8},{x:79.2,y:60.8},{x:78.7,y:61},{x:78,y:61},{x:77.4,y:61.2},{x:76.1,y:61.2},{x:75.7,y:61.1},{x:75.3,y:60.9}], color:'#8fbc8f', desc:'万岛之国，世界最大群岛国家。穆斯林人口最多，生物多样性热点。' },
+    { type:'poly', id:'australia', name:'澳大利亚', points:[{x:78.1,y:69.1},{x:79,y:68.8},{x:79.3,y:67.1},{x:79.5,y:66.7},{x:80,y:66.5},{x:80.2,y:65.9},{x:80.4,y:65.6},{x:81.1,y:66.3},{x:81.1,y:65.6},{x:81.2,y:64.9},{x:82,y:64.4},{x:82.9,y:64.4},{x:83,y:64.7},{x:83.3,y:65.4},{x:83.2,y:66.4},{x:83.4,y:66.6},{x:84,y:67.1},{x:84.3,y:67.4},{x:84.9,y:66.6},{x:84.5,y:65.5},{x:84.9,y:64.5},{x:85.1,y:64.1},{x:85.2,y:63.9},{x:85.7,y:65.4},{x:86,y:65.9},{x:86.3,y:67.1},{x:86.5,y:67.8},{x:86.9,y:68.6},{x:87.3,y:69.3},{x:87.3,y:70},{x:87.6,y:71},{x:87.8,y:71.5},{x:88,y:72.2},{x:88.2,y:73.2},{x:88.2,y:74.2},{x:87.6,y:75.6},{x:87.6,y:77.1},{x:87.3,y:78},{x:87.1,y:78.7},{x:86.7,y:79.8},{x:86.1,y:80},{x:85.1,y:80.6},{x:83.5,y:78.9},{x:82.7,y:77.5},{x:82.3,y:76.7},{x:82.2,y:76.3},{x:81.4,y:75.9},{x:81.3,y:75.9},{x:79.9,y:76.2},{x:79.6,y:76.4},{x:79.1,y:76.8},{x:78,y:76.5},{x:77.5,y:76.8},{x:77.3,y:77.5},{x:77.4,y:75.8},{x:76.9,y:74.7},{x:76.2,y:73.7},{x:76.3,y:71.9},{x:76.6,y:70.5},{x:77.2,y:69.9}], color:'#cd853f', desc:'南半球发达国家，资源与教育出口大国。在美中竞争中寻求平衡。' },
+    { type:'poly', id:'new_zealand', name:'新西兰', points:[{x:90.8,y:81.2},{x:91.7,y:80.1},{x:92.6,y:78.6},{x:92.7,y:78.4},{x:93.3,y:76.8},{x:93.4,y:76},{x:93.6,y:75.1},{x:93.3,y:73},{x:93.9,y:73.1},{x:95,y:74.6},{x:95.1,y:74.7},{x:95.5,y:75.4},{x:95.3,y:76.7},{x:95,y:77.1},{x:94.9,y:77.9},{x:94.4,y:78.9},{x:94.3,y:79.5},{x:95,y:79.8},{x:96,y:80.1},{x:96.6,y:80.6},{x:97.1,y:81.5},{x:96.8,y:83},{x:96.1,y:83},{x:95,y:83.1},{x:93.7,y:83.3},{x:91.9,y:82.5},{x:91.6,y:82.8},{x:90.6,y:82.6}], color:'#228b22', desc:'南太平洋岛国，纯净自然与毛利文化。社会福利先驱。' },
+    { type:'poly', id:'uk', name:'英国', points:[{x:43.1,y:31.7},{x:42.5,y:31.2},{x:42.6,y:29.7},{x:42.8,y:28.7},{x:43,y:27.4},{x:43.4,y:26.9},{x:44,y:27},{x:44.3,y:28},{x:44.9,y:28.5},{x:45.2,y:28.7},{x:45.2,y:29.7},{x:45.3,y:30},{x:45.4,y:30.3},{x:45.4,y:30.9},{x:45.1,y:31.4},{x:44.5,y:31.9},{x:43.9,y:32.4},{x:42.7,y:32.9},{x:42.5,y:32.4},{x:42.5,y:32}], color:'#228b22', desc:'日不落帝国的后继者，脱欧后寻找新定位。金融、文化与软实力。' },
+    { type:'poly', id:'ireland', name:'爱尔兰', points:[{x:40.4,y:32.8},{x:39.8,y:30.8},{x:39.9,y:28.5},{x:40.5,y:27.1},{x:41.7,y:27.3},{x:42.3,y:28.9},{x:42.3,y:30},{x:42.3,y:32},{x:41,y:32.9},{x:40.7,y:32.5}], color:'#8fbc8f', desc:'翡翠之岛，凯尔特虎经济体。科技企业欧洲总部聚集地。' },
+    { type:'poly', id:'france', name:'法国', points:[{x:45.4,y:38.8},{x:44.9,y:38.5},{x:44.2,y:37.8},{x:43.8,y:37.2},{x:43.5,y:36.3},{x:44,y:34.4},{x:44.6,y:33.7},{x:45.4,y:33.5},{x:46.1,y:33.9},{x:46.6,y:34.6},{x:46.9,y:35.1},{x:46.9,y:35.8},{x:46.9,y:37.2},{x:47.2,y:38.1},{x:46.5,y:38.5},{x:46.2,y:38.5}], color:'#4682b4', desc:'欧洲大国，联合国安理会常任理事国。时尚、美食与核电。' },
+    { type:'poly', id:'spain', name:'西班牙', points:[{x:42.7,y:42.9},{x:42.3,y:42.4},{x:42.3,y:41.1},{x:42.3,y:40.2},{x:42.2,y:39.2},{x:42.1,y:38.4},{x:42.3,y:37.4},{x:43.2,y:37.8},{x:43.8,y:37.8},{x:44.4,y:38.1},{x:45,y:38.5},{x:45.4,y:39},{x:45.4,y:39.7},{x:44.9,y:41.2},{x:44.4,y:41.7},{x:43.9,y:42.1},{x:43.5,y:42.5}], color:'#daa520', desc:'伊比利亚半岛大国，旅游与文化输出。加泰罗尼亚独立运动。' },
+    { type:'poly', id:'portugal', name:'葡萄牙', points:[{x:42,y:37.8},{x:41.6,y:37.3},{x:40.7,y:37.3},{x:39.8,y:37.3},{x:39.3,y:37.3},{x:39.1,y:38.4},{x:39.4,y:39.2},{x:39.9,y:40.7},{x:40.3,y:41.3},{x:41.1,y:42.1},{x:41.6,y:42.2},{x:42.1,y:42.2}], color:'#228b22', desc:'大航海先驱，如今数字游民热门目的地。' },
+    { type:'poly', id:'germany', name:'德国', points:[{x:47.6,y:32.6},{x:48,y:31.2},{x:48.2,y:30.2},{x:49.5,y:30.1},{x:50.5,y:30.2},{x:50.3,y:31.3},{x:49.7,y:32.4},{x:49.7,y:33.5},{x:48.9,y:33.7},{x:48.2,y:33.5},{x:47.8,y:33.1}], color:'#8fbc8f', desc:'欧洲经济引擎，统一后的制造业强国。能源转型与移民融合。' },
+    { type:'poly', id:'italy', name:'意大利', points:[{x:50,y:41},{x:49.6,y:40.6},{x:48.8,y:40.3},{x:47.9,y:40},{x:47.5,y:39.5},{x:47.4,y:38.3},{x:47.4,y:37.8},{x:48.3,y:37.4},{x:48.9,y:37.4},{x:49.9,y:37.4},{x:50.8,y:38.3},{x:51,y:39.5},{x:51,y:40.6},{x:50.6,y:40.7}], color:'#cd853f', desc:'文艺复兴故乡，时尚与美食之都。南北经济差距与政治动荡。' },
+    { type:'poly', id:'poland', name:'波兰', points:[{x:50.4,y:32},{x:50.5,y:31.3},{x:50.5,y:30.4},{x:50.5,y:29.8},{x:51.2,y:29.1},{x:52,y:29.7},{x:52.8,y:30},{x:52.9,y:30.2},{x:53.1,y:31.4},{x:53.1,y:31.9},{x:52.5,y:33.1},{x:51.8,y:33.1},{x:51.1,y:32.6},{x:50.9,y:32.6}], color:'#dc143c', desc:'中欧大国，欧盟东扩核心。从计划经济到市场经济的成功转型。' },
+    { type:'poly', id:'ukraine', name:'乌克兰', points:[{x:56.6,y:35.1},{x:55.7,y:35.1},{x:54.8,y:34.6},{x:54.2,y:34},{x:54.3,y:32.9},{x:55.5,y:32.4},{x:57,y:32.3},{x:57.5,y:32.6},{x:57.7,y:33.7},{x:57.4,y:34.7},{x:57.2,y:35.1}], color:'#daa520', desc:'东欧大国，欧洲粮仓。2022年冲突重塑国际秩序。' },
+    { type:'poly', id:'turkey', name:'土耳其', points:[{x:56.5,y:41.4},{x:55.9,y:41.2},{x:55.2,y:40.7},{x:54.8,y:40.2},{x:55.7,y:38.9},{x:56.4,y:38.3},{x:57.6,y:37.9},{x:58.6,y:38.3},{x:59.7,y:38.5},{x:59.7,y:39.2},{x:59.6,y:40.1},{x:59,y:41},{x:58.8,y:41.2},{x:58.3,y:41.2}], color:'#cd853f', desc:'欧亚十字路口，北约成员与伊斯兰大国。' },
+    { type:'poly', id:'iran', name:'伊朗', points:[{x:60.5,y:42.4},{x:60.1,y:41.4},{x:59.9,y:40.5},{x:59.9,y:39.9},{x:60.1,y:39},{x:60.4,y:39},{x:60.9,y:39.1},{x:61.5,y:38.8},{x:61.7,y:38.6},{x:62.2,y:38.6},{x:62.5,y:38.9},{x:63.1,y:39.4},{x:63.4,y:39.9},{x:63.4,y:40.5},{x:63.3,y:41.2},{x:63.4,y:41.7},{x:63.5,y:43},{x:63.8,y:43.6},{x:63.8,y:44.4},{x:63.3,y:44.9},{x:62.3,y:44.9},{x:61.5,y:44.4},{x:60.9,y:43.8},{x:60.8,y:43.6}], color:'#228b22', desc:'波斯文明传承，什叶派核心国家。核问题与制裁下的坚持。' },
+    { type:'poly', id:'iraq', name:'伊拉克', points:[{x:60.1,y:41.4},{x:58.9,y:41.4},{x:58.6,y:41.3},{x:58.3,y:42.4},{x:58.1,y:42.9},{x:58.2,y:43.4},{x:58.3,y:44.4},{x:58.4,y:45.1},{x:58.6,y:45.6},{x:58.9,y:46.1},{x:59.7,y:46.1},{x:59.9,y:45.8},{x:60.7,y:45.6},{x:60.8,y:45},{x:60.7,y:44.6},{x:60.5,y:43.9},{x:60.7,y:43.2}], color:'#cd853f', desc:'两河流域文明发源地，战后重建中。石油资源丰富。' },
+    { type:'poly', id:'saudi_arabia', name:'沙特阿拉伯', points:[{x:58.6,y:52.4},{x:57.5,y:50.5},{x:57.2,y:48.8},{x:56.9,y:47.8},{x:56.9,y:46.7},{x:58.3,y:45.8},{x:59,y:46.6},{x:59.6,y:47.8},{x:60.1,y:48.7},{x:60.7,y:49.1},{x:62.2,y:49.4},{x:61.9,y:50.7},{x:61.4,y:51.5},{x:60.3,y:51.8},{x:59.5,y:51.8}], color:'#daa520', desc:'石油王国，两圣地守护者。愿景2030经济转型。' },
+    { type:'poly', id:'egypt', name:'埃及', points:[{x:53.3,y:49.3},{x:53.4,y:46.8},{x:53.5,y:46},{x:54.8,y:46.1},{x:55.3,y:46.1},{x:56.1,y:46.8},{x:56.1,y:48},{x:56.3,y:49.4},{x:56.5,y:50.5},{x:55.3,y:51.2},{x:53.6,y:51.5},{x:53.2,y:50.7},{x:53.3,y:50.2}], color:'#daa520', desc:'法老文明传承，苏伊士运河守护者。阿拉伯世界人口最多国家。' },
+    { type:'poly', id:'algeria', name:'阿尔及利亚', points:[{x:48.4,y:49.1},{x:47.6,y:47.3},{x:47.7,y:45.5},{x:47.6,y:43.8},{x:47.1,y:42.9},{x:46.2,y:42.7},{x:44.5,y:43},{x:43.7,y:43.6},{x:43.4,y:44.1},{x:43.6,y:45.5},{x:43.4,y:46},{x:42.1,y:46.7},{x:41.8,y:47.4},{x:41.8,y:48.3},{x:42.7,y:49.5},{x:44.1,y:50.9},{x:44.5,y:51.3},{x:45.6,y:52.4},{x:46.9,y:52.3},{x:47.6,y:50.7},{x:47.8,y:50.5}], color:'#daa520', desc:'非洲面积最大国家，天然气出口大国。' },
+    { type:'poly', id:'libya', name:'利比亚', points:[{x:48.4,y:49.1},{x:48.2,y:48},{x:48.2,y:46.8},{x:48.7,y:45.5},{x:49.2,y:45.2},{x:50.1,y:45.7},{x:51.3,y:45.8},{x:52,y:45.1},{x:52.6,y:44.9},{x:53.1,y:45.2},{x:53.1,y:46.6},{x:53.4,y:48.3},{x:53.4,y:49.5},{x:53.4,y:50.5},{x:53.1,y:52},{x:52.9,y:52.1},{x:51.3,y:51.2},{x:50.1,y:50.4},{x:49.2,y:49.9},{x:49,y:49.8}], color:'#cd853f', desc:'北非石油国，内战后分裂治理。' },
+    { type:'poly', id:'sudan', name:'苏丹', points:[{x:53,y:54.9},{x:53.5,y:53.1},{x:53.7,y:51.7},{x:55.5,y:51.2},{x:56.1,y:51.3},{x:56.4,y:51.8},{x:56.5,y:52.8},{x:57,y:54.2},{x:56.6,y:55.1},{x:56.4,y:56.2},{x:56.1,y:56.4},{x:54.2,y:56},{x:53.6,y:55.9}], color:'#daa520', desc:'东非大国，尼罗河交汇处。内战与人道危机。' },
+    { type:'poly', id:'ethiopia', name:'埃塞俄比亚', points:[{x:56.8,y:59.7},{x:56,y:58.6},{x:55.8,y:57.3},{x:56.5,y:55.4},{x:57.4,y:54.4},{x:58,y:54.9},{x:58.9,y:56.1},{x:59.1,y:56.4},{x:59.9,y:57.1},{x:60.5,y:57.3},{x:60.3,y:58.3},{x:59.5,y:59.4},{x:59.2,y:60.1},{x:58.1,y:60.3},{x:57.5,y:60.3}], color:'#228b22', desc:'非洲文明古国，从未被殖民。咖啡发源地，经济高速增长。' },
+    { type:'poly', id:'dr_congo', name:'刚果（金）', points:[{x:49.8,y:65.6},{x:49.9,y:65.3},{x:50,y:63.7},{x:50.3,y:63.1},{x:50.4,y:62.1},{x:50.9,y:61},{x:51.6,y:61},{x:52,y:60.8},{x:53.3,y:60.8},{x:54.1,y:60.8},{x:54.6,y:61},{x:54.5,y:62.7},{x:54.4,y:63.9},{x:54.2,y:64.9},{x:54.2,y:66.3},{x:54.4,y:67.1},{x:54.1,y:68.3},{x:53.6,y:69.2},{x:53.1,y:69.7},{x:51.6,y:69.2},{x:51,y:68.3},{x:50.3,y:67.4},{x:50.2,y:66.9}], color:'#9370db', desc:'非洲心脏，钴矿与稀有金属宝库。资源诅咒与冲突交织。' },
+    { type:'poly', id:'tanzania', name:'坦桑尼亚', points:[{x:54.9,y:68.2},{x:54.4,y:67.2},{x:54.4,y:66.1},{x:55.1,y:65.3},{x:55.7,y:64.4},{x:56.1,y:64.2},{x:56.7,y:64.4},{x:57.3,y:64.8},{x:57.5,y:65},{x:57.7,y:65.6},{x:57.7,y:66.6},{x:57.8,y:68.3},{x:57.9,y:68.8},{x:57.4,y:69.1},{x:56.7,y:69.1},{x:55.8,y:69.3},{x:55.6,y:69.1}], color:'#228b22', desc:'东非大国，乞力马扎罗与塞伦盖蒂的守护者。' },
+    { type:'poly', id:'madagascar', name:'马达加斯加', points:[{x:59,y:73.7},{x:59,y:73},{x:58.8,y:72.1},{x:59,y:71.5},{x:59.6,y:71},{x:60,y:70},{x:60.3,y:69.2},{x:60.7,y:69.1},{x:61.2,y:70},{x:61.2,y:70.7},{x:61.2,y:71.4},{x:61.3,y:72.1},{x:62.7,y:72},{x:64,y:72},{x:64.3,y:72.9},{x:64.2,y:73.7},{x:63.9,y:74.3},{x:63.4,y:74.9},{x:61.8,y:74.7},{x:60.8,y:74.6},{x:60.8,y:75.1},{x:60.7,y:75.7},{x:59.8,y:76},{x:59.7,y:76.2},{x:58.8,y:75.9},{x:58.6,y:75.4}], color:'#8fbc8f', desc:'印度洋大岛，独特生态系统。狐猴与猴面包树的家园。' },
+    { type:'poly', id:'greenland', name:'格陵兰（丹麦）', points:[{x:31.1,y:16.7},{x:30.1,y:16.3},{x:29,y:16.3},{x:28.7,y:15.2},{x:30.1,y:14.5},{x:30,y:13.1},{x:31,y:12.6},{x:32.2,y:11.9},{x:33.2,y:11.6},{x:33.9,y:11.9},{x:34.8,y:11.4},{x:36.1,y:11.2},{x:37.6,y:10.6},{x:37.9,y:10.6},{x:38.9,y:10.9},{x:39.8,y:11.5},{x:40.5,y:11.7},{x:41.6,y:12.3},{x:42.1,y:12.6},{x:41.4,y:13.2},{x:41,y:13.9},{x:40.7,y:15.8},{x:40.9,y:16.7},{x:40.9,y:18.2},{x:40.3,y:18.3},{x:40.1,y:18.5},{x:40.2,y:19.4},{x:40.4,y:19.7},{x:39.9,y:20.4},{x:39.6,y:21.1},{x:38.9,y:21.6},{x:38.1,y:21.8},{x:37.7,y:21.8},{x:37.4,y:22.4},{x:37,y:22.9},{x:36.5,y:22.9},{x:35.6,y:23.5},{x:35.5,y:23.8},{x:35.5,y:25.3},{x:35.5,y:26},{x:35,y:26.5},{x:34.8,y:27},{x:33.6,y:26},{x:33,y:25.1},{x:32.3,y:22.9},{x:32.5,y:21.6},{x:32.7,y:20.7},{x:32.1,y:19.7},{x:31.5,y:18.5},{x:31.7,y:17.5},{x:31,y:17.1}], color:'#8b8682', desc:'丹麦自治领，世界最大岛屿。气候变化前沿与北极资源。' },
+    { type:'poly', id:'finland', name:'芬兰', points:[{x:54.8,y:22.2},{x:54.1,y:21.1},{x:53.7,y:19.6},{x:54,y:18.3},{x:55.2,y:17.8},{x:56.4,y:18.7},{x:57.5,y:19.4},{x:57,y:21.6},{x:56.3,y:22},{x:55.5,y:22.1}], color:'#4682b4', desc:'北欧福利国家，教育与科技强国。桑拿文化与千湖之国。' },
+    { type:'poly', id:'sweden', name:'瑞典', points:[{x:51.2,y:23.6},{x:50.9,y:25.3},{x:50.7,y:26.3},{x:50.5,y:26.8},{x:49.6,y:26.5},{x:49.3,y:25.1},{x:49.3,y:23.6},{x:49.5,y:21.9},{x:49.8,y:21},{x:50.7,y:19.9},{x:52,y:18.6},{x:53,y:18.6},{x:53.1,y:19.8},{x:52.6,y:20.9},{x:52.1,y:21.6},{x:51.9,y:22.1}], color:'#daa520', desc:'北欧王国，诺贝尔奖的故乡。社会民主模范与创新强国。' },
+    { type:'poly', id:'norway', name:'挪威', points:[{x:48.9,y:25.3},{x:48,y:25.9},{x:47.4,y:25.2},{x:45.9,y:24.6},{x:45.6,y:23.6},{x:45.8,y:21.6},{x:47.5,y:21.1},{x:48.3,y:21},{x:48.8,y:20.2},{x:50.3,y:18.9},{x:51.7,y:17.6},{x:52.7,y:17},{x:54.7,y:16.3},{x:53.4,y:17.4},{x:52.4,y:17.8},{x:51.1,y:19.4},{x:50.4,y:20.8},{x:49.5,y:21.8},{x:49.4,y:23.1},{x:49.1,y:24.6}], color:'#dc143c', desc:'北欧石油国，主权财富基金全球最大。峡湾之国。' },
+    { type:'poly', id:'south_africa', name:'南非', points:[{x:50,y:80.3},{x:49.7,y:79.3},{x:50,y:79.1},{x:50.9,y:79.2},{x:51.1,y:78.7},{x:51.1,y:77.9},{x:51.8,y:77.9},{x:52.1,y:77.5},{x:52.9,y:77.4},{x:53.1,y:77},{x:53.6,y:76.7},{x:54.8,y:75.9},{x:55,y:76},{x:55.4,y:77.1},{x:55.7,y:77.9},{x:55.7,y:78.5},{x:55.3,y:79.7},{x:55,y:80.3},{x:54.4,y:81.2},{x:53.9,y:82},{x:53.1,y:82.5},{x:52.2,y:82.5},{x:51.6,y:82.5},{x:50.4,y:82.3}], color:'#5dd9d0', desc:'彩虹之国，从种族隔离到民主转型。非洲最发达经济体之一。' },
+    { type:'poly', id:'namibia', name:'纳米比亚', points:[{x:49.5,y:79},{x:49,y:77.4},{x:48.4,y:76.7},{x:48.2,y:76.2},{x:47.8,y:74.9},{x:48,y:73.8},{x:48,y:73},{x:50,y:73},{x:50.8,y:73.2},{x:51.4,y:73.2},{x:52.8,y:73.1},{x:52.9,y:73.5},{x:52.2,y:74.1},{x:52,y:74.3},{x:51.5,y:74.9},{x:51.2,y:75.7},{x:51.1,y:76.9},{x:51,y:77.9},{x:51,y:78.6},{x:50.6,y:78.9},{x:50,y:78.9}], color:'#5dd9d0', desc:'沙漠之国，骷髅海岸与红沙丘。独立后非洲治理典范。' },
+    { type:'poly', id:'botswana', name:'博茨瓦纳', points:[{x:50.9,y:77.4},{x:50.9,y:76.5},{x:51.3,y:75.4},{x:51.4,y:75.1},{x:51.8,y:74.2},{x:52,y:74.1},{x:53,y:73.6},{x:53.8,y:74.7},{x:54.2,y:75.4},{x:54.4,y:76.3},{x:53.3,y:76.8},{x:52.7,y:77},{x:51.6,y:77.4},{x:51.2,y:77.9}], color:'#5dd9d0', desc:'非洲钻石国，治理与反腐模范。奥卡万戈三角洲。' },
+    { type:'poly', id:'zimbabwe', name:'津巴布韦', points:[{x:54.1,y:74.7},{x:53.5,y:73.7},{x:53.5,y:73},{x:54.2,y:72.4},{x:54.6,y:72.1},{x:55.2,y:71.5},{x:55.7,y:71.4},{x:55.9,y:71.6},{x:56.3,y:73},{x:56.8,y:73.5},{x:57.1,y:74.1},{x:56.8,y:74.9},{x:56.6,y:75.6},{x:56.4,y:76.7},{x:55.5,y:76.9},{x:55.3,y:76.3},{x:54.9,y:75.6}], color:'#5dd9d0', desc:'南部非洲国家，大津巴布韦遗址。经济动荡与政治转型。' },
+    { type:'poly', id:'zambia', name:'赞比亚', points:[{x:52.4,y:73.2},{x:51.8,y:72.2},{x:51.8,y:71.3},{x:52.2,y:70.3},{x:52.5,y:69.6},{x:53,y:69.6},{x:53.5,y:69.6},{x:54.3,y:70.2},{x:54.6,y:70.5},{x:54.8,y:71.5},{x:54.8,y:72},{x:54.6,y:72.2}], color:'#5dd9d0', desc:'南部非洲国家，维多利亚瀑布所在地。铜矿经济。' },
+    { type:'poly', id:'kenya', name:'肯尼亚', points:[{x:55.9,y:63.6},{x:56.1,y:62.7},{x:56.4,y:60.8},{x:57.4,y:60.3},{x:58.4,y:61},{x:58.7,y:61.2},{x:58.7,y:63.1},{x:58.7,y:63.9},{x:58.3,y:64.7},{x:57.7,y:65.2}], color:'#5dd9d0', desc:'东非大国，移动支付M-Pesa先驱。马赛马拉与长跑强国。' },
+    { type:'poly', id:'angola', name:'安哥拉', points:[{x:48.1,y:72.6},{x:48.1,y:71},{x:48.4,y:70},{x:48.5,y:69.1},{x:48.5,y:67.8},{x:48.5,y:66.6},{x:49.2,y:66.4},{x:49.8,y:66.4},{x:50.2,y:66.9},{x:50.5,y:67.6},{x:51,y:68.3},{x:51.5,y:68.8},{x:51.7,y:69.1},{x:51.8,y:69.4},{x:52,y:69.8},{x:51.7,y:70.3},{x:52,y:71.4},{x:52.1,y:72.2},{x:52,y:73},{x:51.4,y:73.3},{x:50.3,y:73.2},{x:49.1,y:73},{x:48.4,y:72.9}], color:'#5dd9d0', desc:'南部非洲石油大国，内战后重建。' },
+    { type:'poly', id:'nigeria', name:'尼日利亚', points:[{x:45.2,y:59.8},{x:45.2,y:58.8},{x:45.4,y:57.5},{x:45.4,y:56.6},{x:45.7,y:55.9},{x:47.5,y:56.1},{x:48.1,y:56.1},{x:49.3,y:56.1},{x:49.8,y:56.4},{x:49.3,y:57.8},{x:49.1,y:58.8},{x:48.7,y:59.9},{x:47.9,y:60.3},{x:46.9,y:60.8},{x:45.8,y:60.8},{x:45.6,y:60.8}], color:'#5dd9d0', desc:'非洲人口最多国家，石油与诺莱坞。宗教与族群多元。' },
+    { type:'poly', id:'chad', name:'乍得', points:[{x:49.7,y:58.2},{x:49.7,y:57.1},{x:49.7,y:56.1},{x:50.2,y:54.8},{x:50.4,y:53.7},{x:50.4,y:52},{x:50.4,y:51.2},{x:50.7,y:51},{x:52,y:52.2},{x:52.6,y:52.7},{x:52.9,y:53.1},{x:53,y:54},{x:53,y:55.1},{x:52.9,y:55.6},{x:52.6,y:56.4},{x:52.5,y:57.3},{x:52.2,y:57.8},{x:51.2,y:58.6},{x:50.2,y:59}], color:'#5dd9d0', desc:'中非内陆国，乍得湖缩小的环境危机。' },
+    { type:'poly', id:'niger', name:'尼日尔', points:[{x:44.5,y:56.1},{x:44.2,y:55},{x:44.5,y:54.5},{x:45.3,y:54.4},{x:45.6,y:53.3},{x:45.8,y:52.7},{x:46.4,y:52},{x:47.1,y:51.3},{x:47.5,y:50.7},{x:48.6,y:50.2},{x:49,y:50.2},{x:49.4,y:50.4},{x:49.8,y:50.9},{x:50,y:51.7},{x:50.2,y:52.8},{x:50.2,y:54},{x:50.1,y:54.8},{x:49.5,y:55.7},{x:48.4,y:56},{x:47.2,y:55.9},{x:45.9,y:55.3},{x:45,y:56}], color:'#5dd9d0', desc:'西非内陆国，撒哈拉边缘。铀矿出口国。' },
+    { type:'poly', id:'mali', name:'马里', points:[{x:40.5,y:56.1},{x:40.5,y:55.1},{x:41.3,y:54.9},{x:41.7,y:54.6},{x:42,y:53.7},{x:42,y:52.2},{x:42.1,y:51},{x:42.1,y:50.2},{x:42.4,y:49.5},{x:42.8,y:49.5},{x:43.4,y:50},{x:43.8,y:50.4},{x:44.3,y:51},{x:44.7,y:51.7},{x:44.9,y:52},{x:45.4,y:52.7},{x:45.4,y:53.7},{x:45,y:54},{x:44.5,y:54.4},{x:43.8,y:54.5},{x:43.2,y:54.6},{x:42.8,y:55.1},{x:42.5,y:55.6},{x:42.3,y:56.4},{x:42,y:56.8},{x:41.4,y:57.3},{x:41,y:56.4}], color:'#5dd9d0', desc:'西非国家，廷巴克图的学术遗产。安全挑战与萨赫勒危机。' },
+    { type:'poly', id:'ghana', name:'加纳', points:[{x:42.8,y:60.4},{x:42.5,y:60},{x:42.7,y:59.3},{x:43.1,y:58.3},{x:43.2,y:57.5},{x:43.8,y:57.3},{x:44.5,y:57.8},{x:45,y:58.4},{x:45.2,y:59.3},{x:45,y:60.4},{x:44.5,y:60.5},{x:43.6,y:60.5},{x:43.1,y:60.8}], color:'#5dd9d0', desc:'西非民主模范，可可出口大国。非洲数字经济先锋。' },
+    { type:'poly', id:'yemen', name:'也门', points:[{x:59.6,y:55.7},{x:59,y:54.2},{x:59.4,y:53.2},{x:60.5,y:52.4},{x:61.4,y:51.5},{x:62.9,y:51.3},{x:63.1,y:52.9},{x:62.4,y:53.4},{x:61.6,y:54.2},{x:61.9,y:55.1},{x:60.8,y:55.6}], color:'#5dd9d0', desc:'阿拉伯半岛南端，内战与人道危机。古代乳香之路。' },
+    { type:'poly', id:'senegal', name:'塞内加尔', points:[{x:39.2,y:56.7},{x:37.6,y:56.6},{x:36.7,y:55.9},{x:36.6,y:54.5},{x:37,y:53.4},{x:38.3,y:53.1},{x:39,y:53.1},{x:39.6,y:53.4},{x:39.9,y:54},{x:40,y:54.9},{x:40.2,y:55.7},{x:39.9,y:56.5},{x:39.4,y:56.6}], color:'#5dd9d0', desc:'西非国家，达喀尔文化之都。非洲民主典范之一。' },
+    { type:'poly', id:'mauritania', name:'毛里塔尼亚', points:[{x:39.1,y:52.7},{x:38.7,y:51.5},{x:39.9,y:50.2},{x:40.8,y:48.3},{x:41.4,y:48},{x:42.3,y:48.8},{x:42.3,y:49.5},{x:42,y:51.3},{x:42.1,y:52.8},{x:41.6,y:53.9},{x:40.5,y:54.3},{x:40,y:53.9}], color:'#5dd9d0', desc:'西非沙漠国家，阿拉伯与非洲文化交汇。铁矿与渔业。' },
+    { type:'poly', id:'morocco', name:'摩洛哥', points:[{x:39.8,y:50},{x:38.8,y:50.2},{x:38.8,y:49.6},{x:39.3,y:48},{x:39.4,y:46.9},{x:39.8,y:45.6},{x:39.9,y:44.6},{x:40.9,y:43.8},{x:42.5,y:42.9},{x:43.2,y:43.5},{x:43.4,y:44.4},{x:43.1,y:45.1},{x:42.5,y:46.5},{x:42,y:47.1},{x:41.2,y:47.9},{x:40.9,y:49},{x:40.6,y:49.4}], color:'#5dd9d0', desc:'北非王国，连接欧洲与非洲的门户。旅游与磷酸盐出口。' },
+    { type:'poly', id:'south_sudan', name:'南苏丹', points:[{x:53.5,y:59.2},{x:52.8,y:58.7},{x:52.8,y:57.5},{x:52.7,y:56.6},{x:52.8,y:55.9},{x:54.1,y:56.4},{x:55.2,y:56.5},{x:55.4,y:56.8},{x:56,y:58.3},{x:56.3,y:59.2},{x:56.1,y:59.5},{x:55.5,y:59.7},{x:54.8,y:60},{x:54.2,y:59.7}], color:'#5dd9d0', desc:'世界最年轻的国家（2011年独立），内战与石油经济。' },
+    { type:'poly', id:'car', name:'中非共和国', points:[{x:50.4,y:61.5},{x:49.8,y:60.4},{x:50,y:59.2},{x:50.9,y:58.6},{x:51.9,y:58.2},{x:52.6,y:57.9},{x:53.5,y:59.4},{x:54.2,y:60.8},{x:53.5,y:61},{x:52.5,y:60.6},{x:51.6,y:61},{x:50.9,y:61.1}], color:'#5dd9d0', desc:'中非国家，钻石与木材资源。武装冲突与国际维和。' },
+    { type:'poly', id:'singapore', name:'新加坡', points:[{x:78.3,y:56.4},{x:77.9,y:56.7},{x:78.6,y:57.3},{x:78.8,y:56.7},{x:78.7,y:56.5},{x:78.5,y:56.4}], color:'#5dd9d0', desc:'亚洲金融中心，城市国家治理典范。多元种族和谐社会。' },
+    { type:'poly', id:'belarus', name:'白俄罗斯', points:[{x:54.2,y:34.4},{x:52.4,y:34.1},{x:52.1,y:32.6},{x:53.1,y:31.4},{x:53.1,y:30.7},{x:53.2,y:29.8},{x:54.2,y:29.7},{x:55,y:28.9},{x:55.7,y:29.5},{x:56.3,y:30.2},{x:57.2,y:31.3},{x:57.4,y:31.9},{x:57.5,y:32.9}], color:'#5dd9d0', desc:'东欧国家，欧洲最后的威权体制。俄罗斯盟友。' },
+    { type:'poly', id:'netherlands', name:'荷兰', points:[{x:48.5,y:28.5},{x:46.2,y:28.4},{x:46.4,y:31.1},{x:48.5,y:30.9},{x:48.8,y:29.1},{x:48.4,y:28.5}], color:'#5dd9d0', desc:'低地之国，围海造田。国际法庭与鲜花贸易。' },
+    { type:'poly', id:'belgium', name:'比利时', points:[{x:45.9,y:33.9},{x:45,y:32.9},{x:44.9,y:31.4},{x:45.5,y:30.8},{x:46.4,y:30.7},{x:47.1,y:30.7},{x:47.6,y:30.8},{x:48,y:31.2},{x:48,y:32.2},{x:47.8,y:33.3}], color:'#5dd9d0', desc:'欧盟与北约总部所在地，巧克力与啤酒。' },
+    { type:'poly', id:'denmark', name:'丹麦', points:[{x:49.3,y:26.2},{x:47.5,y:25.6},{x:46.5,y:26.3},{x:46.2,y:27.3},{x:46.7,y:27.8},{x:48.1,y:28.4},{x:49.3,y:28.2},{x:49.4,y:27}], color:'#5dd9d0', desc:'北欧王国，幸福指数全球前列。乐高与风力发电。' },
+    { type:'poly', id:'iceland', name:'冰岛', points:[{x:39.4,y:24.1},{x:39.3,y:22},{x:40.5,y:21.3},{x:42,y:22},{x:42.7,y:23.6},{x:42.5,y:25.1},{x:41.9,y:25.9},{x:41,y:26.2},{x:39.9,y:25.9},{x:39.5,y:25.3}], color:'#5dd9d0', desc:'北大西洋岛国，火山与冰川之地。地热能源先驱。' },
+    { type:'poly', id:'romania', name:'罗马尼亚', points:[{x:55.6,y:37.2},{x:53.1,y:36.8},{x:53.1,y:34.8},{x:55,y:34.6},{x:56.1,y:35.3},{x:56.3,y:36.3}], color:'#5dd9d0', desc:'东欧国家，喀尔巴阡山与德古拉传说。欧盟成员。' },
+    { type:'poly', id:'greece', name:'希腊', points:[{x:53.8,y:42.9},{x:53.1,y:42.9},{x:52.8,y:41.1},{x:53.1,y:39.4},{x:54.3,y:39.1},{x:55.1,y:40.2},{x:55.4,y:41.8},{x:55.2,y:43.2},{x:54.2,y:43.4},{x:53.9,y:43.3}], color:'#5dd9d0', desc:'欧洲文明摇篮，民主发源地。债务危机后的复苏。' },
+    { type:'poly', id:'switzerland', name:'瑞士', points:[{x:47.4,y:37.8},{x:46.8,y:36.3},{x:47.3,y:35.2},{x:47.6,y:34.7},{x:48.8,y:34.6},{x:49.5,y:35.1},{x:49.7,y:36.6},{x:49.6,y:37.3},{x:48.6,y:38.1},{x:47.8,y:38}], color:'#5dd9d0', desc:'永久中立国，银行与钟表之都。联合国欧洲总部所在地。' }
+  ]
+};
+
+// ==================== REGION DETAILS ====================
+const regionDetails = {
+  americas: { title: '美洲', titleEn: 'The Americas', desc: '末次冰期结束后，人类从白令陆桥扩散至整个大陆。克洛维斯猎人在大平原追踪猛犸，亚马逊流域开始早期农业实验。' },
+  eurasia: { title: '欧亚大陆', titleEn: 'Eurasia', desc: '农业革命在肥沃新月地带酝酿，小麦与大麦驯化。欧洲洞穴壁画记录狩猎生活，社会分层初现。' },
+  africa: { title: '非洲', titleEn: 'Africa', desc: '撒哈拉仍是可通行的草原，尼罗河流域出现最早的农业聚落。班图人开始向南方扩张，带来铁器与农业技术。' },
+  australia: { title: '澳大利亚', titleEn: 'Australia', desc: '约五万年前抵达的智人后裔发展出独特的 Dreamtime 信仰体系。巨型动物群灭绝后，火棍农业管理景观。' },
+  beringia: { title: '白令陆桥', titleEn: 'Beringia', desc: '海平面下降 100 米暴露出的广阔苔原，连接东北亚与阿拉斯加。人类与猛犸、野马、骆驼在此迁徙。' },
+  mesopotamia: { title: '美索不达米亚', titleEn: 'Mesopotamia', desc: '两河之间的土地。苏美尔人发明轮车、帆船与青铜冶炼。城邦间战争频繁，乌鲁克、乌尔、拉格什争霸。' },
+  egypt: { title: '尼罗河流域', titleEn: 'The Nile Valley', desc: '世界最长的诗。尼罗河每年泛滥带来肥沃黑土，使沙漠中的奇迹成为可能。法老被视为神王，来世信仰驱动金字塔建造。' },
+  indus: { title: '印度河流域', titleEn: 'The Indus Valley', desc: '印度文明的先声。摩亨佐-达罗拥有世界最早的公共卫生系统，城市规划严整如棋盘。文字尚未破译。' },
+  yellow_river: { title: '黄河流域', titleEn: 'Yellow River Valley', desc: '华夏摇篮。仰韶彩陶与龙山黑陶见证社会复杂化。传说中的三皇五帝时代，部落联盟向国家过渡。' },
+  aegean: { title: '爱琴海', titleEn: 'The Aegean', desc: '欧洲文明的起点。基克拉泽斯群岛的海员连接埃及与安纳托利亚，米诺斯宫殿在克里特岛兴起。' },
+  persia: { title: '波斯帝国', titleEn: 'Persian Empire', desc: '历史上第一个横跨三大洲的帝国。居鲁士大帝释放巴比伦之囚，大流士建立行省与驿道。波斯波利斯的万国之门见证多元共治。' },
+  greece: { title: '希腊城邦', titleEn: 'Greek City-States', desc: '民主、哲学与悲剧的诞生地。雅典卫城耸立，斯巴达军营严酷。希罗多德记录历史，苏格拉底追问真理。' },
+  egypt_500: { title: '埃及', titleEn: 'Egypt', desc: '古老的文明已历经三千年。波斯统治下的埃及仍在建造神庙，但已不再是独立强权。亚历山大港即将改变一切。' },
+  india_500: { title: '婆罗多诸国', titleEn: 'Mahajanapadas', desc: '十六大国并立，摩揭陀与憍萨罗争霸。释迦牟尼在此觉悟，耆那教大雄宣扬非暴力。奥义书哲学深入探索梵我合一。' },
+  china_500: { title: '东周列国', titleEn: 'Eastern Zhou States', desc: '春秋五霸，礼乐征伐自诸侯出。孔子删述六经，老子留下道德经。铁器普及，井田制瓦解，百家争鸣即将爆发。' },
+  gaul: { title: '高卢', titleEn: 'Gaul', desc: '凯尔特战士的土地。德鲁伊祭司维系口传知识，拉坦诺铁器精美绝伦。他们是令罗马颤抖的敌人，也是日后的法兰克人。' },
+  italy: { title: '意大利', titleEn: 'Italia', desc: '靴子形状的半岛。伊特鲁里亚人建立城市联盟，罗马七丘上的狼孩传说正在变成共和国。希腊殖民城邦点缀南部。' },
+  phoenicia: { title: '腓尼基', titleEn: 'Phoenicia', desc: '紫红之国，航海与商业的民族。他们发明字母，使文字从神庙走向市场。迦太基在北非海岸崛起，将与罗马争夺地中海。' },
+  zhou_states: { title: '东周诸侯', titleEn: 'Eastern Zhou States', desc: '春秋五霸，礼乐征伐自诸侯出。孔子删述六经，老子留下道德经。铁器普及，井田制瓦解，百家争鸣即将爆发。' },
+  bactria: { title: '巴克特里亚', titleEn: 'Bactria', desc: '中亚文明的十字路口。波斯帝国的东部行省，连接印度与草原。亚历山大将从这里进军印度，后来的希腊-巴克特里亚王国在此绽放东西交融的奇异之花。' },
+  rome: { title: '罗马帝国', titleEn: 'Roman Empire', desc: '从苏格兰到美索不达米亚，地中海成为内湖。罗马法、拉丁语、基督教将塑造整个西方文明。但三世纪危机的阴影已在边境聚集。' },
+  parthia: { title: '帕提亚帝国', titleEn: 'Parthian Empire', desc: '马上弓箭手的帝国。他们以轻骑兵回旋战术击败克拉苏，与罗马在亚美尼亚和美索不达米亚拉锯。丝绸之路的中转站。' },
+  han: { title: '汉帝国', titleEn: 'Han Empire', desc: '汉族之名由此而来。造纸术、地动仪、史记。丝绸之路开通，佛教初入中原。但外戚、宦官与豪强正蛀空这座大厦。' },
+  kushan: { title: '贵霜帝国', titleEn: 'Kushan Empire', desc: '大月氏的后裔，中亚的熔炉。犍陀罗佛像融合希腊阿波罗与印度菩萨，佛教由此走向中亚与中国。' },
+  steppe_200: { title: '草原诸部', titleEn: 'Steppe Peoples', desc: '匈奴分裂，鲜卑、乌桓、丁零角逐草原。他们的迁徙与征服将在未来数百年重塑从欧洲到中国的政治版图。' },
+  xiongnu: { title: '匈奴', titleEn: 'Xiongnu', desc: '冒顿单于的遗产。北匈奴西迁将触发欧亚民族多米诺，南匈奴内附成为五胡十六国的先声。草原帝国的组织模式被后世继承。' },
+  arabia_200: { title: '阿拉伯', titleEn: 'Arabia', desc: '沙漠与绿洲的部落世界。纳巴泰人控制乳香贸易，麦加尚未成为宗教中心。六百年后，这里将诞生改变世界的信仰。' },
+  nubia: { title: '努比亚', titleEn: 'Nubia', desc: '埃及以南的黑人王国。麦罗埃有自己的金字塔、文字与冶铁业。他们曾征服埃及建立第二十五王朝，又独立发展数百年。' },
+  song: { title: '北宋', titleEn: 'Northern Song', desc: '文人政治的高峰，经济革命的先声。交子（纸币）、运河、科举。但燕云十六州的缺失与西夏、辽的压力始终如影随形。' },
+  liao: { title: '契丹（辽）', titleEn: 'Khitan (Liao)', desc: '游牧民族建立的双轨制帝国。契丹大字与小字并行，佛教与萨满共存。他们的失败后裔西迁中亚，建立西辽。' },
+  byzantium: { title: '拜占庭帝国', titleEn: 'Byzantine Empire', desc: '罗马的东半身在千年后仍自称罗马帝国。希腊火、东正教、君士坦丁堡的城墙。但曼齐刻尔特的惨败将在七十年后摧毁安纳托利亚。' },
+  holy_roman: { title: '神圣罗马帝国', titleEn: 'Holy Roman Empire', desc: '既不神圣，也非罗马，更非帝国。德意志国王兼任意大利国王，教皇加冕赋予合法性。七选侯制度即将成型。' },
+  france_1000: { title: '法兰西王国', titleEn: 'Kingdom of France', desc: '巴黎岛伯爵的王权微弱到需要向诺曼底公爵求助。封建金字塔层层分封，骑士比武与城堡建筑风靡。' },
+  england_1000: { title: '英格兰王国', titleEn: 'Kingdom of England', desc: '阿尔弗雷德大帝的后裔统治着盎格鲁-撒克逊人的土地。诺曼底公爵威廉是忏悔者爱德华的表亲，也是王位的觊觎者。' },
+  kievan_rus: { title: '基辅罗斯', titleEn: 'Kievan Rus', desc: '东斯拉夫人的第一个国家。弗拉基米尔受洗选择东正教，而非伊斯兰教或天主教。基辅的圣索菲亚大教堂见证这段历史。' },
+  abbasid: { title: '阿拔斯哈里发', titleEn: 'Abbasid Caliphate', desc: '黑衣大食，伊斯兰世界的学术灯塔。代数学、医学、天文学在此发展。但哈里发已成为傀儡，白益与塞尔柱将军掌握实权。' },
+  fatimid: { title: '法蒂玛王朝', titleEn: 'Fatimid Caliphate', desc: '什叶派的伊斯玛仪派哈里发国，自称穆罕默德之女法蒂玛的后裔。开罗、爱资哈尔、北非与埃及的繁荣。' },
+  chola: { title: '朱罗王朝', titleEn: 'Chola Dynasty', desc: '南印度的海上强权。朱罗舰队控制印度洋，远征苏门答腊与马来半岛。青铜湿婆舞王像至今仍是印度艺术的巅峰。' },
+  japan_1000: { title: '日本', titleEn: 'Japan', desc: '平安京的贵族们在和歌与物哀中消磨时光。藤原道长垄断摄关职位，源氏物语描绘的浮世绘卷。武士在庄园中悄然崛起。' },
+  viking: { title: '维京世界', titleEn: 'Viking World', desc: '从北美到里海，维京人的长船无所不至。他们是掠夺者，也是商人、殖民者、雇佣兵。诺曼人、罗斯人、瓦兰吉卫队都是他们的化身。' },
+  cordoba: { title: '科尔多瓦', titleEn: 'Caliphate of Córdoba', desc: '欧洲最璀璨的伊斯兰文明。科尔多瓦大清真寺、图书馆、灌溉农业。犹太医生与翻译家在此活跃，为日后的文艺复兴保存火种。' },
+  ghana: { title: '加纳帝国', titleEn: 'Ghana Empire', desc: '黄金之国，西非第一个大帝国。跨撒哈拉商队带来盐、丝绸与知识。伊斯兰教在商人中传播，但王权仍信奉传统宗教。' },
+  ming: { title: '明朝', titleEn: 'Ming Dynasty', desc: '推翻蒙古统治的汉族王朝。永乐大帝派遣郑和七下西洋，船队规模空前。随后转向内敛，长城重修，海禁严格执行。' },
+  golden_horde: { title: '金帐汗国', titleEn: 'Golden Horde', desc: '拔都的遗产，统治俄罗斯长达两个世纪。萨莱的繁华与草原的残酷。莫斯科大公通过收集贡赋获得汗的信任，暗中积蓄力量。' },
+  timurid: { title: '帖木儿帝国', titleEn: 'Timurid Empire', desc: '自称成吉思汗后裔的突厥化蒙古人。撒马尔罕的蓝色穹顶、比比哈努姆清真寺。帝国随帖木儿之死迅速分裂，但文化影响延续至莫卧儿。' },
+  ottoman_1400: { title: '奥斯曼', titleEn: 'Ottoman Sultanate', desc: '安纳托利亚边境的贝伊国成长为巴尔干霸主。耶尼切里军团、德米舍梅制度。君士坦丁堡的城墙已能听到乌尔班大炮的轰鸣。' },
+  england_1400: { title: '英格兰', titleEn: 'Kingdom of England', desc: '兰开斯特的红玫瑰。亨利五世在阿金库尔以长弓手击败法国骑士，莎士比亚将为此谱写不朽篇章。' },
+  france_1400: { title: '法兰西', titleEn: 'Kingdom of France', desc: '瓦卢瓦的百合花。百年战争中最黑暗的时刻，勃艮第与英国结盟。圣女贞德将在洛林出现，以神启之名拯救王太子。' },
+  mali: { title: '马里帝国', titleEn: 'Mali Empire', desc: '曼萨·穆萨的帝国，黄金产量震惊世界。廷巴克图的桑科雷大学，伊斯兰学术在西非的灯塔。他的麦加朝圣导致开罗金价暴跌。' },
+  delhi: { title: '德里苏丹国', titleEn: 'Delhi Sultanate', desc: '突厥-阿富汗军事贵族统治印度。顾特卜塔高耸入云，伊斯兰建筑与印度传统融合。苏菲圣人使伊斯兰教深入民间。' },
+  andean: { title: '安第斯世界', titleEn: 'Andean World', desc: '印加帝国正在崛起，奇穆王国走向衰落。没有文字，但奇普结绳记事系统复杂精密。马铃薯与藜麦支撑高原文明。' },
+  aztec: { title: '墨西哥谷', titleEn: 'Valley of Mexico', desc: '阿兹特克三城同盟以特诺奇蒂特兰为首。湖心岛上的城市比欧洲任何城市都大，金字塔神庙与浮动花园并存。' },
+  british_empire: { title: '大英帝国', titleEn: 'British Empire', desc: '工业革命改变人类。蒸汽机、工厂、铁路。拿破仑战争中的胜利者，即将成为日不落帝国。议会改革与废奴运动正在进行。' },
+  british_n_america: { title: '英属北美', titleEn: 'British North America', desc: '加拿大与加勒比殖民地。毛皮贸易、种植园经济、流放罪犯。美国独立后，忠诚派北迁改变加拿大人口结构。' },
+  usa: { title: '美国', titleEn: 'United States', desc: '新共和国的扩张。路易斯安那购地使领土翻倍，刘易斯与克拉克探险深入西部。奴隶制与自由的矛盾正在发酵。' },
+  qing: { title: '大清帝国', titleEn: 'Qing China', desc: '康乾盛世的余晖。四库全书编纂，疆域达到极盛。但闭关锁国、人口爆炸与鸦片贸易的隐患正在积累。白莲教起义动摇根基。' },
+  russia_1800: { title: '俄罗斯帝国', titleEn: 'Russian Empire', desc: '击败拿破仑后的欧洲宪兵。十二月党人起义前的专制帝国。西伯利亚流放、农奴制、普希金的诗歌。阿拉斯加尚未出售。' },
+  france_1800: { title: '法兰西', titleEn: 'France', desc: '拿破仑·波拿巴的帝国。民法典统一法律，公立教育培养公民，大军团横扫欧洲。但西班牙泥潭与俄罗斯寒冬将终结这一切。' },
+  spain_1800: { title: '西班牙', titleEn: 'Spain', desc: '波旁改革的失败。美洲殖民地独立运动风起云涌，本土被拿破仑占领，游击战诞生。' },
+  portugal_1800: { title: '葡萄牙', titleEn: 'Portugal', desc: '布拉干萨王朝，巴西仍是殖民地。里斯本在1755年大地震后重建为启蒙城市。王室将在不久后逃亡里约。' },
+  british_india: { title: '英属印度', titleEn: 'British India', desc: '东印度公司从商人变为统治者。普拉西战役、迈索尔战争、马拉塔联盟瓦解。印度次大陆逐渐纳入英国全球体系。' },
+  australia_1800: { title: '英属澳大利亚', titleEn: 'British Australia', desc: '新南威尔士与范迪门地。流放殖民地转型为自由移民社会。原住民人口锐减，羊毛成为经济命脉。' },
+  spanish_america: { title: '西班牙美洲', titleEn: 'Spanish America', desc: '从加利福尼亚到火地岛，克里奥尔精英对马德里的不满达到顶点。独立战争将诞生一系列新国家。' },
+  brazil_1800: { title: '葡萄牙巴西', titleEn: 'Portuguese Brazil', desc: '里约热内卢是殖民帝国事实上的首都。咖啡种植园向内陆扩张，奴隶贸易虽遭英国压力仍持续。' },
+  china_modern: { title: '中国', titleEn: 'China', desc: '改革开放四十余年，世界工厂与最大市场。高铁、移动支付、航天工程。台湾、南海、中美竞争是核心地缘议题。' },
+  russia_modern: { title: '俄罗斯', titleEn: 'Russia', desc: '苏联解体后，以能源与军事维持大国地位。乌克兰危机后与国际社会对立加深，转向东方。' },
+  usa_modern: { title: '美国', titleEn: 'United States', desc: '冷战胜利者，单极时刻已过。硅谷、好莱坞、华尔街定义全球文化。政治极化、种族矛盾挑战霸权根基。' },
+  brazil_modern: { title: '巴西', titleEn: 'Brazil', desc: '金砖国家，亚马逊守护者。足球、桑巴、狂欢节。但贫富差距、暴力犯罪、政治腐败仍是发展瓶颈。' },
+  india_modern: { title: '印度', titleEn: 'India', desc: '最大民主国家，IT与制药强国。印度教民族主义崛起，种姓制度在现代变形。印太战略中的关键摇摆力量。' },
+  australia_modern: { title: '澳大利亚', titleEn: 'Australia', desc: '南半球发达国家，资源与教育出口大国。在美中竞争中寻求平衡，气候变化与山火威胁独特生态系统。' },
+  canada: { title: '加拿大', titleEn: 'Canada', desc: '双语多元文化模范，北极主权主张国。能源管道争议、原住民和解、与美国复杂共生关系。' },
+  europe_modern: { title: '欧洲联盟', titleEn: 'European Union', desc: '战后和平工程，27国联邦实验。欧元危机、英国脱欧、难民潮、右翼崛起。法德轴心能否继续推动一体化？' },
+  japan_modern: { title: '日本', titleEn: 'Japan', desc: '失去的三十年后寻求再通胀。动漫、游戏、精密制造全球领先。老龄化、少子化、宪法第九条是长期挑战。' },
+  middle_east_modern: { title: '中东', titleEn: 'Middle East', desc: '石油、宗教、帝国遗产的交汇。阿拉伯之春失败后的威权复辟，伊朗-沙特代理战争，以色列与巴勒斯坦的未解冲突。' },
+  africa_modern: { title: '非洲', titleEn: 'Africa', desc: '人口最年轻的洲，2050年将占世界人口四分之一。城市化、移动支付、中国投资。但冲突、债务、气候脆弱性仍是障碍。' },
+  arctic_ocean: { title: '北冰洋', titleEn: 'Arctic Ocean', desc: '地球最北的海洋，大部分被海冰覆盖。因纽特人在其南缘建立了适应极寒的狩猎文明。气候变暖正在改变北极航道的地缘格局。' },
+  pacific1: { title: '太平洋', titleEn: 'Pacific Ocean', desc: '占地球表面三分之一的最大海洋。南岛语族的航海壮举横跨这片蓝色大陆，从东南亚扩散至夏威夷、新西兰与复活节岛。' },
+  antarctic_sea: { title: '南极海', titleEn: 'Southern Ocean', desc: '环绕南极洲的极寒海域。强劲的环极洋流将南极与世界其他海洋隔开，创造了独特的生态系统。' },
+  atlantic: { title: '大西洋', titleEn: 'Atlantic Ocean', desc: '分隔欧非与美洲的大洋。从维京人的冒险到哥伦布的航行，大西洋的跨越改写了世界历史的进程。' },
+  indian_ocean: { title: '印度洋', titleEn: 'Indian Ocean', desc: '季风驱动的贸易之海。从阿拉伯商人到郑和船队，印度洋贸易网络连接了东非、阿拉伯、印度与东南亚。' },
+  pacific2: { title: '太平洋', titleEn: 'Pacific Ocean', desc: '太平洋西部，火山与珊瑚岛链点缀其间。波利尼西亚人凭借星象导航征服了这片广袤水域，创造了人类航海史上最伟大的篇章。' },
+  antarctica: { title: '南极洲', titleEn: 'Antarctica', desc: '地球上最冷、最干燥、风速最高的大洲。冰盖厚达四千米，封存着地球气候变迁的珍贵记录。1959年《南极条约》将其定为和平与科研之地。' },
+  india: { title: '印度', titleEn: 'India', desc: '南亚次大陆，世界上最古老的文明之一。从吠陀时代到莫卧儿帝国，从佛教到印度教，这片土地孕育了丰富的宗教、哲学与艺术传统。' },
+  italia: { title: '意大利', titleEn: 'Italia', desc: '地中海心脏的靴形半岛。伊特鲁里亚、希腊殖民城邦与拉丁部落在此交汇，最终罗马从一个小城邦崛起为统治整个地中海的帝国。' },
+  zhao: { title: '赵国', titleEn: 'State of Zhao', desc: '战国七雄之一，位于今山西、河北一带。赵武灵王推行胡服骑射，使赵国军事实力大增。长平之战四十万降卒被坑杀，成为战国最惨烈的悲剧。' },
+  yan: { title: '燕国', titleEn: 'State of Yan', desc: '战国七雄中最北的诸侯国，都城蓟（今北京）。燕昭王筑黄金台招贤纳士，乐毅连下齐国七十余城。荆轲刺秦王的壮举流传千古。' },
+  qi: { title: '齐国', titleEn: 'State of Qi', desc: '东方大国，临淄是战国最繁华的都市。稷下学宫汇聚诸子百家，孟子、荀子、邹衍皆在此讲学。齐国以工商立国，鱼盐之利甲天下。' },
+  wei: { title: '魏国', titleEn: 'State of Wei', desc: '三家分晋后最早变法的诸侯。魏文侯任用李悝、吴起，率先推行法治改革。但魏国四战之地，人才外流严重——商鞅、孙膑皆出走他国。' },
+  han_state: { title: '韩国', titleEn: 'State of Han', desc: '战国七雄中最小的国家，位于中原腹地。以强弩著称，劲弩之国名不虚传。韩非子集法家大成，却死于自己理论所武装的秦国狱中。' },
+  chu: { title: '楚国', titleEn: 'State of Chu', desc: '南方最大的诸侯国，疆域辽阔。楚文化瑰丽浪漫：屈原的《离骚》开辟文学传统，曾侯乙编钟震撼世界。楚虽三户，亡秦必楚。' },
+  steppe: { title: '草原诸部', titleEn: 'Steppe Peoples', desc: '欧亚草原上的游牧民族群体。匈奴分裂后，鲜卑、乌桓、丁零等部族角逐。他们的大迁徙浪潮将在未来数百年重塑从欧洲到中国的政治版图。' },
+  arabia: { title: '阿拉伯', titleEn: 'Arabia', desc: '沙漠与绿洲构成的部落世界。乳香贸易路线穿越半岛，纳巴泰人在佩特拉凿岩建城。六百年后，伊斯兰教将从麦加的沙漠中崛起，改变世界格局。' },
+  silk_road: { title: '丝绸之路', titleEn: 'Silk Road', desc: '连接东西方文明的万里商道。丝绸、香料、宝石与思想沿途流通。佛教东传、罗马玻璃入华、粟特商人穿梭其间——这条路塑造了欧亚大陆的文化基因。' },
+  aboriginal: { title: '诸多原住民部落联盟', titleEn: 'Aboriginal Confederations', desc: '澳大利亚原住民。' },
+  algeria: { title: '阿尔及利亚', titleEn: 'Algeria', desc: '非洲面积最大国家，天然气出口大国。' },
+  algonquin: { title: '阿尔贡昆人', titleEn: 'Algonquin', desc: '阿尔贡昆语系各部落。' },
+  angola: { title: '安哥拉', titleEn: 'Angola', desc: '南部非洲石油大国，内战后重建。' },
+  argentina: { title: '阿根廷', titleEn: 'Argentina', desc: '探戈与潘帕斯之国。农业出口大国，经济起伏剧烈。' },
+  belarus: { title: '白俄罗斯', titleEn: 'Belarus', desc: '东欧国家，欧洲最后的威权体制。俄罗斯盟友。' },
+  belgium: { title: '比利时', titleEn: 'Belgium', desc: '欧盟与北约总部所在地，巧克力与啤酒。' },
+  bolivia: { title: '玻利维亚', titleEn: 'Bolivia', desc: '南美内陆国，高原之国。锂矿资源丰富，原住民文化深厚。' },
+  botswana: { title: '博茨瓦纳', titleEn: 'Botswana', desc: '非洲钻石国，治理与反腐模范。奥卡万戈三角洲。' },
+  brazil: { title: '巴西', titleEn: 'Brazil', desc: '南美最大国家，金砖成员。亚马逊雨林守护者，足球与桑巴的故乡。' },
+  british_west_africa: { title: '英属西非海岸', titleEn: 'British West Africa', desc: '英属西非。' },
+  cape_colony: { title: '开普殖民地（大英）', titleEn: 'Cape Colony', desc: '开普殖民地。' },
+  car: { title: '中非共和国', titleEn: 'Central African Republic', desc: '中非国家，钻石与木材资源。武装冲突与国际维和。' },
+  chad: { title: '乍得', titleEn: 'Chad', desc: '中非内陆国，乍得湖缩小的环境危机。' },
+  chagatai: { title: '察合台汗国', titleEn: 'Chagatai Khanate', desc: '蒙古帝国的中亚遗产。' },
+  chile: { title: '智利', titleEn: 'Chile', desc: '南美狭长国度，从沙漠到冰川。铜矿大国，拉美经济模范。' },
+  china: { title: '中国', titleEn: 'China', desc: '改革开放四十余年，世界工厂与最大市场。高铁、移动支付、航天工程标志崛起。' },
+  colombia: { title: '哥伦比亚', titleEn: 'Colombia', desc: '南美门户，从内战走向和平进程。咖啡、翡翠与生物多样性。' },
+  cuba: { title: '古巴', titleEn: 'Cuba', desc: '加勒比最大岛国，社会主义体制延续至今。雪茄、朗姆酒与革命遗产。' },
+  denmark: { title: '丹麦', titleEn: 'Denmark', desc: '北欧王国，幸福指数全球前列。乐高与风力发电。' },
+  dr_congo: { title: '刚果（金）', titleEn: 'DR Congo', desc: '非洲心脏，钴矿与稀有金属宝库。资源诅咒与冲突交织。' },
+  dutch_east_indies: { title: '荷属东印度', titleEn: 'Dutch East Indies', desc: '荷属东印度。' },
+  egypt_1800: { title: '埃及', titleEn: 'Egypt', desc: '埃及。' },
+  england: { title: '英格兰王国', titleEn: 'Kingdom of England', desc: '盎格鲁-撒克逊时代尾声。' },
+  ethiopia: { title: '埃塞俄比亚', titleEn: 'Ethiopia', desc: '非洲文明古国，从未被殖民。咖啡发源地，经济高速增长。' },
+  ethiopia_1800: { title: '埃塞俄比亚帝国', titleEn: 'Ethiopian Empire', desc: '埃塞俄比亚帝国。' },
+  finland: { title: '芬兰', titleEn: 'Finland', desc: '北欧福利国家，教育与科技强国。桑拿文化与千湖之国。' },
+  france: { title: '法国', titleEn: 'France', desc: '欧洲大国，联合国安理会常任理事国。时尚、美食与核电。' },
+  french_guinea: { title: '法属几内亚', titleEn: 'French Guinea', desc: '法属几内亚。' },
+  germany: { title: '德国', titleEn: 'Germany', desc: '欧洲经济引擎，统一后的制造业强国。能源转型与移民融合。' },
+  goryeo: { title: '高丽', titleEn: 'Goryeo', desc: '高丽王朝。' },
+  greenland: { title: '格陵兰（丹麦）', titleEn: 'Greenland (Denmark)', desc: '丹麦自治领，世界最大岛屿。气候变化前沿与北极资源。' },
+  greenland_1800: { title: '格陵兰（丹麦）', titleEn: 'Greenland (Denmark)', desc: '丹麦格陵兰。' },
+  guatemala: { title: '危地马拉', titleEn: 'Guatemala', desc: '中美洲国家，玛雅文明后裔。咖啡出口与社会不平等并存。' },
+  iceland: { title: '冰岛', titleEn: 'Iceland', desc: '北大西洋岛国，火山与冰川之地。地热能源先驱。' },
+  indonesia: { title: '印尼', titleEn: 'Indonesia', desc: '万岛之国，世界最大群岛国家。穆斯林人口最多，生物多样性热点。' },
+  inuit: { title: '因纽特人', titleEn: 'Inuit', desc: '北极地区的因纽特人。' },
+  inupiat: { title: '伊努皮亚特人', titleEn: 'Iñupiat', desc: '阿拉斯加的原住民。' },
+  iran: { title: '伊朗', titleEn: 'Iran', desc: '波斯文明传承，什叶派核心国家。核问题与制裁下的坚持。' },
+  iraq: { title: '伊拉克', titleEn: 'Iraq', desc: '两河流域文明发源地，战后重建中。石油资源丰富。' },
+  ireland: { title: '爱尔兰', titleEn: 'Ireland', desc: '翡翠之岛，凯尔特虎经济体。科技企业欧洲总部聚集地。' },
+  japan: { title: '日本', titleEn: 'Japan', desc: '科技与文化输出大国。动漫、游戏、精密制造全球领先。老龄化社会的挑战。' },
+  japan_1800: { title: '日本', titleEn: 'Japan', desc: '日本。' },
+  joseon: { title: '朝鲜', titleEn: 'Joseon Korea', desc: '朝鲜王朝。' },
+  kazakhstan: { title: '哈萨克斯坦', titleEn: 'Kazakhstan', desc: '中亚最大国家，苏联遗产与现代化转型。石油天然气储量巨大。' },
+  kenya: { title: '肯尼亚', titleEn: 'Kenya', desc: '东非大国，移动支付M-Pesa先驱。马赛马拉与长跑强国。' },
+  khmer: { title: '高棉帝国', titleEn: 'Khmer Empire', desc: '吴哥窟的缔造者。' },
+  libya: { title: '利比亚', titleEn: 'Libya', desc: '北非石油国，内战后分裂治理。' },
+  lithuania: { title: '立陶宛大公国', titleEn: 'Grand Duchy of Lithuania', desc: '东欧大国。' },
+  madagascar: { title: '马达加斯加', titleEn: 'Madagascar', desc: '印度洋大岛，独特生态系统。狐猴与猴面包树的家园。' },
+  malaysia: { title: '马来西亚', titleEn: 'Malaysia', desc: '东南亚联邦，多元种族社会。棕榈油与电子产品出口大国。' },
+  mamluk: { title: '马穆鲁克苏丹国', titleEn: 'Mamluk Sultanate', desc: '马穆鲁克苏丹国。' },
+  mauritania: { title: '毛里塔尼亚', titleEn: 'Mauritania', desc: '西非沙漠国家，阿拉伯与非洲文化交汇。铁矿与渔业。' },
+  maya: { title: '玛雅城邦', titleEn: 'Maya City-States', desc: '城邦各自为政的古典文明。' },
+  mexico: { title: '墨西哥', titleEn: 'Mexico', desc: '拉美大国，古老文明与现代工业交融。毒品战争与移民议题影响深远。' },
+  mongolia: { title: '蒙古', titleEn: 'Mongolia', desc: '草原之国，游牧文明传承。中俄之间的缓冲带，矿产资源丰富。' },
+  morocco: { title: '摩洛哥', titleEn: 'Morocco', desc: '北非王国，连接欧洲与非洲的门户。旅游与磷酸盐出口。' },
+  myanmar: { title: '缅甸', titleEn: 'Myanmar', desc: '东南亚国家，佛塔之国。军政府与民主运动的拉锯。' },
+  namibia: { title: '纳米比亚', titleEn: 'Namibia', desc: '沙漠之国，骷髅海岸与红沙丘。独立后非洲治理典范。' },
+  netherlands: { title: '荷兰', titleEn: 'Netherlands', desc: '低地之国，围海造田。国际法庭与鲜花贸易。' },
+  new_spain: { title: '新西班牙', titleEn: 'New Spain', desc: '新西班牙总督区。' },
+  new_zealand: { title: '新西兰', titleEn: 'New Zealand', desc: '南太平洋岛国，纯净自然与毛利文化。社会福利先驱。' },
+  niger: { title: '尼日尔', titleEn: 'Niger', desc: '西非内陆国，撒哈拉边缘。铀矿出口国。' },
+  nigeria: { title: '尼日利亚', titleEn: 'Nigeria', desc: '非洲人口最多国家，石油与诺莱坞。宗教与族群多元。' },
+  norway: { title: '挪威', titleEn: 'Norway', desc: '北欧石油国，主权财富基金全球最大。峡湾之国。' },
+  ottoman: { title: '奥斯曼苏丹国', titleEn: 'Ottoman Sultanate', desc: '奥斯曼帝国崛起。' },
+  ottoman_1800: { title: '奥斯曼帝国', titleEn: 'Ottoman Empire', desc: '奥斯曼帝国。' },
+  persia_1800: { title: '波斯', titleEn: 'Persia', desc: '波斯。' },
+  peru: { title: '秘鲁', titleEn: 'Peru', desc: '安第斯文明传承者，马丘比丘守护国。矿业经济与原住民文化共存。' },
+  poland: { title: '波兰', titleEn: 'Poland', desc: '中欧大国，欧盟东扩核心。从计划经济到市场经济的成功转型。' },
+  portugal: { title: '葡萄牙', titleEn: 'Portugal', desc: '大航海先驱，如今数字游民热门目的地。' },
+  portuguese_angola: { title: '葡萄牙安哥拉', titleEn: 'Portuguese Angola', desc: '葡属安哥拉。' },
+  portuguese_east_africa: { title: '葡萄牙东非', titleEn: 'Portuguese East Africa', desc: '葡属东非。' },
+  romania: { title: '罗马尼亚', titleEn: 'Romania', desc: '东欧国家，喀尔巴阡山与德古拉传说。欧盟成员。' },
+  russia: { title: '俄罗斯', titleEn: 'Russia', desc: '横跨欧亚的联邦，能源与军事大国。乌克兰危机后地缘格局重塑。' },
+  russian_america: { title: '俄属美洲', titleEn: 'Russian America', desc: '俄属美洲。' },
+  saudi_arabia: { title: '沙特阿拉伯', titleEn: 'Saudi Arabia', desc: '石油王国，两圣地守护者。愿景2030经济转型。' },
+  senegal: { title: '塞内加尔', titleEn: 'Senegal', desc: '西非国家，达喀尔文化之都。非洲民主典范之一。' },
+  singapore: { title: '新加坡', titleEn: 'Singapore', desc: '亚洲金融中心，城市国家治理典范。多元种族和谐社会。' },
+  south_africa: { title: '南非', titleEn: 'South Africa', desc: '彩虹之国，从种族隔离到民主转型。非洲最发达经济体之一。' },
+  south_korea: { title: '韩国', titleEn: 'South Korea', desc: 'K-pop与半导体强国，从汉江奇迹到文化输出。朝韩分裂是未愈伤痕。' },
+  south_sudan: { title: '南苏丹', titleEn: 'South Sudan', desc: '世界最年轻的国家（2011年独立），内战与石油经济。' },
+  spain: { title: '西班牙', titleEn: 'Spain', desc: '伊比利亚半岛大国，旅游与文化输出。加泰罗尼亚独立运动。' },
+  spanish_philippines: { title: '菲律宾（西班牙）', titleEn: 'Spanish Philippines', desc: '西班牙菲律宾。' },
+  sudan: { title: '苏丹', titleEn: 'Sudan', desc: '东非大国，尼罗河交汇处。内战与人道危机。' },
+  sweden: { title: '瑞典', titleEn: 'Sweden', desc: '北欧王国，诺贝尔奖的故乡。社会民主模范与创新强国。' },
+  switzerland: { title: '瑞士', titleEn: 'Switzerland', desc: '永久中立国，银行与钟表之都。联合国欧洲总部所在地。' },
+  taino: { title: '泰诺', titleEn: 'Taíno', desc: '加勒比海的泰诺人。' },
+  tanzania: { title: '坦桑尼亚', titleEn: 'Tanzania', desc: '东非大国，乞力马扎罗与塞伦盖蒂的守护者。' },
+  thailand: { title: '泰国', titleEn: 'Thailand', desc: '微笑之国，旅游胜地。君主立宪制，东南亚第二大经济体。' },
+  tripolitania: { title: '的黎波里塔尼亚', titleEn: 'Tripolitania', desc: '的黎波里塔尼亚。' },
+  turkey: { title: '土耳其', titleEn: 'Turkey', desc: '欧亚十字路口，北约成员与伊斯兰大国。' },
+  uk: { title: '英国', titleEn: 'United Kingdom', desc: '日不落帝国的后继者，脱欧后寻找新定位。金融、文化与软实力。' },
+  ukraine: { title: '乌克兰', titleEn: 'Ukraine', desc: '东欧大国，欧洲粮仓。2022年冲突重塑国际秩序。' },
+  various_tribal: { title: '诸多部落联盟', titleEn: 'Various Tribal Confederations', desc: '北美原住民诸部落。' },
+  vietnam: { title: '越南', titleEn: 'Vietnam', desc: '越南，革新开放后快速工业化。' },
+  yemen: { title: '也门', titleEn: 'Yemen', desc: '阿拉伯半岛南端，内战与人道危机。古代乳香之路。' },
+  zambia: { title: '赞比亚', titleEn: 'Zambia', desc: '南部非洲国家，维多利亚瀑布所在地。铜矿经济。' },
+  zimbabwe: { title: '津巴布韦', titleEn: 'Zimbabwe', desc: '南部非洲国家，大津巴布韦遗址。经济动荡与政治转型。' },
+};
+
+// ==================== STATE ====================
+let currentEraId = '1000ce';
+let selectedRegionId = null;
+let isPlaying = false;
+let playInterval = null;
+let hotspotsVisible = true;
+
+// ==================== INIT ====================
+function init() {
+  document.querySelectorAll('.t-node').forEach(node => {
+    node.addEventListener('click', () => setEra(node.dataset.year));
+  });
+  document.getElementById('play-btn').addEventListener('click', togglePlay);
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.layer-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const eye = item.querySelector('.eye-icon');
+      const isOn = eye.getAttribute('stroke') !== 'var(--ink-faint)';
+      if (isOn) {
+        eye.setAttribute('stroke', 'var(--ink-faint)');
+        eye.querySelector('circle').setAttribute('fill', 'none');
+        if (item.dataset.layer === 'political') hotspotsVisible = false;
+      } else {
+        eye.setAttribute('stroke', 'var(--accent)');
+        eye.querySelector('circle').setAttribute('fill', 'var(--accent)');
+        if (item.dataset.layer === 'political') hotspotsVisible = true;
+      }
+      updateHotspotsVisibility();
+    });
+  });
+  document.getElementById('overlay').addEventListener('click', closePanel);
+
+  // Keyboard support
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closePanel();
+    if (e.key === 'ArrowRight') navigateEra(1);
+    if (e.key === 'ArrowLeft') navigateEra(-1);
+    if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+  });
+
+  // Sync overlay to image bounds
+  const img = document.getElementById('map-image');
+  img.addEventListener('load', syncOverlay);
+  window.addEventListener('resize', syncOverlay);
+  syncOverlay();
+
+  setEra('1000ce');
+}
+
+// Keep hotspots-overlay exactly on top of the rendered image area
+function syncOverlay() {
+  const img = document.getElementById('map-image');
+  const overlay = document.getElementById('hotspots-overlay');
+  const container = document.getElementById('map-container');
+  if (!img.naturalWidth) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const imgRect = img.getBoundingClientRect();
+
+  // offset relative to container
+  const left = imgRect.left - containerRect.left;
+  const top = imgRect.top - containerRect.top;
+  overlay.style.left = left + 'px';
+  overlay.style.top = top + 'px';
+  overlay.style.width = imgRect.width + 'px';
+  overlay.style.height = imgRect.height + 'px';
+}
+
+function navigateEra(dir) {
+  const idx = eras.findIndex(e => e.id === currentEraId);
+  const next = idx + dir;
+  if (next >= 0 && next < eras.length) setEra(eras[next].id);
+}
+
+// ==================== SET ERA ====================
+function setEra(eraId) {
+  if (!eraId || !hotspotsData[eraId]) return;
+  const prevEraId = currentEraId;
+  currentEraId = eraId;
+
+  // Update timeline nodes
+  const eraIdx = eras.findIndex(e => e.id === eraId);
+  document.querySelectorAll('.t-node').forEach((n, i) => {
+    n.classList.toggle('active', n.dataset.year === eraId);
+    n.classList.toggle('visited', i < eraIdx);
+  });
+
+  // Update progress bar
+  const progress = document.getElementById('timeline-progress');
+  const pct = (eraIdx / (eras.length - 1)) * 100;
+  progress.style.width = pct + '%';
+
+  const era = eras.find(e => e.id === eraId);
+  if (!era) return;
+
+  // Update year display
+  document.getElementById('current-year-display').textContent = era.yearLabel;
+
+  // Show era transition for dramatic effect (skip on first load)
+  if (prevEraId !== eraId && prevEraId) {
+    const trans = document.getElementById('era-transition');
+    const transText = document.getElementById('era-transition-text');
+    transText.textContent = era.yearLabel;
+    trans.classList.add('active');
+    setTimeout(() => trans.classList.remove('active'), 800);
+  }
+
+  // Fade map
+  const img = document.getElementById('map-image');
+  img.classList.add('fade-out');
+  setTimeout(() => {
+    img.src = era.src;
+    img.onload = () => { img.classList.remove('fade-out'); syncOverlay(); };
+    if (img.complete) img.classList.remove('fade-out');
+  }, 450);
+
+  renderHotspots(eraId);
+
+  if (selectedRegionId) {
+    const exists = hotspotsData[eraId].some(h => h.id === selectedRegionId);
+    if (exists) openPanel(selectedRegionId);
+    else closePanel();
+  }
+}
+
+// ==================== HOTSPOTS ====================
+function renderHotspots(eraId) {
+  const overlay = document.getElementById('hotspots-overlay');
+  overlay.innerHTML = '';
+  const list = hotspotsData[eraId] || [];
+
+  // Create SVG for polygon hotspots
+  const hasPoly = list.some(h => h.type === 'poly');
+  let svg = null;
+  if (hasPoly) {
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'hotspots-svg');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    overlay.appendChild(svg);
+  }
+
+  list.forEach((h, idx) => {
+    if (h.type === 'poly' && h.points) {
+      // Polygon hotspot
+      const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      const pts = h.points.map(p => p.x + ',' + p.y).join(' ');
+      polygon.setAttribute('points', pts);
+      polygon.setAttribute('class', 'hotspot-poly');
+      polygon.setAttribute('data-id', h.id);
+      polygon.addEventListener('click', (e) => { e.stopPropagation(); openPanel(h.id); });
+      svg.appendChild(polygon);
+    } else {
+      // Rectangle hotspot (original behavior)
+      const div = document.createElement('div');
+      div.className = 'hotspot pulse';
+      div.style.cssText = `top:${h.top}%;left:${h.left}%;width:${h.w}%;height:${h.h}%;animation-delay:${idx*0.15}s`;
+      div.dataset.id = h.id;
+      div.dataset.name = h.name;
+      div.addEventListener('click', (e) => { e.stopPropagation(); openPanel(h.id); });
+      overlay.appendChild(div);
+    }
+  });
+  updateHotspotsVisibility();
+}
+
+function updateHotspotsVisibility() {
+  const overlay = document.getElementById('hotspots-overlay');
+  overlay.style.opacity = hotspotsVisible ? '1' : '0';
+  overlay.style.pointerEvents = hotspotsVisible ? 'auto' : 'none';
+}
+
+// ==================== PLAY ====================
+function togglePlay() {
+  const btn = document.getElementById('play-btn');
+  if (isPlaying) {
+    clearInterval(playInterval);
+    isPlaying = false;
+    btn.classList.remove('playing');
+    btn.innerHTML = `<span>PLAY</span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+    return;
+  }
+  isPlaying = true;
+  btn.classList.add('playing');
+  btn.innerHTML = `<span>PAUSE</span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>`;
+
+  let idx = eras.findIndex(e => e.id === currentEraId);
+  if (idx === -1 || idx === eras.length - 1) idx = -1;
+
+  playInterval = setInterval(() => {
+    idx++;
+    if (idx >= eras.length) { idx = 0; }
+    setEra(eras[idx].id);
+  }, 3000);
+}
+
+// ==================== PANEL ====================
+function openPanel(regionId) {
+  selectedRegionId = regionId;
+  const info = regionDetails[regionId];
+  if (!info) return;
+
+  document.querySelectorAll('.hotspot').forEach(h => {
+    const isSelected = h.dataset.id === regionId;
+    h.style.borderColor = isSelected ? 'var(--accent)' : '';
+    h.style.background = isSelected ? 'rgba(107,196,184,0.12)' : '';
+    h.style.boxShadow = isSelected ? '0 0 30px rgba(107,196,184,0.15), inset 0 0 20px rgba(107,196,184,0.05)' : '';
+    h.style.zIndex = isSelected ? '20' : '';
+  });
+
+  const era = eras.find(e => e.id === currentEraId);
+  const currentHotspot = (hotspotsData[currentEraId] || []).find(h => h.id === regionId);
+
+  document.getElementById('panel-title').textContent = info.title;
+  document.getElementById('panel-title-en').textContent = info.titleEn;
+
+  const body = document.getElementById('panel-body');
+  body.innerHTML = `
+    <div class="info-section">
+      <div class="info-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        CURRENT ERA
+      </div>
+      <div style="display:flex;align-items:baseline;gap:4px;">
+        <span class="era-number">${era ? era.yearLabel.replace(/[^0-9\-]/g, '') || era.label : ''}</span>
+        <span class="era-unit">${era && era.id !== 'prehistoric' && era.id !== 'modern' ? '年' : ''}</span>
+      </div>
+      <p style="margin-top:10px;font-size:0.72rem;color:var(--ink-faint);line-height:1.7;font-family:var(--font-mono);font-weight:300;">${era ? era.desc : ''}</p>
+    </div>
+
+    <div class="info-section">
+      <div class="info-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        OVERVIEW
+      </div>
+      <p class="desc-text">${info.desc}</p>
+    </div>
+
+    ${currentHotspot ? `
+    <div class="info-section">
+      <div class="info-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        ERA SNAPSHOT
+      </div>
+      <p class="desc-text" style="color:var(--gold);">${currentHotspot.desc}</p>
+    </div>
+    ` : ''}
+
+    <button class="enter-btn" onclick="enterCountryHistory('${regionId}', '${info.title}')">
+      进入这片土地的历史
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    </button>
+  `;
+
+  document.getElementById('left-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('active');
+}
+
+function closePanel() {
+  document.getElementById('left-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('active');
+  selectedRegionId = null;
+  document.querySelectorAll('.hotspot').forEach(h => {
+    h.style.borderColor = '';
+    h.style.background = '';
+    h.style.boxShadow = '';
+    h.style.zIndex = '';
+  });
+}
+
+
+
+
+
+
+// ===== USA HISTORY: DATA & LOGIC =====
+const usaChapters = [
+  { id:'ch1', num:'第一章', title:'美洲的原住民与古代文明', sub:'INDIGENOUS CIVILIZATIONS' },
+  { id:'ch2', num:'第二章', title:'欧洲人来了', sub:'EUROPEAN ARRIVAL' },
+  { id:'ch3', num:'第三章', title:'英属北美殖民地的建立与发展', sub:'BRITISH COLONIES' },
+  { id:'ch4', num:'第四章', title:'走向独立', sub:'ROAD TO INDEPENDENCE' },
+  { id:'ch5', num:'第五章', title:'新生共和国的挑战', sub:'THE NEW REPUBLIC' },
+  { id:'ch6', num:'第六章', title:'分裂与内战', sub:'CIVIL WAR' },
+  { id:'ch7', num:'第七章', title:'镀金时代与进步时代', sub:'GILDED & PROGRESSIVE ERA' },
+  { id:'ch8', num:'第八章', title:'两次世界大战中的美国', sub:'WORLD WARS' },
+  { id:'ch9', num:'第九章', title:'冷战时代', sub:'COLD WAR' },
+  { id:'ch10', num:'第十章', title:'当代美国', sub:'CONTEMPORARY AMERICA' },
+];
+
+// Summary events for timeline view
+const usaSummaryEvents = [
+  { ch:'ch1', year:'~23000 BCE', title:'最早的美洲人', tags:['society'], hi:0, desc:'白沙国家公园的脚印化石证明人类至少在2.3万年前踏足美洲。他们可能通过白令陆桥从西伯利亚步行而来，追逐猛犸象和野马。' },
+  { ch:'ch1', year:'~13000 BCE', title:'克洛维斯文化', tags:['society'], hi:0, desc:'以独特凹槽石矛头闻名的克洛维斯人，猎杀猛犸象和乳齿象。他们的消失与美洲大型哺乳动物灭绝高度重合。' },
+  { ch:'ch1', year:'~5000 BCE', title:'农业革命：玉米的诞生', tags:['economy'], hi:1, desc:'玉米被培育，从手指大小的穗子经过几千年选育成为全世界总产量最高的粮食作物。农业改变了一切——定居、村庄、城市。' },
+  { ch:'ch1', year:'1400s', title:'印加帝国', tags:['politics'], hi:1, desc:'帕查库特克领导下覆盖南美西海岸4000公里，3万公里道路网，奇普结绳记事。美洲最大帝国。' },
+  { ch:'ch1', year:'2000 BCE–900 CE', title:'玛雅文明', tags:['society'], hi:1, desc:'美洲唯一成熟文字系统，发明"0"的概念比欧洲早几百年。城邦政治如同古希腊。9世纪神秘衰落。' },
+  { ch:'ch1', year:'1325', title:'阿兹特克建城', tags:['politics'], hi:1, desc:'湖心岛上的特诺奇提特兰人口超20万。大规模人祭——太阳神需要人血作"燃料"才能继续升起。' },
+  { ch:'ch2', year:'1492', title:'哥伦布到达美洲', tags:['politics'], hi:1, desc:'三艘帆船到达加勒比海。哥伦布至死坚信自己到达了亚洲。他的第一印象："用50个人就能征服他们全部。"' },
+  { ch:'ch2', year:'1519–1521', title:'科尔特斯征服阿兹特克', tags:['war'], hi:1, desc:'500人+数万印第安盟军，利用内部矛盾、技术碾压和天花瘟疫，摧毁了阿兹特克帝国。' },
+  { ch:'ch2', year:'1500s–1600s', title:'人口灾难：90%消失', tags:['society'], hi:1, desc:'天花等疾病杀死90-95%美洲原住民。从5000万-1亿降到500万-1000万。催生大西洋奴隶贸易，1200万非洲人被运往美洲。' },
+  { ch:'ch3', year:'1607', title:'詹姆斯敦建立', tags:['politics'], hi:1, desc:'英国第一个永久殖民地。最初104人到年底只剩38人。"饥饿时期"甚至出现人吃人。' },
+  { ch:'ch3', year:'1619', title:'民主萌芽与奴隶制引入', tags:['politics','society'], hi:1, desc:'同一年：北美第一个民选立法机构诞生，第一批非洲黑人抵达。光明与黑暗同一年降临。' },
+  { ch:'ch3', year:'1620', title:'五月花号公约', tags:['politics'], hi:1, desc:'102人签署公约——不是国王授权，而是人民自己通过契约建立政府。美国民主传统的源头之一。' },
+  { ch:'ch3', year:'1676', title:'培根起义', tags:['society'], hi:0, desc:'白人黑人穷人联合对抗精英。镇压后统治者系统性加深种族裂痕——种族成为统治工具，这套把戏反复重演。' },
+  { ch:'ch3', year:'1692', title:'塞勒姆女巫审判', tags:['society'], hi:0, desc:'19人被绞死，1人被石头压死。当恐惧压倒理性、指控不需要证据时，任何人都可能成为受害者。' },
+  { ch:'ch4', year:'1754–1763', title:'七年战争', tags:['war'], hi:1, desc:'21岁的华盛顿意外引爆英法争夺北美的战争。英国惨胜但国债翻番，开始向殖民地征税——埋下独立革命种子。' },
+  { ch:'ch4', year:'1773', title:'波士顿倾茶事件', tags:['politics'], hi:1, desc:'342箱茶叶被倒入大海。"不是税的多少，而是原则问题。"英国以"不可容忍法令"回应，反而把殖民地团结起来。' },
+  { ch:'ch4', year:'1775.4.19', title:'莱克星顿枪声', tags:['war'], hi:1, desc:'"响彻世界的枪声"。70名民兵迎战700名英军，8人倒下。保罗·里维尔骑马报信。战争开始。' },
+  { ch:'ch4', year:'1776.7.4', title:'《独立宣言》', tags:['politics'], hi:1, desc:'"人人生而平等"——33岁的杰斐逊写下人类最著名的政治宣言。56人签名，以生命为赌注。但签署者很多是奴隶主。' },
+  { ch:'ch4', year:'1781', title:'约克镇大捷', tags:['war'], hi:1, desc:'法国舰队封锁海湾，美法联军围困康沃利斯。英军投降，军乐队据说演奏了"世界颠倒了"。' },
+  { ch:'ch5', year:'1787', title:'费城制宪会议', tags:['politics'], hi:1, desc:'55人关门密谈四个月。大妥协解决大小州之争，五分之三妥协把奴隶制炸弹埋入宪法地基。' },
+  { ch:'ch5', year:'1791', title:'权利法案', tags:['politics'], hi:1, desc:'前十条修正案保障言论自由、宗教自由、持枪权、免受搜查等基本权利。美国自由的基石。' },
+  { ch:'ch5', year:'1800', title:'第一次政权和平轮替', tags:['politics'], hi:1, desc:'杰斐逊击败亚当斯。在当时世界上几乎闻所未闻——权力交接通常伴随流血。证明体制可以承受政党轮替。' },
+  { ch:'ch6', year:'1793', title:'轧棉机：奴隶制起死回生', tags:['economy'], hi:1, desc:'惠特尼发明轧棉机，原想减少对奴隶依赖，却让棉花爆炸增长。奴隶从70万增至400万。历史的讽刺。' },
+  { ch:'ch6', year:'1860', title:'林肯当选', tags:['politics'], hi:1, desc:'纯粹的北方政党候选人当选，在南方十个州一张票都没拿到。南方认定这是北方的宣战。' },
+  { ch:'ch6', year:'1861.4.12', title:'萨姆特堡：内战爆发', tags:['war'], hi:1, desc:'凌晨4:30南军开火。林肯征召75000志愿兵服役90天——他以为很快就能平定。战争打了四年。' },
+  { ch:'ch6', year:'1863.1.1', title:'《解放奴隶宣言》', tags:['politics','society'], hi:1, desc:'把战争定义为解放奴隶的战争。虽只"解放"控制不了的地方的奴隶，但象征意义巨大。18万黑人加入北军。' },
+  { ch:'ch6', year:'1863.7', title:'葛底斯堡', tags:['war'], hi:1, desc:'三天5万人伤亡。林肯272词演说："孕育于自由之中，奉行人人生而平等的原则——考验这样的国家能否长存。"' },
+  { ch:'ch6', year:'1865.4', title:'战争结束·林肯遇刺', tags:['war','politics'], hi:1, desc:'李将军投降，格兰特给予优厚条件。五天后林肯在剧院被枪杀。75万人死亡的战争结束了。' },
+  { ch:'ch7', year:'1877', title:'重建终结', tags:['politics','society'], hi:1, desc:'肮脏交易：共和党获总统，联邦军队撤出南方。种族隔离的"吉姆·克劳"时代开始。共和党出卖了黑人。' },
+  { ch:'ch7', year:'1880s–1900s', title:'镀金时代', tags:['economy','society'], hi:1, desc:'洛克菲勒控制90%石油，1%的人拥有一半财富。工人每周67小时，十岁的孩子在煤矿劳动。表面金光闪闪，里面是廉价金属。' },
+  { ch:'ch7', year:'1920', title:'女性投票权', tags:['society'], hi:1, desc:'第十九修正案通过。从1848年到1920年，女性花了72年才赢得投票权。' },
+  { ch:'ch8', year:'1917', title:'美国参加一战', tags:['war'], hi:1, desc:'无限制潜艇战+齐默尔曼电报。威尔逊说"让世界对民主更安全"。11.6万美国人死亡，一半死于大流感。' },
+  { ch:'ch8', year:'1929', title:'大崩盘与大萧条', tags:['economy'], hi:1, desc:'"黑色星期二"。失业率25%，工业产出腰斩。"胡佛村"遍地——纸板铁皮搭的贫民窟。农民倒牛奶，城里孩子挨饿。' },
+  { ch:'ch8', year:'1933', title:'罗斯福新政', tags:['politics','economy'], hi:1, desc:'"唯一需要恐惧的是恐惧本身。"FDIC、SEC、社会保障、最低工资——美国福利国家的起点。联邦政府角色永久性扩大。' },
+  { ch:'ch8', year:'1941.12.7', title:'珍珠港', tags:['war'], hi:1, desc:'2403人死亡。"一个将永远承受耻辱的日子。"一夜之间孤立主义烟消云散，美国成为民主国家的兵工厂。' },
+  { ch:'ch8', year:'1944.6.6', title:'诺曼底登陆', tags:['war'], hi:1, desc:'15万盟军跨越英吉利海峡。奥马哈海滩第一波伤亡率超90%。人类史上最大两栖登陆。' },
+  { ch:'ch8', year:'1945.8', title:'原子弹', tags:['war'], hi:1, desc:'广岛14万人、长崎7万人死亡。奥本海默："我成了死神，世界的毁灭者。"人类进入核时代。' },
+  { ch:'ch9', year:'1947', title:'杜鲁门主义与马歇尔计划', tags:['politics'], hi:1, desc:'遏制政策诞生。130亿美元重建西欧——美国外交史上最成功的举措之一。冷战格局确立。' },
+  { ch:'ch9', year:'1950–1953', title:'朝鲜战争', tags:['war'], hi:1, desc:'麦克阿瑟想用原子弹被杜鲁门解职——文官控制军队的原则。3.7万美军死亡，战线回到原点。至今没有和约。' },
+  { ch:'ch9', year:'1962.10', title:'古巴导弹危机', tags:['war','politics'], hi:1, desc:'人类距核毁灭最近的13天。"我们眼对眼对视，对方眨眼了。"此后建立白宫-克里姆林宫热线。' },
+  { ch:'ch9', year:'1964–1975', title:'越南战争', tags:['war'], hi:1, desc:'5.8万美军死亡。第一场"客厅里的战争"撕裂美国。1975年西贡陷落，美国最大军事失败。' },
+  { ch:'ch9', year:'1969.7.20', title:'登月', tags:['society'], hi:1, desc:'"个人的一小步，人类的一大步。"40万人参与，消耗联邦预算4%。推动的科技进步为信息革命奠基。' },
+  { ch:'ch9', year:'1989.11.9', title:'柏林墙倒塌', tags:['politics'], hi:1, desc:'数万东柏林人涌向墙，边防军没开枪。人们用锤子砸墙。东欧共产党政权如多米诺骨牌倒下。冷战结束。' },
+  { ch:'ch10', year:'2001.9.11', title:'9/11恐怖袭击', tags:['war'], hi:1, desc:'近3000人死亡，两座110层大楼在全世界面前倒塌。"历史终结"的幻象粉碎。"反恐战争"开始。' },
+  { ch:'ch10', year:'2003', title:'伊拉克战争', tags:['war'], hi:1, desc:'以不存在的"大规模杀伤性武器"为由入侵。4500美军死亡，花费超2万亿。成为新的越南。' },
+  { ch:'ch10', year:'2008', title:'金融危机与奥巴马当选', tags:['economy','politics'], hi:1, desc:'雷曼破产引发金融海啸。同年奥巴马当选——距《解放奴隶宣言》146年，第一位非裔总统。' },
+  { ch:'ch10', year:'2021.1.6', title:'国会山骚乱', tags:['politics'], hi:1, desc:'自1814年以来国会大厦首次被攻占——攻击者是美国人自己。和平权力交接的传统受到245年来最严重挑战。' },
+];
+
+
+let usaMode = 'summary';
+
+function openUSAHistory() {
+  const page = document.getElementById('usa-history-page');
+  page.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  buildChapterNav();
+  renderUSA();
+  setTimeout(() => setupScrollSpy(), 100);
+}
+
+function closeUSAHistory() {
+  document.getElementById('usa-history-page').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function setUSAMode(m) {
+  usaMode = m;
+  document.querySelectorAll('.usa-mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-'+m).classList.add('active');
+  renderUSA();
+}
+
+function buildChapterNav() {
+  const nav = document.getElementById('usa-chapter-nav');
+  nav.innerHTML = '<div class="usa-nav-label">章节导航</div>' +
+    usaChapters.map((c,i) =>
+      `<button class="usa-ch-btn ${i===0?'active':''}" data-ch="${c.id}" onclick="jumpCh('${c.id}',this)">
+        <span class="ch-num">${c.num}</span>${c.title}
+      </button>`
+    ).join('');
+}
+
+function jumpCh(id, btn) {
+  document.querySelectorAll('.usa-ch-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const el = document.getElementById('usa-'+id);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function setupScrollSpy() {
+  const scroller = document.getElementById('usa-scroll-container');
+  if(!scroller || scroller._spy) return;
+  scroller._spy = true;
+  scroller.addEventListener('scroll', () => {
+    let cur = 'ch1';
+    document.querySelectorAll('.usa-chapter-block').forEach(b => {
+      const r = b.getBoundingClientRect();
+      if(r.top < 250) cur = b.id.replace('usa-','');
+    });
+    document.querySelectorAll('.usa-ch-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.ch === cur);
+    });
+  });
+}
+
+function tagHTML(t) {
+  const labels = {war:'⚔ 战争',politics:'📜 政治',economy:'🏭 经济',society:'✊ 社会'};
+  return `<span class="usa-tag ${t}">${labels[t]||t}</span>`;
+}
+
+function renderUSA() {
+  const box = document.getElementById('usa-content');
+  if(usaMode === 'summary') {
+    box.innerHTML = usaChapters.map(c => {
+      const evts = usaSummaryEvents.filter(e=>e.ch===c.id);
+      return `<div id="usa-${c.id}" class="usa-chapter-block">
+        <div class="usa-chapter-head">
+          <div class="usa-chapter-num">${c.sub}</div>
+          <div class="usa-chapter-title">${c.num}：${c.title}</div>
+        </div>
+        ${evts.map(e => `<div class="usa-event ${e.hi?'high':''}">
+          <div class="usa-event-year">${e.year}</div>
+          <div class="usa-event-title">${e.title}</div>
+          <div class="usa-event-tags">${e.tags.map(tagHTML).join('')}</div>
+          <div class="usa-event-desc">${e.desc}</div>
+        </div>`).join('')}
+      </div>`;
+    }).join('');
+  } else {
+    box.innerHTML = usaChapters.map(c => {
+      const txt = usaFullText[c.id] || '';
+      return `<div id="usa-${c.id}" class="usa-chapter-block">
+        <div class="usa-chapter-head">
+          <div class="usa-chapter-num">${c.sub}</div>
+          <div class="usa-chapter-title">${c.num}：${c.title}</div>
+        </div>
+        <div class="usa-full-text">${txt}</div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('usa-scroll-container').scrollTop = 0;
+}
+
+function enterCountryHistory(regionId, title) {
+  const usaIds = ['usa','americas','british_n_america','new_spain','russian_america'];
+  if(usaIds.includes(regionId)) {
+    closePanel();
+    openUSAHistory();
+  } else {
+    alert('即将进入 ' + title + ' 的详细历史... (内容建设中)');
+  }
+}
+
+const usaFullText = {
+  ch1: `最早的美洲人
+
+在欧洲人"发现"美洲之前，这片大陆已经有人住了——而且住了很久很久。
+
+具体有多久？根据2021年在美国新墨西哥州白沙国家公园发现的人类脚印化石，答案是至少2.3万年。这个发现相当震撼，因为它把人类踏足美洲的时间往前推了好几千年。
+
+这些最早的美洲人是怎么来的？主流理论认为，他们是从西伯利亚走过来的。当时正值冰河时期，海平面比现在低得多，亚洲和北美之间露出了一片陆地，学术上叫"白令陆桥"。一群追逐猎物的猎人，可能根本没意识到自己正在"跨洲迁徙"，就这么一路走到了美洲。
+
+不过，近年来的考古发现让事情变得更复杂了。有证据显示，一部分早期移民可能是坐船来的——从波利尼西亚，甚至从日本。DNA研究还发现了疑似来自欧洲的基因痕迹。美洲最早居民的来源，很可能比我们想象的更加多元。
+
+克洛维斯人：美洲最早的"文化名片"
+
+在早期美洲人中，有一群人特别出名，叫"克洛维斯人"，活跃在大约1.3万到1.2万年前。
+
+他们出名不是因为建了什么宏伟建筑——那个时代还没这条件——而是因为他们留下的石器太有特点了。克洛维斯人打造的石质矛头，两面都经过精细加工，有一种独特的"凹槽"设计，方便绑在木杆上。这种工艺在当时的美洲遍地开花，从北美到南美都有出土，说明克洛维斯文化的影响范围相当广。
+
+他们的食谱也挺壮观的。猛犸象、乳齿象、古风野牛、地懒——这些现在只能在博物馆里看到的史前巨兽，都是克洛维斯人的盘中餐。当然，他们不是只吃肉，考古发现他们还采集上百种植物。
+
+从狩猎到农业：美洲文明的起点
+
+时间来到公元前8000年左右，美洲进入了"古代阶段"。
+
+真正的转折点是农业的出现，大约在公元前5000年。美洲农业最重要的贡献，是一种叫"玉米"的作物。最早的玉米长得其实很寒酸，穗子只有手指那么大。但经过美洲原住民几千年的培育，它变成了高产、耐旱、适应性极强的作物。今天，玉米是全世界总产量最高的粮食作物——超过了小麦和水稻。
+
+农业改变了一切。人们不用再整天迁徙了，可以定居下来。村庄出现了，然后是城镇，然后是城市。文明的种子，就这样在美洲土地上发芽了。
+
+印加帝国：美洲最大的帝国
+
+印加人的崛起相当晚，也相当快。公元15世纪初，他们还只是秘鲁库斯科山区里的一个小部落。然后，一个叫帕查库特克的领袖上台了——"改变世界的人"。到16世纪初，印加帝国的版图已经覆盖了几乎整个南美洲西海岸，南北跨度超过4000公里。
+
+他们修建了总长超过3万公里的道路网。他们有"奇普"结绳记事系统。他们的君主"萨帕印加"被认为是太阳神因蒂的后裔。
+
+玛雅文明：城邦、文字与神秘的衰落
+
+玛雅文明最早可追溯到公元前2000年。但玛雅从来不是统一的帝国，它更像古希腊——一堆城邦各自为政。
+
+玛雅人最牛的成就是文字系统——整个美洲唯一被基本破译的古代文字。他们用二十进制，发明了"0"的概念，比欧洲人早了几百年。历法精确度超过同时期欧洲。
+
+从公元9世纪开始，南部低地的玛雅城邦一个接一个崩溃。原因至今是谜。但玛雅文明并没有完全消失，今天仍有数百万玛雅人后裔生活在墨西哥和中美洲。
+
+阿兹特克帝国：嗜血的霸主
+
+大约在1325年，墨西卡人在湖心岛上建立了特诺奇提特兰。传说他们看到一只鹰站在仙人掌上叼着一条蛇——今天墨西哥国徽上就有这只鹰。
+
+到西班牙人到来前，人口超过20万，比当时欧洲大多数城市都大。阿兹特克人的人祭规模令人震惊——他们相信太阳神需要人血作为"燃料"才能继续升起。
+
+北美：没有帝国，但并非空白
+
+北美原住民发展出了多种多样的文化：因纽特人在北极猎海豹，普韦布洛人建造多层泥砖建筑，林地印第安人种植"三姐妹"（玉米、豆类、南瓜），平原印第安人追逐野牛。
+
+易洛魁联盟是著名的政治组织——松散的邦联，成员部落在外交和战争上协调行动。有学者认为美国联邦制可能受其启发。
+
+美洲文明为何"落后"于欧洲？
+
+地理是重要因素——美洲南北走向，跨越几乎所有气候带，技术传播困难。动物也是关键——大型可驯化动物在冰河时期末期几乎灭绝了，没有马、牛、羊，就没有畜力，车轮也失去了发展动力。还有疾病——欧亚大陆人和家畜接触了几千年演化出的传染病，对美洲人来说是生化武器。
+
+历史从来不是公平的竞赛。`,
+  ch2: `大航海时代的背景
+
+15世纪的欧洲发生了深刻变化。黑死病后劳动力稀缺导致工资上涨，封建制度松动。文艺复兴重新发掘古希腊罗马知识，航海技术进步，对东方财富的渴望达到顶点。
+
+奥斯曼帝国像铁幕横亘东西方之间，每件东方商品都要经过层层加价。西欧人想绕过"中间商"，找一条直达东方的新路。
+
+葡萄牙人开路
+
+"航海家恩里克"王子在萨格里什建立航海研究中心。1441年，葡萄牙人带回第一批黑人奴隶——开启了持续四个世纪的罪恶贸易。1488年迪亚士绕过好望角，1498年达·伽马到达印度。
+
+哥伦布：向西航行的疯狂赌徒
+
+哥伦布估算从欧洲向西4000公里就能到日本。实际距离超过19000公里。如果美洲不存在，他和船员会死在半路上。
+
+四处碰壁后，西班牙女王伊莎贝拉赌了一把。1492年8月3日，三艘帆船从帕洛斯港出发。
+
+10月12日凌晨看到陆地。哥伦布坚信到达了亚洲——他至死都拒绝承认这是新大陆。他在日记中写下对泰诺人的第一印象："用50个人就能征服他们全部。"
+
+为什么叫"阿美利加"而不是"哥伦布大陆"？因为意大利人韦斯普奇首先认识到这是一块全新的大陆，而不是哥伦布坚持的"亚洲延伸"。1507年制图师用韦斯普奇的名字命名了这片土地。
+
+西班牙的征服
+
+1519年科尔特斯率500人登陆墨西哥。利用内部矛盾结盟数万仇恨阿兹特克的部落，加上武器代差和天花瘟疫，1521年摧毁特诺奇提特兰。
+
+皮萨罗用类似套路征服印加帝国。印加皇帝用整整一屋子黄金赎身，皮萨罗收了黄金然后还是处死了他。
+
+人口灾难
+
+天花、麻疹、流感——美洲原住民的免疫系统从未接触过这些病原体。整个美洲人口从约5000万至1亿降到500万至1000万。90%甚至95%的原住民在150年里消失了。
+
+人口锐减→劳动力短缺→从非洲进口奴隶。约1200万非洲人被强行运往美洲。
+
+西班牙帝国的讽刺
+
+西班牙控制了当时世界金银总量的83%。但大量金银涌入导致通货膨胀近4倍，本土手工业被冲垮。等到美洲银矿产量下降，西班牙发现自己已经空心化了。美洲的财富最终流向了英国、荷兰、法国的商人——他们用赚到的钱取代西班牙成为新的世界霸主。
+
+其他玩家入场
+
+法国人专注毛皮贸易，和印第安人关系相对融洽。荷兰人建立了"新阿姆斯特丹"（后来的纽约）。但对美洲未来影响最大的，是英国。`,
+  ch3: `英国人姗姗来迟
+
+16世纪中叶的英国还不是什么强国。伊丽莎白一世时期开始关注美洲，但用的是"特许状"模式——政府不掏钱，坐等民间资本冒险。
+
+罗阿诺克：消失的殖民地
+
+1587年117名殖民者登上罗阿诺克岛。领袖怀特回英国求援，因为无敌舰队来袭三年后才返回，发现所有人消失了。唯一线索是树上刻的"CROATOAN"。四百多年来至今没有定论。
+
+詹姆斯敦：在死亡边缘站稳脚跟
+
+1607年弗吉尼亚公司的104名殖民者建立詹姆斯敦——英国第一个永久殖民地。选址在沼泽地，蚊子肆虐，饮用水污染。大量"绅士"不干活只找金子。到年底只剩38人。
+
+约翰·史密斯推行"不劳动者不得食"。1609年"饥饿时期"，500人只剩60人，甚至出现人吃人——2012年考古确实发现了有刀切痕迹的女孩遗骸。
+
+烟草成为救命稻草。1612年约翰·罗尔夫引进温和品种，弗吉尼亚终于找到赚钱门路。罗尔夫还娶了波卡洪塔斯——她1616年访问英国受到热烈欢迎，但返程前染病去世，年仅21岁。
+
+1619年：两件大事
+
+同一年：弗吉尼亚议会诞生（北美第一个民选立法机构），第一批非洲黑人抵达英属北美。民主萌芽和奴隶制引入，同一块硬币的两面。
+
+最早的非洲人身份比较模糊——安东尼·约翰逊获自由后自己也成了地主。但到17世纪末，终身的、基于种族的奴隶制已牢固确立。
+
+五月花号
+
+1620年102人签署《五月花号公约》——人民自己通过契约建立政府。第一个冬天只剩一半人。万帕诺亚格印第安人帮助了他们——不是因为善良，而是瘟疫削弱了他们的实力，需要和带火枪的白人结盟自保。
+
+马萨诸塞湾："山巅之城"
+
+1630年温斯罗普宣称要成为"山巅之城，万众瞩目"。这种使命感贯穿美国历史。但清教徒追求的是自己的宗教自由，不是所有人的——异见者被驱逐，贵格会教徒被鞭打甚至绞死。
+
+培根起义与种族工具的发明
+
+1676年白人黑人穷人联合起义。镇压后，统治者系统性地加深种族裂痕：改善白人待遇，把黑人推向终身奴隶制。让穷白人觉得至少比黑人强，他们就不会造反。种族成为统治工具。
+
+塞勒姆女巫审判
+
+1692年，19人被绞死，1人被石头压死。当恐惧压倒理性、指控不需要证据时，任何人都可能成为受害者。1950年代麦卡锡主义被称为"现代猎巫"。
+
+威廉·佩恩的"神圣实验"
+
+贵格会教徒佩恩建立宾夕法尼亚——真正的宗教宽容，土地从印第安人购买而非强占。费城成为殖民地最繁荣的城市之一。1688年《日耳曼敦抗议书》是美洲第一份反奴隶制公开文件。
+
+十三殖民地形成
+
+北方：小农经济、渔业、商业，奴隶不多，清教传统重教育。南方：种植园经济，大规模奴隶制，社会等级分明。中部：最多元化。到18世纪中叶总人口超过100万。`,
+  ch4: `法国人的北美
+
+新法兰西的总人口只有约7万，英属殖民地已超100万。法国控制的是一条线（河流沿岸贸易站），不是一片。一旦开战，人力远远不够。
+
+七年战争：决定北美命运
+
+1753年21岁的华盛顿被派去警告法国人。1754年他打死法国军官——战争稀里糊涂地开始了。最初英国人惨败，1759年攻陷魁北克，1763年《巴黎条约》法国退出北美。
+
+英国赢了，但国债翻番。《1763年公告》禁止殖民者越过阿巴拉契亚山脉——殖民者怒了。
+
+"无代表，不纳税"
+
+1765年《印花税法》——第一次直接税。殖民者暴力抵制，"自由之子"涂焦油粘羽毛。1766年废除。
+
+1770年"波士顿惨案"——5名波士顿人被射杀。为士兵辩护的律师是约翰·亚当斯。
+
+1773年波士顿倾茶——342箱茶叶入海。英国以"不可容忍法令"回应，反而团结了殖民地。
+
+第一届大陆会议
+
+1774年十二个殖民地56名代表齐聚费城。通过《殖民者权利宣言》，建立通信委员会网络。革命的基础设施悄悄建立。
+
+莱克星顿：第一枪
+
+1775年4月19日，"响彻世界的枪声"。英军撤退途中遭民兵不断袭击，损失73死174伤。
+
+《常识》：思想转折点
+
+1776年1月，潘恩用最简单的语言论证独立："一个小岛凭什么统治一个大陆？"三个月内卖出10万册。
+
+《独立宣言》
+
+1776年7月4日。"人人生而平等，造物主赋予他们若干不可剥夺的权利。"但谴责奴隶贸易的段落被删除。56人签名，以生命为赌注。
+
+独立战争
+
+1776年圣诞夜华盛顿渡河奇袭特伦顿。1777年萨拉托加近6000英军投降——促成法国参战。1781年约克镇康沃利斯投降，英国军乐队演奏"世界颠倒了"。
+
+1783年《巴黎条约》正式承认美国独立。
+
+革命的另一面
+
+约15-20%殖民者是效忠派，6-8万人流亡加拿大。成千上万黑人为英国作战——因为英国答应给他们自由。大多数印第安部落支持英国——因为殖民者对土地的贪婪威胁更大。
+
+"人人生而平等"的承诺并没有适用于黑人奴隶、女性和原住民。`,
+  ch5: `胜利之后：现在怎么办？
+
+邦联政府极其虚弱——不能征税、不能管理贸易、不能强制执行决定。像一个没有工资没有权力的物业管理员。
+
+各州各自为政，互设关税壁垒，货币混乱。国债4200万美元无力偿还。
+
+谢斯起义
+
+1786年马萨诸塞农民起义。退伍军人还不起债务，农场被没收。邦联政府无力镇压——连军队都没有。最后靠州政府自己筹钱解决。
+
+华盛顿在信中写道："如果政府不能保护公民的财产，那还要政府干什么？"
+
+费城制宪会议
+
+1787年55名代表关门密谈四个月。弗吉尼亚方案提出三权分立。
+
+大妥协：众议院按人口，参议院每州两席。五分之三妥协：每个奴隶算五分之三个人计算代表权——臭名昭著的政治交易。
+
+宪法避免使用"奴隶"一词，逃奴条款强迫北方州帮助抓捕逃奴。妥协把定时炸弹埋入地基，七十年后炸裂国家。
+
+选举人团制度也是妥协产物——大州多选举人，小州也有权重。已发生五次赢得普选票却输掉总统选举的情况。
+
+批准之争
+
+联邦党人vs反联邦党人。反对派最大质疑：没有权利法案！1788年宪法生效，1791年权利法案通过。
+
+汉密尔顿vs杰斐逊
+
+汉密尔顿：建国家银行、承担国州债、保护制造业——要把美国变成商业工业大国。
+杰斐逊：独立自耕农是社会中坚，工厂雇工没有独立性——理想的美国是农业共和国。
+
+首都建在南方的华盛顿，是南方同意联邦承担州债的交换条件。
+
+宪法解释之争至今存在：联邦政府的权力边界在哪里？
+
+1800年的革命
+
+杰斐逊击败亚当斯——第一次政权和平转移。在当时世界上几乎闻所未闻。证明体制可以承受政党轮替，可以通过选举而不是暴力解决分歧。`,
+  ch6: `棉花王国的崛起
+
+1793年惠特尼发明轧棉机。棉花出口从150万磅飙升到1860年的20亿磅。奴隶从70万增至近400万。"棉花为王"——但惠特尼的初衷是减少对奴隶的依赖。历史的讽刺莫过于此。
+
+两个美国
+
+南方：种植园经济、奴隶制、崇尚"骑士精神"。北方：工业革命、工厂铁路城市、强调"自由劳动"。
+
+南方从"必要的罪恶"转向宣称奴隶制是"正面的善"——黑人天生低劣需要白人"照顾"，《圣经》也支持。当经济体系建立在某种制度上时，人们总能找到理由辩护。
+
+西进与奴隶制碰撞
+
+每一块新领土都引发同一个问题：允许奴隶制吗？1820年密苏里妥协、1850年妥协案——一个接一个被打破。
+
+1852年《汤姆叔叔的小屋》成为仅次于《圣经》的畅销书。1854年《堪萨斯-内布拉斯加法案》废除了密苏里妥协，堪萨斯变成流血的战场。
+
+共和党1854年诞生，核心主张：阻止奴隶制扩张。1858年林肯-道格拉斯辩论让林肯全国闻名。
+
+分裂
+
+1860年林肯当选，普选票只有40%，南方十个州一张票都没拿到。南卡169:0票通过脱离。十一个州成立南方联盟。
+
+内战
+
+1861年4月12日萨姆特堡开火。北方人口2200万vs南方900万（含350万奴隶），工业90%在北方。但南方只需守住领土。
+
+第一场"现代战争"：线膛步枪、铁甲舰、铁路、电报。但战术还停留在旧时代，排队冲锋迎面撞上更致命的火力。葛底斯堡三天5万伤亡，安提塔姆一天2万——美国历史上最血腥的一天。
+
+1863年1月1日《解放奴隶宣言》。7月葛底斯堡——皮克特冲锋变成大屠杀；同日维克斯堡投降，密西西比河完全落入北方。林肯发表272词不朽演说。
+
+1865年4月9日李将军投降，格兰特给予优厚条件。五天后林肯在福特剧院被暗杀。
+
+总死亡人数可能高达75万——超过美国参与的所有其他战争的死亡总和。奴隶制终结，联邦不可分割——但种族问题远未解决。`,
+  ch7: `重建的失败
+
+约翰逊对南方白人极其宽大。"黑人法典"几乎是换了名字的奴隶制。国会"激进重建"让黑人第一次投票、参选、担任公职。但三K党恐怖活动横行。
+
+1877年肮脏交易：共和党获总统，联邦军队撤出南方。重建终结。
+
+吉姆·克劳
+
+人头税、识字测验、祖父条款——系统性剥夺黑人投票权。路易斯安那黑人选民从13万降到1342人。
+
+1896年"普莱西案"裁定种族隔离合宪——"分开但平等"。黑人沦为佃农的"债务奴役"。私刑照片被做成明信片出售。
+
+镀金时代
+
+洛克菲勒控制90%石油，卡内基主宰钢铁，1%的人拥有一半财富。"强盗大亨"们用掠夺性定价、秘密回扣、纵向整合垄断行业。
+
+工人每周67小时，十岁童工在煤矿劳动。海马克特事件四名工运领袖被绞死，霍姆斯特德罢工军队镇压。劳资冲突接近阶级战争。
+
+1880-1920年约2300万移民涌入。1882年《排华法案》——第一部针对特定族群的限制法。
+
+进步主义
+
+"扒粪者"记者揭露腐败——塔贝尔揭露标准石油，辛克莱的《屠场》曝光肉类加工业。
+
+西奥多·罗斯福：反托拉斯诉讼拆分标准石油，煤矿罢工中政府首次不站在资方一边，推动食品安全立法和环保。
+
+威尔逊：联邦储备系统、所得税修正案、克莱顿反托拉斯法。
+
+1920年第十九修正案——女性花了72年赢得投票权。
+
+1898年美西战争让美国突然成为太平洋帝国，但菲律宾独立战争中美军使用了酷刑和集中营。进步主义的最大局限：对南方种族隔离视而不见。威尔逊本人在联邦政府推行种族隔离。`,
+  ch8: `一战
+
+1914年欧洲大陆爆炸。堑壕战的僵局——为夺取几公里土地死伤几十万。凡尔登和索姆河各死伤超过百万。
+
+美国最初中立，但经济利益倾向协约国——出口从8亿飙升到32亿美元。1915年卢西塔尼亚号被击沉，128名美国人遇难。
+
+1917年德国恢复无限制潜艇战+齐默尔曼电报，美国参战。400万军队动员，200万送往法国。威尔逊说这是"结束一切战争的战争"。
+
+11月11日停战。11.6万美国人死亡，其中一半死于1918年大流感——全球杀死5000万到1亿人。
+
+威尔逊带着"十四点"去巴黎，但克列孟梭和劳合·乔治要的是复仇。《凡尔赛条约》让德国承担全部罪责和巨额赔款——这种屈辱感成为希特勒崛起的温床。
+
+美国参议院拒绝批准条约。威尔逊全国巡讲中中风，生命最后一年半由妻子代理。美国没有加入自己帮助创建的国际联盟。
+
+咆哮的二十年代
+
+汽车、收音机、电影、消费主义、分期付款。"飞来波女郎"挑战传统，爵士乐风靡。但禁酒令催生有组织犯罪，三K党卷土重来，《排华法案》扩展为全面限制移民。
+
+财富分配极不平等，股市泡沫越吹越大。
+
+大萧条
+
+1929年10月"黑色星期二"。工业产出腰斩，失业率25%。银行倒闭→信贷冻结→企业裁员→消费下降→恶性循环。"胡佛村"遍地。农民倒牛奶，城里孩子挨饿。
+
+罗斯福新政
+
+"唯一需要恐惧的是恐惧本身。"百日立法：银行整顿、FDIC存款保险、SEC证券监管、CCC植树造林。第二阶段：社会保障法（养老和失业保险）、瓦格纳法（工会权利）、最低工资和40小时工作制。
+
+新政是否结束了大萧条？争论至今。1939年失业率仍达17%，真正终结大萧条的是二战。但新政永久性地扩大了联邦政府角色——美国不再是"放任自流"的国家。
+
+二战
+
+珍珠港：1941年12月7日，2403人死亡。"一个将永远承受耻辱的日子。"一夜之间孤立主义烟消云散。
+
+美国成为民主国家的兵工厂：近30万架飞机、10万辆坦克、6500艘军舰。失业率从17%降到1.2%。600万女性进入工厂——"铆工露西"。12万日裔美国人被关进拘留营。
+
+1944年6月6日诺曼底登陆——15万盟军。奥马哈海滩第一波伤亡率超90%。
+
+1945年8月广岛14万人、长崎7万人死亡。奥本海默："我成了死神，世界的毁灭者。"9月2日日本在密苏里号上签署投降书。`,
+  ch9: `铁幕降临
+
+美苏代表两种对立制度。斯大林在东欧建立"缓冲区"——波兰到东德，一个接一个落入苏联控制。丘吉尔："一道铁幕已经降落在欧洲大陆上。"
+
+遏制政策
+
+凯南"长电报"：在每个可能扩张的地方坚决抵抗，时间站在美国这边。1947年杜鲁门主义：全球对抗共产主义扩张。马歇尔计划130亿美元重建西欧——最成功的外交举措之一。
+
+1948年柏林封锁。美英空运——平均每分钟一架降落，持续近一年。苏联解除封锁。1949年北约成立——美国第一次和平时期的军事同盟。
+
+朝鲜战争
+
+1950年北朝鲜入侵南方。麦克阿瑟仁川登陆扭转战局，但越过38线后30万中国志愿军参战。麦克阿瑟想用原子弹被杜鲁门解职——文官控制军队的原则。1953年停火，战线回到原点。3.7万美军死亡。
+
+麦卡锡主义
+
+"红色恐慌"。麦卡锡声称手里有"205名共产党员"名单——很可能根本不存在。好莱坞黑名单、学术清洗、联邦调查局监控。1954年陆军-麦卡锡听证会直播，"先生，你难道没有一点廉耻吗？"麦卡锡倒台。
+
+太空竞赛
+
+1957年斯普特尼克卫星——美国震动。1961年加加林首次进入太空。肯尼迪承诺十年内登月。1969年7月20日阿姆斯特朗踏上月球："个人的一小步，人类的一大步。"
+
+古巴导弹危机
+
+1962年10月，人类距核毁灭最近的13天。肯尼迪下令海上封锁。苏联货船驶向封锁线——全面核战争将在几小时内造成1亿以上死亡。10月24日苏联货船掉头。"我们眼对眼对视，对方眨眼了。"
+
+越南战争
+
+美军从2.3万飙升到54万。找不到决定性目标——越共打完就消失在丛林里。1968年春节攻势粉碎胜利信心。反战运动撕裂美国。
+
+1975年4月30日西贡陷落。5.8万美军死亡，花费1500亿美元。"越战综合症"困扰美国多年。
+
+冷战终结
+
+里根军备竞赛+CIA全球反击+"星球大战计划"。苏联经济停滞，戈尔巴乔夫改革。
+
+1989年11月9日柏林墙倒塌。东欧共产党政权如多米诺骨牌倒下。1991年12月苏联解体。冷战结束，美国成为唯一超级大国。`,
+  ch10: `"历史的终结"？
+
+福山宣称自由民主是人类最终形式。1990年代互联网革命、经济繁荣、股市狂飙。但历史没有终结。
+
+1991年海湾战争：100小时地面战，美军148人阵亡。精确制导武器让世界目瞪口呆。但萨达姆留在权力位置上。
+
+克林顿时代：预算盈余、犯罪率下降、互联网繁荣。但莱温斯基丑闻——第二位被弹劾的总统（参议院未定罪）。
+
+2000年大选：戈尔赢普选票，但佛罗里达几百票之差——"蝴蝶选票""悬挂的纸屑"。最高法院5:4判给小布什。
+
+9/11
+
+2001年9月11日。8:46第一架飞机撞向世贸北塔。近3000人死亡——超过珍珠港。"历史终结"的幻象粉碎。
+
+入侵阿富汗推翻塔利班。2003年以不存在的"大规模杀伤性武器"为由入侵伊拉克——三周推翻萨达姆但战后重建变成泥潭。阿布格莱布虐囚丑闻。4500美军死亡，花费超2万亿。
+
+2008年金融危机
+
+雷曼兄弟破产，金融体系面临崩溃。失业率10%，数百万人失去房子。7000亿美元紧急救助。
+
+同年奥巴马当选——第一位非裔总统。距《解放奴隶宣言》146年。推行医疗改革，但"茶党"运动兴起，政治极化加剧。
+
+特朗普时代
+
+2016年触动白人工人阶级不满情绪，"让美国再次伟大"。击败希拉里——所有民调预测都错了。
+
+两次被弹劾（均未定罪）。2020年新冠疫情，超35万美国人死亡。
+
+2021年1月6日
+
+特朗普拒绝承认败选。支持者冲击国会大厦——自1814年以来首次被攻占，攻击者是美国人自己。
+
+权力交接最终完成，但不再是"和平"的了。证明即使在最古老的民主国家，和平权力交接也不能视为理所当然。
+
+2022年最高法院推翻"罗伊诉韦德案"，各州在堕胎问题上分裂成两个世界。
+
+美国的历史，可以被看作不断努力、不断失败、不断再尝试去实现"人人生而平等"那个承诺的过程。它还没有完成。也许永远不会完成。但只要还有人相信那个承诺值得追求，这个国家就还有希望。`,
+};
+
+
+init();
+</script>
+
+<!-- USA HISTORY FULLSCREEN PAGE -->
+<div id="usa-history-page">
+  <div class="usa-topbar">
+    <button class="usa-back-btn" onclick="closeUSAHistory()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+      返回地图
+    </button>
+    <div style="flex:1;text-align:center;">
+      <span style="font-family:var(--font-serif);color:rgba(227,217,195,0.85);font-size:1.05rem;letter-spacing:1px;">美国史</span>
+      <span style="color:rgba(227,217,195,0.2);font-family:var(--font-mono);font-size:0.6rem;margin-left:10px;">23,000 BCE — Present</span>
+    </div>
+    <div style="display:flex;gap:3px;background:rgba(107,196,184,0.06);border-radius:16px;padding:3px;">
+      <button id="mode-summary" onclick="setUSAMode('summary')" class="usa-mode-btn active">精炼版</button>
+      <button id="mode-full" onclick="setUSAMode('full')" class="usa-mode-btn">完整版</button>
+    </div>
+  </div>
+  <div class="usa-body">
+    <div class="usa-nav" id="usa-chapter-nav"></div>
+    <div class="usa-scroll" id="usa-scroll-container">
+      <div class="usa-content-inner" id="usa-content"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
