@@ -731,6 +731,7 @@ function handleTap(x, y, target) {
       if (['microscope','diorama_oxygen','diorama_cambrian','diorama_dinosaur'].includes(key)) { window.location.href = './life.html'; return; }
       if (objectData[key]) openPanel(key);
     } else if (t === 'board') {
+      if (hot.dataset.board === 'map') { window.location.href = './history.html'; return; }
       openBoard(hot.dataset.board);
     } else if (t === 'goto-gallery') {
       gotoRoom('gallery');
@@ -751,6 +752,10 @@ function handleTap(x, y, target) {
       if (key === 'celestial') { window.location.href = './cosmos.html'; return; }
       if (['microscope','diorama_oxygen','diorama_cambrian','diorama_dinosaur'].includes(key)) { window.location.href = './life.html'; return; }
       if (objectData[key]) openPanel(key);
+    } else if (t === 'board') {
+      if (hot.dataset.board === 'map') { window.location.href = './history.html'; return; }
+      openBoard(hot.dataset.board);
+    } else if (t === 'goto-gallery' || t === 'goto-study') {
       gotoRoom(t === 'goto-gallery' ? 'gallery' : 'study');
     } else {
       walkBack();
