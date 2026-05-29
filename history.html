@@ -118,7 +118,7 @@ header > * { pointer-events: auto; }
 
 /* ===== MAP STAGE ===== */
 #map-stage {
-  position: fixed; inset: 48px 0 100px 0;
+  position: fixed; inset: 48px 0 80px 0;
   display: flex; justify-content: center; align-items: center;
   z-index: 2;
   overflow: hidden;
@@ -327,104 +327,50 @@ header > * { pointer-events: auto; }
 .eye-icon { margin-left: auto; width: 14px; height: 14px; opacity: 0.4; transition: all 0.3s; }
 .layer-item:hover .eye-icon { opacity: 1; }
 
-/* ===== TIMELINE ===== */
+/* ===== TIMELINE — ERA CARDS ===== */
 #timeline-bar {
-  position: fixed; bottom: 0; left: 0; right: 0; height: 100px;
-  background: linear-gradient(to top, rgba(10,9,8,0.98) 0%, rgba(10,9,8,0.8) 60%, transparent 100%);
-  z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 0 40px;
+  position: fixed; bottom: 0; left: 0; right: 0; height: 80px;
+  background: linear-gradient(to top, rgba(10,9,8,0.98) 0%, rgba(10,9,8,0.85) 70%, transparent 100%);
+  z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 0 0 14px;
   opacity: 0; animation: fadeSlideUp 0.8s 0.3s ease forwards;
 }
-.timeline-label {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 0.6rem; color: var(--ink-faint); margin-bottom: 8px;
-  letter-spacing: 0.18em; font-family: var(--font-mono); font-weight: 300;
-  text-transform: uppercase;
+.era-strip {
+  display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden;
+  padding: 0 20px; max-width: 100%; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
 }
-.timeline-label svg { width: 13px; height: 13px; opacity: 0.4; }
-
-.timeline-track-wrap {
-  position: relative; width: 100%; max-width: 900px; height: 38px;
-  display: flex; align-items: center;
+.era-strip::-webkit-scrollbar { display:none; }
+.era-card {
+  flex-shrink: 0; scroll-snap-align: center;
+  padding: 8px 16px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(30,25,18,0.6);
+  cursor: pointer; transition: all 0.35s ease;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 72px;
 }
-.timeline-track {
-  position: absolute; left: 0; right: 0; height: 1px;
-  background: linear-gradient(to right, transparent, var(--gold-dim), rgba(196,162,101,0.15), var(--gold-dim), transparent);
-  top: 50%; transform: translateY(-50%);
+.era-card:active { transform: scale(0.95); }
+.era-card-label {
+  font-family: var(--font-display); font-size: 0.78rem; font-weight: 600;
+  color: var(--ink-dim); white-space: nowrap; transition: color 0.3s;
 }
-/* Progress fill */
-.timeline-progress {
-  position: absolute; left: 0; height: 2px;
-  background: linear-gradient(to right, var(--accent), rgba(107,196,184,0.3));
-  top: 50%; transform: translateY(-50%);
-  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
-  border-radius: 1px;
-  box-shadow: 0 0 8px var(--accent-glow);
+.era-card-sub {
+  font-family: var(--font-mono); font-size: 0.5rem; font-weight: 300;
+  color: var(--ink-faint); white-space: nowrap; letter-spacing: 0.04em; transition: color 0.3s;
 }
-
-.timeline-nodes {
-  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
-  display: flex; justify-content: space-between; pointer-events: none;
+.era-card.active {
+  border-color: rgba(107,196,184,0.4);
+  background: rgba(107,196,184,0.08);
+  box-shadow: 0 0 16px rgba(107,196,184,0.08);
 }
-.t-node {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  cursor: pointer; pointer-events: auto; transition: all 0.3s;
-  position: relative;
-}
-.t-node-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--bg); border: 1.5px solid var(--gold-dim);
-  transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
-  position: relative; z-index: 2;
-}
-.t-node:hover .t-node-dot {
-  border-color: var(--gold); background: var(--gold);
-  box-shadow: 0 0 10px rgba(196,162,101,0.3);
-}
-.t-node.active .t-node-dot {
-  width: 12px; height: 12px; background: var(--accent); border-color: var(--accent);
-  box-shadow: 0 0 16px var(--accent-glow), 0 0 40px rgba(107,196,184,0.1);
-}
-.t-node.visited .t-node-dot {
-  background: var(--gold-dim); border-color: var(--gold-dim);
-}
-.t-node-label {
-  font-size: 0.58rem; color: var(--ink-faint);
-  font-family: var(--font-mono); font-weight: 300;
-  transition: color 0.3s; white-space: nowrap; letter-spacing: 0.06em;
-}
-.t-node:hover .t-node-label { color: var(--ink); }
-.t-node.active .t-node-label { color: var(--accent); font-weight: 400; }
-
-#current-year-display {
-  position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
-  background: var(--panel); border: 1px solid rgba(107,196,184,0.3); color: var(--accent);
-  padding: 4px 16px; border-radius: 14px;
-  font-size: 0.75rem; font-weight: 600;
-  font-family: var(--font-display); letter-spacing: 0.08em;
-  box-shadow: 0 0 20px rgba(107,196,184,0.08);
-  pointer-events: none; white-space: nowrap;
-  backdrop-filter: blur(12px);
-  transition: all 0.4s ease;
-}
-
-.play-btn {
-  position: absolute; right: -80px; top: 50%; transform: translateY(-50%);
-  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
-  background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
-  font-family: var(--font-mono); font-size: 0.65rem; font-weight: 300;
-  cursor: pointer; border-radius: 20px; transition: all 0.35s;
-  letter-spacing: 0.08em;
-}
-.play-btn:hover {
-  border-color: var(--gold); color: var(--gold-bright);
-  box-shadow: 0 0 16px rgba(196,162,101,0.12);
-}
-.play-btn.playing { border-color: var(--accent); color: var(--accent); }
-.play-btn svg { width: 12px; height: 12px; }
+.era-card.active .era-card-label { color: var(--accent); }
+.era-card.active .era-card-sub { color: rgba(107,196,184,0.6); }
+.era-card.visited { border-color: rgba(196,162,101,0.2); }
+.era-card.visited .era-card-label { color: var(--gold-dim); }
 
 .timeline-hint {
-  margin-top: 8px; font-size: 0.55rem; color: var(--ink-faint); opacity: 0.5;
+  margin-top: 6px; font-size: 0.5rem; color: var(--ink-faint); opacity: 0.4;
   letter-spacing: 0.12em; font-family: var(--font-mono); font-weight: 300;
 }
 
@@ -487,11 +433,10 @@ header > * { pointer-events: auto; }
     border-radius: 16px 16px 0 0;
   }
   #left-panel.open { transform: translateY(0); }
-  .play-btn { right: 8px; padding: 7px 12px; font-size: 0.6rem; }
-  .play-btn span { display: none; }
-  #timeline-bar { padding: 0 20px; }
-  .timeline-track-wrap { max-width: 100%; }
-  .t-node-label { font-size: 0.5rem; }
+  #timeline-bar { padding: 0; height: 70px; }
+  #map-stage { inset: 48px 0 70px 0; }
+  .era-card { padding: 6px 12px; min-width: 60px; }
+  .era-card-label { font-size: 0.7rem; }
 }
 
 
@@ -638,10 +583,66 @@ header > * { pointer-events: auto; }
 
 @media (max-width:768px) {
   .usa-nav { display:none; }
-  .usa-content-inner { padding:24px 20px 80px; }
-  .usa-topbar { padding:10px 16px; }
-  .usa-chapter-title { font-size:1.3rem; }
+  .usa-content-inner { padding:24px 18px 100px; }
+  .usa-topbar { padding:12px 14px; gap:10px; }
+  .usa-topbar .ch-time-range { display:none; }
+  .usa-back-btn { padding:8px 12px; font-size:0.7rem; }
+  .usa-back-btn span { display:none; }
+  .usa-mode-btn { padding:7px 16px; font-size:0.68rem; }
+  .usa-chapter-title { font-size:1.25rem; }
+  .usa-chapter-head { margin-bottom:24px; padding-bottom:16px; position:sticky; top:0; background:#1a1612; z-index:5; }
+  .usa-event-desc { font-size:0.75rem; line-height:1.95; }
+  .usa-full-text { font-size:0.78rem; line-height:2.15; }
+  .ch-term { padding:0 1px; }
+  .ch-popup { font-size:0.82rem; line-height:1.85; }
+  .ch-xlink { font-size:0.68rem; padding:4px 12px; }
 }
+
+/* === MOBILE CHAPTER FLOAT BUTTON === */
+.mob-ch-btn {
+  display:none; position:fixed; bottom:20px; left:20px; z-index:10003;
+  width:44px; height:44px; border-radius:50%; border:1px solid rgba(107,196,184,0.3);
+  background:rgba(18,15,12,0.95); color:var(--accent); cursor:pointer;
+  backdrop-filter:blur(12px); box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  align-items:center; justify-content:center; transition:all 0.3s;
+}
+.mob-ch-btn:active { transform:scale(0.92); background:rgba(107,196,184,0.15); }
+.mob-ch-btn svg { width:18px; height:18px; }
+@media (max-width:768px) { .mob-ch-btn { display:flex; } }
+
+.mob-ch-sheet {
+  position:fixed; bottom:0; left:0; right:0; z-index:10004;
+  background:rgba(18,15,12,0.98); border-top:1px solid rgba(107,196,184,0.2);
+  border-radius:16px 16px 0 0; padding:16px 16px 28px; max-height:55vh; overflow-y:auto;
+  transform:translateY(100%); transition:transform 0.3s ease;
+  backdrop-filter:blur(20px);
+}
+.mob-ch-sheet.open { transform:translateY(0); }
+.mob-ch-sheet .mcs-title { font-size:0.62rem; color:var(--ink-faint); letter-spacing:0.12em; font-family:var(--font-mono); margin-bottom:10px; }
+.mob-ch-sheet .mcs-item {
+  display:block; width:100%; text-align:left; background:none; border:none; padding:12px 14px;
+  font-family:var(--font-body); font-size:0.78rem; color:var(--ink-dim); cursor:pointer;
+  border-radius:8px; transition:all 0.2s; line-height:1.5; margin-bottom:2px;
+}
+.mob-ch-sheet .mcs-item:active { background:rgba(107,196,184,0.08); color:var(--accent); }
+.mob-ch-sheet .mcs-item.active { color:var(--accent); background:rgba(107,196,184,0.06); border-left:2px solid var(--accent); }
+.mob-ch-sheet .mcs-sub { font-size:0.52rem; color:var(--ink-faint); font-family:var(--font-mono); display:block; margin-bottom:2px; letter-spacing:1px; }
+
+/* === READING PROGRESS BAR === */
+.read-progress { position:fixed; top:0; left:0; height:2px; z-index:10005; background:var(--accent); width:0; transition:width 0.15s linear; pointer-events:none; box-shadow:0 0 6px var(--accent-glow); }
+
+/* === BACK TO TOP === */
+.btt-btn {
+  position:fixed; bottom:20px; right:20px; z-index:10003;
+  width:40px; height:40px; border-radius:50%; border:1px solid rgba(196,162,101,0.2);
+  background:rgba(18,15,12,0.95); color:var(--gold); cursor:pointer;
+  backdrop-filter:blur(12px); box-shadow:0 4px 16px rgba(0,0,0,0.4);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:all 0.3s; transform:translateY(8px);
+}
+.btt-btn.show { opacity:1; pointer-events:auto; transform:translateY(0); }
+.btt-btn:active { transform:scale(0.92); }
+.btt-btn svg { width:16px; height:16px; }
 
 
 /* === TERM GLOSSARY === */
@@ -778,30 +779,16 @@ header > * { pointer-events: auto; }
 
 <!-- TIMELINE -->
 <div id="timeline-bar">
-  <div class="timeline-label">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    TIMELINE
+  <div class="era-strip" id="era-strip">
+    <div class="era-card" data-year="prehistoric" onclick="setEra('prehistoric')"><span class="era-card-label">史前</span><span class="era-card-sub">远古</span></div>
+    <div class="era-card" data-year="3000bce" onclick="setEra('3000bce')"><span class="era-card-label">前3000</span><span class="era-card-sub">文明初现</span></div>
+    <div class="era-card" data-year="500bce" onclick="setEra('500bce')"><span class="era-card-label">前500</span><span class="era-card-sub">古典时代</span></div>
+    <div class="era-card" data-year="200ce" onclick="setEra('200ce')"><span class="era-card-label">200</span><span class="era-card-sub">帝国并立</span></div>
+    <div class="era-card active" data-year="1000ce" onclick="setEra('1000ce')"><span class="era-card-label">1000</span><span class="era-card-sub">中世纪</span></div>
+    <div class="era-card" data-year="1400ce" onclick="setEra('1400ce')"><span class="era-card-label">1400</span><span class="era-card-sub">大航海前</span></div>
+    <div class="era-card" data-year="1800ce" onclick="setEra('1800ce')"><span class="era-card-label">1800</span><span class="era-card-sub">工业革命</span></div>
+    <div class="era-card" data-year="modern" onclick="setEra('modern')"><span class="era-card-label">现代</span><span class="era-card-sub">今天</span></div>
   </div>
-  <div class="timeline-track-wrap">
-    <div class="timeline-track"></div>
-    <div class="timeline-progress" id="timeline-progress"></div>
-    <div class="timeline-nodes">
-      <div class="t-node" data-year="prehistoric"><div class="t-node-dot"></div><span class="t-node-label">史前</span></div>
-      <div class="t-node" data-year="3000bce"><div class="t-node-dot"></div><span class="t-node-label">前3000</span></div>
-      <div class="t-node" data-year="500bce"><div class="t-node-dot"></div><span class="t-node-label">前500</span></div>
-      <div class="t-node" data-year="200ce"><div class="t-node-dot"></div><span class="t-node-label">200</span></div>
-      <div class="t-node active" data-year="1000ce"><div class="t-node-dot"></div><span class="t-node-label">1000</span></div>
-      <div class="t-node" data-year="1400ce"><div class="t-node-dot"></div><span class="t-node-label">1400</span></div>
-      <div class="t-node" data-year="1800ce"><div class="t-node-dot"></div><span class="t-node-label">1800</span></div>
-      <div class="t-node" data-year="modern"><div class="t-node-dot"></div><span class="t-node-label">现代</span></div>
-    </div>
-    <div id="current-year-display">公元 1000 年</div>
-    <button class="play-btn" id="play-btn">
-      <span>PLAY</span>
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-    </button>
-  </div>
-  <div class="timeline-hint">click a node to travel through time</div>
 </div>
 
 <script>
@@ -1228,40 +1215,11 @@ let playInterval = null;
 let hotspotsVisible = true;
 
 function init() {
-  document.querySelectorAll('.t-node').forEach(node => {
-    node.addEventListener('click', () => setEra(node.dataset.year));
-  });
-  document.getElementById('play-btn').addEventListener('click', togglePlay);
-  document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-    });
-  });
-  document.querySelectorAll('.layer-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const eye = item.querySelector('.eye-icon');
-      const isOn = eye.getAttribute('stroke') !== 'var(--ink-faint)';
-      if (isOn) {
-        eye.setAttribute('stroke', 'var(--ink-faint)');
-        eye.querySelector('circle').setAttribute('fill', 'none');
-        if (item.dataset.layer === 'political') hotspotsVisible = false;
-      } else {
-        eye.setAttribute('stroke', 'var(--accent)');
-        eye.querySelector('circle').setAttribute('fill', 'var(--accent)');
-        if (item.dataset.layer === 'political') hotspotsVisible = true;
-      }
-      updateHotspotsVisibility();
-    });
-  });
   document.getElementById('overlay').addEventListener('click', closePanel);
 
   // Keyboard support
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closePanel();
-    if (e.key === 'ArrowRight') navigateEra(1);
-    if (e.key === 'ArrowLeft') navigateEra(-1);
-    if (e.key === ' ') { e.preventDefault(); togglePlay(); }
   });
 
   // Sync overlay to image bounds
@@ -1271,6 +1229,12 @@ function init() {
   syncOverlay();
 
   setEra('1000ce');
+
+  // Scroll active era card into view
+  setTimeout(() => {
+    const active = document.querySelector('.era-card.active');
+    if(active) active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  }, 500);
 }
 
 // Keep hotspots-overlay exactly on top of the rendered image area
@@ -1292,34 +1256,24 @@ function syncOverlay() {
   overlay.style.height = imgRect.height + 'px';
 }
 
-function navigateEra(dir) {
-  const idx = eras.findIndex(e => e.id === currentEraId);
-  const next = idx + dir;
-  if (next >= 0 && next < eras.length) setEra(eras[next].id);
-}
-
 function setEra(eraId) {
   if (!eraId || !hotspotsData[eraId]) return;
   const prevEraId = currentEraId;
   currentEraId = eraId;
 
-  // Update timeline nodes
+  // Update era cards
   const eraIdx = eras.findIndex(e => e.id === eraId);
-  document.querySelectorAll('.t-node').forEach((n, i) => {
-    n.classList.toggle('active', n.dataset.year === eraId);
-    n.classList.toggle('visited', i < eraIdx);
+  document.querySelectorAll('.era-card').forEach((c, i) => {
+    c.classList.toggle('active', c.dataset.year === eraId);
+    c.classList.toggle('visited', i < eraIdx);
   });
 
-  // Update progress bar
-  const progress = document.getElementById('timeline-progress');
-  const pct = (eraIdx / (eras.length - 1)) * 100;
-  progress.style.width = pct + '%';
+  // Scroll active card into view
+  const activeCard = document.querySelector('.era-card.active');
+  if(activeCard) activeCard.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
 
   const era = eras.find(e => e.id === eraId);
   if (!era) return;
-
-  // Update year display
-  document.getElementById('current-year-display').textContent = era.yearLabel;
 
   // Show era transition for dramatic effect (skip on first load)
   if (prevEraId !== eraId && prevEraId) {
@@ -1392,29 +1346,6 @@ function updateHotspotsVisibility() {
   const overlay = document.getElementById('hotspots-overlay');
   overlay.style.opacity = hotspotsVisible ? '1' : '0';
   overlay.style.pointerEvents = hotspotsVisible ? 'auto' : 'none';
-}
-
-function togglePlay() {
-  const btn = document.getElementById('play-btn');
-  if (isPlaying) {
-    clearInterval(playInterval);
-    isPlaying = false;
-    btn.classList.remove('playing');
-    btn.innerHTML = `<span>PLAY</span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
-    return;
-  }
-  isPlaying = true;
-  btn.classList.add('playing');
-  btn.innerHTML = `<span>PAUSE</span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>`;
-
-  let idx = eras.findIndex(e => e.id === currentEraId);
-  if (idx === -1 || idx === eras.length - 1) idx = -1;
-
-  playInterval = setInterval(() => {
-    idx++;
-    if (idx >= eras.length) { idx = 0; }
-    setEra(eras[idx].id);
-  }, 3000);
 }
 
 function openPanel(regionId) {
@@ -1655,18 +1586,19 @@ function renderUSA() {
 }
 
 function enterCountryHistory(regionId, title) {
-  const usaIds = ['usa','americas','british_n_america','russian_america'];
-  const ptIds = ['portugal','portugal_1800'];
-  const esIds = ['spain','spain_1800','cordoba'];
-  if(usaIds.includes(regionId)) {
+  const routeMap = {
+    usa:'us', americas:'us', british_n_america:'us', russian_america:'us',
+    portugal:'pt', portugal_1800:'pt',
+    spain:'pt_to_es', spain_1800:'pt_to_es', cordoba:'pt_to_es'
+  };
+  // Normalize spain route
+  let targetKey = routeMap[regionId];
+  if(targetKey === 'pt_to_es') targetKey = 'es';
+
+  if(targetKey && ALL_COUNTRIES[targetKey]) {
     closePanel();
-    openUSAHistory();
-  } else if(ptIds.includes(regionId)) {
-    closePanel();
-    openCountryHistory('pt', '葡萄牙史', '远古 — 今', ptChapters, ptSummaryEvents, ptFullText);
-  } else if(esIds.includes(regionId)) {
-    closePanel();
-    openCountryHistory('es', '西班牙史', '远古 — 今', esChapters, esSummaryEvents, esFullText);
+    const c = ALL_COUNTRIES[targetKey];
+    openCountryHistory(targetKey, c.title, c.range, c.chapters(), c.events(), c.fullText());
   } else {
     alert('即将进入 ' + title + ' 的详细历史... (内容建设中)');
   }
@@ -2535,6 +2467,95 @@ function openNotesPanel() {
 function closeNotesPanel(){document.getElementById('ch-notes-panel').classList.remove('open');}
 function deleteNote(pid){delete _notes[pid];localStorage.setItem('ch_notes',JSON.stringify(_notes));const el=document.getElementById(pid);if(el)el.classList.remove('has-note');openNotesPanel();}
 
+// === MOBILE CHAPTER SHEET ===
+function toggleMobChSheet() {
+  var sheet = document.getElementById('mob-ch-sheet');
+  var ov = document.getElementById('mob-ch-overlay');
+  if(sheet.classList.contains('open')) { closeMobChSheet(); return; }
+  if(!activeCountry) return;
+  sheet.innerHTML = '<div class="mcs-title">章节导航</div>' +
+    activeCountry.chapters.map(function(c,i){
+      return '<button class="mcs-item'+(i===0?' active':'')+'" data-ch="'+c.id+'" onclick="mobJumpCh(\''+c.id+'\')"><span class="mcs-sub">'+c.sub+'</span>'+c.title+'</button>';
+    }).join('');
+  sheet.classList.add('open');
+  ov.style.display = 'block';
+}
+function closeMobChSheet() {
+  document.getElementById('mob-ch-sheet').classList.remove('open');
+  document.getElementById('mob-ch-overlay').style.display = 'none';
+}
+function mobJumpCh(chId) {
+  closeMobChSheet();
+  scrollToCountryChapter(chId);
+}
+
+// === READING PROGRESS BAR + BACK TO TOP ===
+function setupReadingUI() {
+  var scroller = document.getElementById('country-scroll-container');
+  if(!scroller) return;
+  var progressBar = document.getElementById('read-progress');
+  var bttBtn = document.getElementById('btt-btn');
+  var mobBtn = document.getElementById('mob-ch-btn');
+  scroller.addEventListener('scroll', function() {
+    var sh = scroller.scrollHeight - scroller.clientHeight;
+    var pct = sh > 0 ? (scroller.scrollTop / sh) * 100 : 0;
+    if(progressBar) progressBar.style.width = pct + '%';
+    if(bttBtn) bttBtn.classList.toggle('show', scroller.scrollTop > 400);
+    // Update mobile sheet active state
+    if(activeCountry) {
+      var blocks = scroller.querySelectorAll('.usa-chapter-block');
+      var curId = null;
+      blocks.forEach(function(b){ if(b.getBoundingClientRect().top < 200) curId = b.id; });
+      if(curId) {
+        var chId = curId.replace('ch-'+activeCountry.key+'-','');
+        document.querySelectorAll('#country-chapter-nav .usa-ch-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.ch===chId); });
+        document.querySelectorAll('#mob-ch-sheet .mcs-item').forEach(function(b){ b.classList.toggle('active', b.dataset.ch===chId); });
+      }
+    }
+    // Save scroll position
+    if(activeCountry) {
+      try { localStorage.setItem('ch_scroll_'+activeCountry.key+'_'+countryMode, scroller.scrollTop); } catch(e){}
+    }
+  }, {passive:true});
+}
+function scrollBackToTop() {
+  var s = document.getElementById('country-scroll-container');
+  if(s) s.scrollTo({top:0, behavior:'smooth'});
+}
+
+// === SHOW/HIDE READING UI ELEMENTS ===
+var _origOpenCountry = openCountryHistory;
+openCountryHistory = function(key, title, timeRange, chapters, events, fullText) {
+  _origOpenCountry(key, title, timeRange, chapters, events, fullText);
+  document.getElementById('mob-ch-btn').style.display = '';
+  document.getElementById('read-progress').style.display = '';
+  setupReadingUI();
+  // Restore scroll
+  setTimeout(function(){
+    var saved = localStorage.getItem('ch_scroll_'+key+'_'+countryMode);
+    if(saved) { var s = document.getElementById('country-scroll-container'); if(s) s.scrollTop = parseInt(saved)||0; }
+  }, 200);
+};
+var _origCloseCountry = closeCountryHistory;
+closeCountryHistory = function() {
+  _origCloseCountry();
+  document.getElementById('mob-ch-btn').style.display = 'none';
+  document.getElementById('read-progress').style.display = 'none';
+  document.getElementById('btt-btn').classList.remove('show');
+  closeMobChSheet();
+};
+var _origSetMode = setCountryMode;
+setCountryMode = function(mode) {
+  _origSetMode(mode);
+  // Restore scroll for new mode
+  if(activeCountry) {
+    setTimeout(function(){
+      var saved = localStorage.getItem('ch_scroll_'+activeCountry.key+'_'+mode);
+      if(saved) { var s = document.getElementById('country-scroll-container'); if(s) s.scrollTop = parseInt(saved)||0; }
+    }, 100);
+  }
+};
+
 function exportNotes() {
   let text = 'Chronicle 阅读笔记\n' + new Date().toLocaleString('zh-CN') + '\n\n';
   Object.keys(_notes).forEach(pid => {
@@ -2553,21 +2574,46 @@ function exportNotes() {
 
 
 // === CROSS-COUNTRY FUNCTIONS ===
-function addXLinks(text, myKey) { return text; }
+function addXLinks(text, myKey) {
+  var others = Object.keys(ALL_COUNTRIES).filter(function(k){return k!==myKey;});
+  others.forEach(function(ck){
+    var c = ALL_COUNTRIES[ck];
+    var name = c.name;
+    var re = new RegExp('(?<!data-term=")(' + name + ')(?![^<]*<\\/span>)', 'g');
+    text = text.replace(re, '<span class="ch-xlink" onclick="jumpToCountry(\''+ck+'\')">$1 →</span>');
+  });
+  return text;
+}
+
+function jumpToCountry(targetKey) {
+  var c = ALL_COUNTRIES[targetKey];
+  if(!c) return;
+  closeCountryHistory();
+  setTimeout(function(){
+    openCountryHistory(targetKey, c.title, c.range, c.chapters(), c.events(), c.fullText());
+  }, 250);
+}
 
 const ERA_YEARS = {
+  ch1:[-23000,-1400],ch2:[-1400,1607],ch3:[1607,1750],ch4:[1750,1783],ch5:[1783,1820],ch6:[1793,1877],ch7:[1877,1920],ch8:[1917,1945],ch9:[1945,1991],ch10:[1991,2026],
   pt1:[-50000,-300],pt2:[-300,409],pt3:[409,1139],pt4:[1139,1415],pt5:[1415,1578],pt6:[1578,1640],pt7:[1640,1807],pt8:[1807,1974],pt9:[1974,2026],
   es1:[-50000,-206],es2:[-206,409],es3:[409,711],es4:[711,1085],es5:[1085,1556],es6:[1556,1700],es7:[1700,1808],es8:[1808,1874],es9:[1874,1936],es10:[1936,1975],es11:[1975,2026]
 };
 const ALL_COUNTRIES = {
-  pt:{name:'\u8461\u8404\u7259',chapters:()=>ptChapters,events:()=>ptSummaryEvents,fullText:()=>ptFullText,title:'\u8461\u8404\u7259\u53f2',range:'\u8fdc\u53e4 \u2014 \u4eca'},
-  es:{name:'\u897f\u73ed\u7259',chapters:()=>esChapters,events:()=>esSummaryEvents,fullText:()=>esFullText,title:'\u897f\u73ed\u7259\u53f2',range:'\u8fdc\u53e4 \u2014 \u4eca'}
+  us:{name:'美国',chapters:()=>usaChapters,events:()=>usaSummaryEvents,fullText:()=>usaFullText,title:'美国史',range:'23,000 BCE — Present'},
+  pt:{name:'葡萄牙',chapters:()=>ptChapters,events:()=>ptSummaryEvents,fullText:()=>ptFullText,title:'葡萄牙史',range:'远古 — 今'},
+  es:{name:'西班牙',chapters:()=>esChapters,events:()=>esSummaryEvents,fullText:()=>esFullText,title:'西班牙史',range:'远古 — 今'}
 };
 
 function getOverlappingEras(chapterId) {
   var myYears = ERA_YEARS[chapterId];
   if(!myYears) return [];
-  var myKey = chapterId.substring(0,2);
+  // Determine which country owns this chapter
+  var myKey = null;
+  Object.keys(ALL_COUNTRIES).forEach(function(ck){
+    ALL_COUNTRIES[ck].chapters().forEach(function(ch){ if(ch.id === chapterId) myKey = ck; });
+  });
+  if(!myKey) return [];
   var results = [];
   Object.keys(ALL_COUNTRIES).forEach(function(ck) {
     if(ck === myKey) return;
@@ -2701,37 +2747,12 @@ function setupCountryScrollSpy() {
 init();
 </script>
 
-<!-- USA HISTORY FULLSCREEN PAGE -->
-<div id="usa-history-page">
-  <div class="usa-topbar">
-    <button class="usa-back-btn" onclick="closeUSAHistory()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-      返回地图
-    </button>
-    <div style="flex:1;text-align:center;">
-      <span style="font-family:var(--font-serif);color:rgba(227,217,195,0.85);font-size:1.05rem;letter-spacing:1px;">美国史</span>
-      <span style="color:rgba(227,217,195,0.2);font-family:var(--font-mono);font-size:0.6rem;margin-left:10px;">23,000 BCE — Present</span>
-    </div>
-    <div style="display:flex;gap:3px;background:rgba(107,196,184,0.06);border-radius:16px;padding:3px;">
-      <button id="mode-summary" onclick="setUSAMode('summary')" class="usa-mode-btn active">精炼版</button>
-      <button id="mode-full" onclick="setUSAMode('full')" class="usa-mode-btn">完整版</button>
-    </div>
-  </div>
-  <div class="usa-body">
-    <div class="usa-nav" id="usa-chapter-nav"></div>
-    <div class="usa-scroll" id="usa-scroll-container">
-      <div class="usa-content-inner" id="usa-content"></div>
-    </div>
-  </div>
-</div>
-
-
 <!-- GENERIC COUNTRY HISTORY PAGE (reuses USA CSS classes) -->
 <div id="country-history-page" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);animation:usaFadeIn 0.4s ease;">
   <div class="usa-topbar">
     <button class="usa-back-btn" onclick="closeCountryHistory()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-      返回地图
+      <span>返回</span>
     </button>
     <div style="flex:1;text-align:center;">
       <span class="ch-title-text" style="font-family:var(--font-serif);color:rgba(227,217,195,0.85);font-size:1.05rem;letter-spacing:1px;"></span>
@@ -2759,6 +2780,21 @@ init();
   </div>
   <div class="ch-np-body"></div>
 </div>
+
+<!-- Mobile Chapter Nav -->
+<button class="mob-ch-btn" id="mob-ch-btn" onclick="toggleMobChSheet()" style="display:none;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+</button>
+<div class="mob-ch-sheet" id="mob-ch-sheet"></div>
+<div id="mob-ch-overlay" style="position:fixed;inset:0;z-index:10003;background:rgba(0,0,0,0.3);display:none;" onclick="closeMobChSheet()"></div>
+
+<!-- Reading Progress Bar -->
+<div class="read-progress" id="read-progress"></div>
+
+<!-- Back to Top -->
+<button class="btt-btn" id="btt-btn" onclick="scrollBackToTop()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
 
 </body>
 </html>
