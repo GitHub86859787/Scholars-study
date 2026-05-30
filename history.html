@@ -481,7 +481,7 @@ header > * { pointer-events: auto; }
   .nav-tab { font-size:0.52rem; padding:5px 8px; border-radius:6px; gap:3px; }
   .nav-tab svg { width:10px; height:10px; }
   #left-panel {
-    width: 82%; max-height: 70vh;
+    width: 82%; max-height: 50vh;
     top: 50%; bottom: auto; left: 0;
     transform: translateX(-100%) translateY(-50%);
     border-right: 1px solid var(--border); border-top: none;
@@ -798,7 +798,7 @@ header > * { pointer-events: auto; }
       </svg>
     </div>
     <div class="brand-text">
-      <h1>历史地图</h1>
+      <h1>历史地图 <span style="font-size:0.6em;opacity:0.5;font-weight:400;">Chronicle Map</span></h1>
       <p>drag through time — watch the world reshape</p>
     </div>
   </div>
@@ -1385,6 +1385,7 @@ function init() {
   function onTouchStart(e) {
     if(e.touches.length===2) {
       pinching=true; startDist=dist(e.touches); startScale=scale;
+      startPosX=posX; startPosY=posY;
       e.preventDefault();
     } else if(e.touches.length===1 && scale>1) {
       startX=e.touches[0].clientX; startY=e.touches[0].clientY;
@@ -1395,7 +1396,16 @@ function init() {
     if(pinching && e.touches.length===2) {
       e.preventDefault();
       var d = dist(e.touches);
-      scale = Math.max(1, Math.min(5, startScale*(d/startDist)));
+      var newScale = Math.max(1, Math.min(5, startScale*(d/startDist)));
+      // Zoom towards focal point (midpoint of two fingers)
+      var m = mid(e.touches);
+      var rect = container.parentElement.getBoundingClientRect();
+      var fx = m.x - rect.left - rect.width/2;
+      var fy = m.y - rect.top - rect.height/2;
+      var ratio = newScale / startScale;
+      posX = fx - ratio * (fx - startPosX);
+      posY = fy - ratio * (fy - startPosY);
+      scale = newScale;
       clampPos(); applyTransform();
     } else if(e.touches.length===1 && scale>1) {
       e.preventDefault();
@@ -2668,7 +2678,7 @@ function setupReadingUI() {
   if(!scroller) return;
   var progressBar = document.getElementById('read-progress');
   var bttBtn = document.getElementById('btt-btn');
-  var mobBtn = document.getElementById('mob-ch-btn');
+  var mobBtn = null; // mob-ch-btn removed
   scroller.addEventListener('scroll', function() {
     var sh = scroller.scrollHeight - scroller.clientHeight;
     var pct = sh > 0 ? (scroller.scrollTop / sh) * 100 : 0;
@@ -2700,7 +2710,7 @@ function scrollBackToTop() {
 var _origOpenCountry = openCountryHistory;
 openCountryHistory = function(key, title, timeRange, chapters, events, fullText) {
   _origOpenCountry(key, title, timeRange, chapters, events, fullText);
-  document.getElementById('mob-ch-btn').style.display = '';
+  // mob-ch-btn removed
   document.getElementById('read-progress').style.display = '';
   updateReturnBtn();
   setupReadingUI();
@@ -2713,7 +2723,7 @@ openCountryHistory = function(key, title, timeRange, chapters, events, fullText)
 var _origCloseCountry = closeCountryHistory;
 closeCountryHistory = function() {
   _origCloseCountry();
-  document.getElementById('mob-ch-btn').style.display = 'none';
+  // mob-ch-btn removed
   document.getElementById('read-progress').style.display = 'none';
   document.getElementById('btt-btn').classList.remove('show');
   closeMobChSheet();
@@ -2996,22 +3006,14 @@ function renderCountryContent() {
     box.innerHTML = chapters.map(c => {
       const text = fullText[c.id] || '(内容建设中)';
       const paragraphs = text.split('\n').filter(p=>p.trim()).map((p,pi) => {
-        // Split into sentences for per-sentence note attachment
-        const sentences = p.split(/(?<=[。！？\n])/g).filter(s=>s.trim());
-        if(sentences.length <= 1) {
-          // Short paragraph — keep as single unit
-          const pid = 'p-'+key+'-'+c.id+'-'+pi;
-          const hasNote = getNoteText(pid).trim();
-          let processed = termify(p);
-          processed = addXLinks(processed, key);
-          return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}"><div class="ndot"></div><p>${processed}</p><div class="ch-notebox" id="nb-${pid}"><button class="nb-close" onclick="closeNote('${pid}')">×</button><textarea placeholder="写想法..." oninput="saveNote('${pid}',this.value)">${getNoteText(pid)}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
-        }
+        // Split into sentences — each gets its own note attachment
+        const sentences = p.split(/(?<=[。！？])/g).filter(s=>s.trim());
         return sentences.map((s, si) => {
           const pid = 'p-'+key+'-'+c.id+'-'+pi+'-'+si;
           const hasNote = getNoteText(pid).trim();
           let processed = termify(s);
           processed = addXLinks(processed, key);
-          return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}" style="padding-left:10px;border-left-width:1px;"><div class="ndot"></div><p style="margin:0;">${processed}</p><div class="ch-notebox" id="nb-${pid}"><button class="nb-close" onclick="closeNote('${pid}')">×</button><textarea placeholder="写想法..." oninput="saveNote('${pid}',this.value)">${getNoteText(pid)}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
+          return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}"><div class="ndot"></div><p>${processed}</p><div class="ch-notebox" id="nb-${pid}"><button class="nb-close" onclick="closeNote('${pid}')">×</button><textarea placeholder="写想法..." oninput="saveNote('${pid}',this.value)">${getNoteText(pid)}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
         }).join('');
       }).join('');
       return `<div id="ch-${key}-${c.id}" class="usa-chapter-block">
@@ -3096,10 +3098,7 @@ init();
   <div class="ch-np-body"></div>
 </div>
 
-<!-- Mobile Chapter Nav -->
-<button class="mob-ch-btn" id="mob-ch-btn" onclick="toggleMobChSheet()" style="display:none;">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-</button>
+<!-- Mobile Chapter Nav (removed - chapter titles serve as navigation) -->
 <div class="mob-ch-sheet" id="mob-ch-sheet"></div>
 <div id="mob-ch-overlay" style="position:fixed;inset:0;z-index:10003;background:rgba(0,0,0,0.3);display:none;" onclick="closeMobChSheet()"></div>
 
