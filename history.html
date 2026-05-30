@@ -481,7 +481,7 @@ header > * { pointer-events: auto; }
   .nav-tab { font-size:0.52rem; padding:5px 8px; border-radius:6px; gap:3px; }
   .nav-tab svg { width:10px; height:10px; }
   #left-panel {
-    width: 72%; max-height: 40vh;
+    width: 82%; max-height: 65vh;
     top: 50%; bottom: auto; left: 0;
     transform: translateX(-100%) translateY(-50%);
     border-right: 1px solid var(--border); border-top: none;
@@ -489,18 +489,17 @@ header > * { pointer-events: auto; }
     overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
   #left-panel.open { transform: translateX(0) translateY(-50%); }
-  .panel-header { padding:14px 16px 8px; }
-  .panel-title { font-size:1rem; }
-  .panel-title-en { font-size:0.55rem; margin-top:1px; }
-  .panel-close { top:10px; right:10px; width:24px; height:24px; font-size:0.6rem; }
-  .panel-body { padding:10px 16px 14px; }
+  .panel-header { padding:18px 20px 12px; }
+  .panel-title { font-size:1.2rem; }
+  .panel-title-en { font-size:0.6rem; margin-top:2px; }
+  .panel-close { top:14px; right:14px; width:28px; height:28px; font-size:0.7rem; }
+  .panel-body { padding:14px 20px; }
+  .info-section { margin-bottom:16px; }
+  .info-label { font-size:0.5rem; margin-bottom:5px; }
+  .era-number { font-size:1.5rem; }
+  .desc-text { font-size:0.72rem; line-height:1.75; }
+  .enter-btn { padding:12px; font-size:0.72rem; letter-spacing:0.08em; }
   .panel-footer { display:none; }
-  .info-section { margin-bottom:0; }
-  .info-label { display:none; }
-  .era-number { display:none; }
-  .era-unit { display:none; }
-  .desc-text { font-size:0.68rem; line-height:1.65; }
-  .enter-btn { padding:10px; font-size:0.68rem; margin-top:0; margin-bottom:0; letter-spacing:0.06em; }
   #timeline-bar { padding: 0 16px; }
   .timeline-track-wrap { max-width: 100%; }
   .t-node-label { font-size: 0.5rem; }
@@ -513,9 +512,9 @@ header > * { pointer-events: auto; }
   display:none; position:fixed; inset:0; z-index:10000;
   background:#1a1612;
   overflow:hidden;
-  animation: usaFadeIn 0.4s ease;
+  animation: readerFadeIn 0.4s ease;
 }
-@keyframes usaFadeIn { from{opacity:0} to{opacity:1} }
+@keyframes readerFadeIn { from{opacity:0} to{opacity:1} }
 
 .reader-topbar {
   position:relative; z-index:10;
@@ -1627,22 +1626,38 @@ function openPanel(regionId) {
   const body = document.getElementById('panel-body');
   const eraDesc = era ? era.desc : '';
   const hotDesc = currentHotspot ? currentHotspot.desc : '';
-  // Pick the most specific non-duplicate description
-  let briefDesc = '';
-  if(hotDesc && hotDesc !== info.desc) {
-    briefDesc = hotDesc;
-  } else if(info.desc) {
-    briefDesc = info.desc;
-  }
-  // If eraDesc is different and adds value, append it
-  if(eraDesc && eraDesc !== briefDesc && eraDesc !== info.desc) {
-    briefDesc = eraDesc + ' ' + briefDesc;
-  }
+  const showSnapshot = hotDesc && hotDesc !== info.desc;
 
   body.innerHTML = `
     <div class="info-section">
-      <p class="desc-text">${briefDesc}</p>
+      <div class="info-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        CURRENT ERA
+      </div>
+      <div style="display:flex;align-items:baseline;gap:4px;">
+        <span class="era-number">${era ? era.yearLabel.replace(/[^0-9\-]/g, '') || era.label : ''}</span>
+        <span class="era-unit">${era && era.id !== 'prehistoric' && era.id !== 'modern' ? '年' : ''}</span>
+      </div>
+      <p style="margin-top:10px;font-size:0.72rem;color:var(--ink-faint);line-height:1.7;font-family:var(--font-mono);font-weight:300;">${eraDesc}</p>
     </div>
+
+    <div class="info-section">
+      <div class="info-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        OVERVIEW
+      </div>
+      <p class="desc-text">${info.desc}</p>
+    </div>
+
+    ${showSnapshot ? `
+    <div class="info-section">
+      <div class="info-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        ERA SNAPSHOT
+      </div>
+      <p class="desc-text" style="color:var(--gold);">${hotDesc}</p>
+    </div>
+    ` : ''}
 
     <button class="enter-btn" onclick="enterCountryHistory('${regionId}', '${info.title}')">
       进入这片土地的历史
@@ -1699,7 +1714,7 @@ let activeCountry = null;
 
 function openCountryHistory(key, title, timeRange, chapters, events, fullText, bgData) {
   activeCountry = { key, title, timeRange, chapters, events, fullText, bgData:bgData||{} };
-  const page = document.getElementById('country-history-page');
+  const page = document.getElementById('reader-history-page');
   // Set title
   page.querySelector('.ch-title-text').textContent = title;
   page.querySelector('.ch-time-range').textContent = timeRange;
@@ -1714,7 +1729,7 @@ function openCountryHistory(key, title, timeRange, chapters, events, fullText, b
 }
 
 function closeCountryHistory() {
-  document.getElementById('country-history-page').style.display = 'none';
+  document.getElementById('reader-history-page').style.display = 'none';
   document.body.style.overflow = '';
   // Clear nav stack when manually closing (not when jumping)
   if(!_navStack.length) {
@@ -1913,7 +1928,7 @@ function pushReadingState() {
   window.history.pushState({view:'reading'}, '');
 }
 window.addEventListener('popstate', function(e) {
-  var page = document.getElementById('country-history-page');
+  var page = document.getElementById('reader-history-page');
   if(page && page.style.display !== 'none') {
     var nav = document.getElementById('country-chapter-nav');
     if(nav && nav.classList.contains('open')) {
@@ -2079,7 +2094,7 @@ const ALL_COUNTRIES = {
 async function loadCountryData(key) {
   if(_countryCache[key]) return _countryCache[key];
   try {
-    const resp = await fetch('data/' + key + '.json');
+    const resp = await fetch(key + '.json');
     const data = await resp.json();
     _countryCache[key] = data;
     return data;
@@ -2096,7 +2111,7 @@ let _termRe = null;
 async function loadGlossary() {
   if(_termKeys.length > 0) return;
   try {
-    const resp = await fetch('data/glossary.json');
+    const resp = await fetch('glossary.json');
     GLOSSARY = await resp.json();
     _termKeys = Object.keys(GLOSSARY).sort((a,b) => b.length - a.length);
     _termRe = new RegExp('(' + _termKeys.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'g');
@@ -2222,7 +2237,7 @@ async function doEraJump(targetKey, targetChId) {
   
   var savedMode = countryMode;
   var c = ALL_COUNTRIES[targetKey];
-  var page = document.getElementById('country-history-page');
+  var page = document.getElementById('reader-history-page');
   var content = document.getElementById('country-content');
   content.style.opacity = '0';
   content.style.transition = 'opacity 0.2s';
@@ -2271,7 +2286,7 @@ function navBack() {
   
   // Seamless swap
   var content = document.getElementById('country-content');
-  var page = document.getElementById('country-history-page');
+  var page = document.getElementById('reader-history-page');
   content.style.opacity = '0';
   content.style.transition = 'opacity 0.2s';
   
@@ -2399,7 +2414,7 @@ init();
 </script>
 
 <!-- GENERIC COUNTRY HISTORY PAGE (reuses USA CSS classes) -->
-<div id="country-history-page" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);animation:usaFadeIn 0.4s ease;">
+<div id="reader-history-page" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);animation:readerFadeIn 0.4s ease;">
   <div class="reader-topbar">
     <button class="reader-back-btn" onclick="_navStack=[];updateReturnBtn();closeCountryHistory()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
