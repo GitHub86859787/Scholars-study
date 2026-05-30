@@ -5,7 +5,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Chronicle Map — 世界历史地图</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Mono:wght@300;400&display=swap');
@@ -129,7 +129,21 @@ header > * { pointer-events: auto; }
   justify-content: center;
   align-items: center;
   width: 100%; height: 100%;
+  transform-origin: center center;
+  transition: transform 0.1s linear;
+  touch-action: none;
 }
+
+/* === TOAST === */
+.ch-toast {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.9);
+  background:rgba(30,25,18,0.95); border:1px solid rgba(107,196,184,0.3);
+  color:var(--accent); padding:10px 24px; border-radius:20px;
+  font-family:var(--font-mono); font-size:0.75rem; letter-spacing:0.08em;
+  z-index:99999; opacity:0; pointer-events:none;
+  transition:all 0.3s ease; backdrop-filter:blur(12px);
+}
+.ch-toast.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
 #map-image {
   max-width: 100%; max-height: 100%;
   object-fit: contain;
@@ -460,25 +474,22 @@ header > * { pointer-events: auto; }
   #left-panel { width: 360px; }
 }
 @media (max-width: 768px) {
-  .nav-tabs { 
-    gap:4px; padding:0; 
-    position:fixed; bottom:100px; left:10px; z-index:99;
-    flex-direction:column; background:rgba(18,15,12,0.9); 
-    border-radius:10px; border:1px solid var(--border);
-    backdrop-filter:blur(12px); padding:4px;
-  }
-  .nav-tab { font-size:0.55rem; padding:6px 10px; border-radius:6px; }
-  header { padding: 0 16px; }
+  header { padding: 0 10px; }
+  .brand-text h1 { font-size: 0.7rem; letter-spacing:0.1em; }
   .brand-text p { display: none; }
+  .nav-tabs { gap:2px; }
+  .nav-tab { font-size:0.52rem; padding:5px 8px; border-radius:6px; gap:3px; }
+  .nav-tab svg { width:10px; height:10px; }
   #left-panel {
-    width: 85%; height: 100%;
-    top: 0; bottom: 0; left: 0;
+    width: 82%; max-height: 70vh;
+    top: 50%; bottom: auto; left: 0;
+    transform: translateX(-100%) translateY(-50%);
     border-right: 1px solid var(--border); border-top: none;
-    transform: translateX(-100%);
-    border-radius: 0 12px 12px 0;
+    border-radius: 0 14px 14px 0;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
-  #left-panel.open { transform: translateX(0); }
-  #timeline-bar { padding: 0 20px; }
+  #left-panel.open { transform: translateX(0) translateY(-50%); }
+  #timeline-bar { padding: 0 16px; }
   .timeline-track-wrap { max-width: 100%; }
   .t-node-label { font-size: 0.5rem; }
   #map-stage { inset: 48px 0 100px 0; }
@@ -769,6 +780,7 @@ header > * { pointer-events: auto; }
 <div class="era-transition" id="era-transition">
   <div class="era-transition-text" id="era-transition-text"></div>
 </div>
+<div class="ch-toast" id="ch-toast"></div>
 
 <!-- HEADER -->
 <header>
@@ -786,7 +798,7 @@ header > * { pointer-events: auto; }
       </svg>
     </div>
     <div class="brand-text">
-      <h1>CHRONICLE MAP</h1>
+      <h1>历史地图</h1>
       <p>drag through time — watch the world reshape</p>
     </div>
   </div>
@@ -1342,6 +1354,88 @@ function init() {
   setEra('1000ce');
 }
 
+// === CUSTOM MAP PINCH-ZOOM & PAN ===
+(function(){
+  var container = null;
+  var scale = 1, posX = 0, posY = 0;
+  var startDist = 0, startScale = 1;
+  var startX = 0, startY = 0, startPosX = 0, startPosY = 0;
+  var pinching = false;
+
+  function setup() {
+    container = document.getElementById('map-container');
+    if(!container) return;
+    container.addEventListener('touchstart', onTouchStart, {passive:false});
+    container.addEventListener('touchmove', onTouchMove, {passive:false});
+    container.addEventListener('touchend', onTouchEnd, {passive:true});
+    // Double-tap to reset
+    var lastTap = 0;
+    container.addEventListener('touchend', function(e){
+      var now = Date.now();
+      if(now - lastTap < 300 && e.changedTouches.length === 1 && scale > 1) {
+        scale=1; posX=0; posY=0; applyTransform(); e.preventDefault();
+      }
+      lastTap = now;
+    });
+  }
+
+  function dist(t) { return Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY); }
+  function mid(t) { return {x:(t[0].clientX+t[1].clientX)/2, y:(t[0].clientY+t[1].clientY)/2}; }
+
+  function onTouchStart(e) {
+    if(e.touches.length===2) {
+      pinching=true; startDist=dist(e.touches); startScale=scale;
+      e.preventDefault();
+    } else if(e.touches.length===1 && scale>1) {
+      startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+      startPosX=posX; startPosY=posY;
+    }
+  }
+  function onTouchMove(e) {
+    if(pinching && e.touches.length===2) {
+      e.preventDefault();
+      var d = dist(e.touches);
+      scale = Math.max(1, Math.min(5, startScale*(d/startDist)));
+      clampPos(); applyTransform();
+    } else if(e.touches.length===1 && scale>1) {
+      e.preventDefault();
+      posX = startPosX + (e.touches[0].clientX - startX);
+      posY = startPosY + (e.touches[0].clientY - startY);
+      clampPos(); applyTransform();
+    }
+  }
+  function onTouchEnd(e) {
+    if(e.touches.length<2) pinching=false;
+    if(scale<=1.05) { scale=1; posX=0; posY=0; applyTransform(); }
+  }
+  function clampPos() {
+    var rect = container.parentElement.getBoundingClientRect();
+    var maxX = rect.width*(scale-1)/2;
+    var maxY = rect.height*(scale-1)/2;
+    posX = Math.max(-maxX, Math.min(maxX, posX));
+    posY = Math.max(-maxY, Math.min(maxY, posY));
+  }
+  function applyTransform() {
+    container.style.transform = 'translate('+posX+'px,'+posY+'px) scale('+scale+')';
+  }
+
+  // Reset when era changes
+  var _origSetEra = setEra;
+  setEra = function(id) { scale=1; posX=0; posY=0; applyTransform(); _origSetEra(id); };
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup);
+  else setup();
+})();
+
+// === TOAST ===
+function showToast(msg, ms) {
+  var t = document.getElementById('ch-toast');
+  if(!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, ms||1500);
+}
+
 // Keep hotspots-overlay exactly on top of the rendered image area
 function syncOverlay() {
   const img = document.getElementById('map-image');
@@ -1615,7 +1709,7 @@ function enterCountryHistory(regionId, title) {
     const c = ALL_COUNTRIES[targetKey];
     openCountryHistory(targetKey, c.title, c.range, c.chapters(), c.events(), c.fullText());
   } else {
-    alert('即将进入 ' + title + ' 的详细历史... (内容建设中)');
+    showToast(title + ' 内容建设中');
   }
 }
 
@@ -2459,19 +2553,6 @@ function closeNote(pid) {
   if(nb) nb.classList.remove('show');
 }
 
-// Dynamic viewport: prevent iOS zoom on textarea focus
-var _vpMeta = document.querySelector('meta[name="viewport"]');
-document.addEventListener('focusin', function(e) {
-  if(e.target.tagName === 'TEXTAREA' && e.target.closest('.ch-notebox')) {
-    _vpMeta.setAttribute('content','width=device-width, initial-scale=1.0, maximum-scale=1.0');
-  }
-});
-document.addEventListener('focusout', function(e) {
-  if(e.target.tagName === 'TEXTAREA' && e.target.closest('.ch-notebox')) {
-    _vpMeta.setAttribute('content','width=device-width, initial-scale=1.0');
-  }
-});
-
 // Long press handler for notes
 let _pressTimer=null, _pressStartY=0;
 document.addEventListener('touchstart', e => {
@@ -2650,7 +2731,7 @@ setCountryMode = function(mode) {
 };
 
 function exportNotes() {
-  let text = 'Chronicle 阅读笔记\n' + new Date().toLocaleString('zh-CN') + '\n\n';
+  let text = '';
   Object.keys(_notes).forEach(pid => {
     var note = _notes[pid];
     var noteText = typeof note === 'string' ? note : note.text;
@@ -2666,7 +2747,7 @@ function exportNotes() {
   });
   if(navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function(){
-      alert('已复制到剪贴板');
+      showToast('已复制');
     }).catch(function(){ fallbackCopy(text); });
   } else { fallbackCopy(text); }
 }
@@ -2675,7 +2756,7 @@ function fallbackCopy(text) {
   ta.value = text; ta.style.cssText='position:fixed;left:-999px';
   document.body.appendChild(ta); ta.select();
   document.execCommand('copy'); document.body.removeChild(ta);
-  alert('已复制到剪贴板');
+  showToast('已复制');
 }
 
 
@@ -2745,16 +2826,40 @@ function showEraJump(chapterId) {
     ov.onclick = closeEraJump;
     document.body.appendChild(ov);
   }
-  var items = overlaps.map(function(o){
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:8px;cursor:pointer;" onclick="doEraJump(\''+o.country+'\',\''+o.ch.id+'\')">'
-      +'<div style="font-size:0.8rem;width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:rgba(30,25,18,0.85);border-radius:6px;border:1px solid rgba(196,162,101,0.12);font-family:var(--font-mono);color:rgba(138,125,107,1);">'+o.country.toUpperCase()+'</div>'
-      +'<div style="flex:1"><div style="font-size:0.8rem;color:#e8dcc8;font-weight:600;">'+o.name+'</div><div style="font-size:0.65rem;color:rgba(138,125,107,1);margin-top:2px;">'+o.ch.title+'</div></div>'
-      +(o.pins?'<div style="font-size:0.58rem;color:var(--accent);font-family:var(--font-mono);">\u2605</div>':'')
-      +'<div style="color:rgba(138,125,107,0.5);">\u203a</div></div>';
+  // Group by country
+  var byCountry = {};
+  overlaps.forEach(function(o){
+    if(!byCountry[o.country]) byCountry[o.country] = {name:o.name, items:[]};
+    byCountry[o.country].items.push(o);
+  });
+  var countries = Object.keys(byCountry);
+  var tabs = countries.map(function(ck,i){
+    return '<button style="padding:6px 14px;border-radius:14px;border:1px solid '+(i===0?'rgba(107,196,184,0.4)':'var(--border)')+';background:'+(i===0?'rgba(107,196,184,0.08)':'none')+';color:'+(i===0?'var(--accent)':'rgba(138,125,107,1)')+';cursor:pointer;font-family:var(--font-mono);font-size:0.72rem;transition:all 0.2s;" onclick="switchJumpTab(\''+ck+'\',this)">'+byCountry[ck].name+'</button>';
   }).join('');
-  panel.innerHTML = '<div style="font-size:0.68rem;color:rgba(138,125,107,1);letter-spacing:0.08em;margin-bottom:10px;font-family:var(--font-mono);">\u540c\u65f6\u671f</div>' + items;
+  var firstItems = byCountry[countries[0]].items;
+  panel.dataset.chid = chapterId;
+  panel.innerHTML = '<div style="font-size:0.62rem;color:rgba(138,125,107,1);letter-spacing:0.08em;margin-bottom:10px;font-family:var(--font-mono);">同时期</div>'
+    + '<div style="display:flex;gap:6px;margin-bottom:12px;" id="jump-tabs">'+tabs+'</div>'
+    + '<div id="jump-items">'+renderJumpItems(firstItems)+'</div>';
   document.getElementById('ch-jump-overlay').style.display = 'block';
   setTimeout(function(){panel.style.transform='translateY(0)';}, 10);
+}
+function renderJumpItems(items) {
+  return items.map(function(o){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:8px;cursor:pointer;" onclick="doEraJump(\''+o.country+'\',\''+o.ch.id+'\')">'
+      +'<div style="flex:1"><div style="font-size:0.78rem;color:#e8dcc8;font-weight:600;">'+o.ch.title+'</div><div style="font-size:0.6rem;color:rgba(138,125,107,1);margin-top:2px;">'+o.ch.sub+'</div></div>'
+      +'<div style="color:rgba(138,125,107,0.5);">›</div></div>';
+  }).join('');
+}
+function switchJumpTab(ck, btn) {
+  document.querySelectorAll('#jump-tabs button').forEach(function(b){
+    b.style.borderColor='var(--border)'; b.style.background='none'; b.style.color='rgba(138,125,107,1)';
+  });
+  btn.style.borderColor='rgba(107,196,184,0.4)'; btn.style.background='rgba(107,196,184,0.08)'; btn.style.color='var(--accent)';
+  var chid = document.getElementById('ch-jump-panel').dataset.chid;
+  var allOverlaps = getOverlappingEras(chid);
+  var filtered = allOverlaps.filter(function(o){ return o.country === ck; });
+  document.getElementById('jump-items').innerHTML = renderJumpItems(filtered);
 }
 
 function closeEraJump() {
@@ -2891,11 +2996,23 @@ function renderCountryContent() {
     box.innerHTML = chapters.map(c => {
       const text = fullText[c.id] || '(内容建设中)';
       const paragraphs = text.split('\n').filter(p=>p.trim()).map((p,pi) => {
-        const pid = 'p-'+key+'-'+c.id+'-'+pi;
-        const hasNote = getNoteText(pid).trim();
-        let processed = termify(p);
-        processed = addXLinks(processed, key);
-        return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}"><div class="ndot"></div><p>${processed}</p><div class="ch-notebox" id="nb-${pid}"><button class="nb-close" onclick="closeNote('${pid}')">×</button><textarea placeholder="写下你的想法..." oninput="saveNote('${pid}',this.value)">${getNoteText(pid)}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
+        // Split into sentences for per-sentence note attachment
+        const sentences = p.split(/(?<=[。！？\n])/g).filter(s=>s.trim());
+        if(sentences.length <= 1) {
+          // Short paragraph — keep as single unit
+          const pid = 'p-'+key+'-'+c.id+'-'+pi;
+          const hasNote = getNoteText(pid).trim();
+          let processed = termify(p);
+          processed = addXLinks(processed, key);
+          return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}"><div class="ndot"></div><p>${processed}</p><div class="ch-notebox" id="nb-${pid}"><button class="nb-close" onclick="closeNote('${pid}')">×</button><textarea placeholder="写想法..." oninput="saveNote('${pid}',this.value)">${getNoteText(pid)}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
+        }
+        return sentences.map((s, si) => {
+          const pid = 'p-'+key+'-'+c.id+'-'+pi+'-'+si;
+          const hasNote = getNoteText(pid).trim();
+          let processed = termify(s);
+          processed = addXLinks(processed, key);
+          return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}" style="padding-left:10px;border-left-width:1px;"><div class="ndot"></div><p style="margin:0;">${processed}</p><div class="ch-notebox" id="nb-${pid}"><button class="nb-close" onclick="closeNote('${pid}')">×</button><textarea placeholder="写想法..." oninput="saveNote('${pid}',this.value)">${getNoteText(pid)}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
+        }).join('');
       }).join('');
       return `<div id="ch-${key}-${c.id}" class="usa-chapter-block">
         <div class="usa-chapter-head" style="position:relative;">
