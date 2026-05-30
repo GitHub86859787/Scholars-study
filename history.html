@@ -5,7 +5,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Chronicle Map — 世界历史地图</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Mono:wght@300;400&display=swap');
@@ -118,7 +118,7 @@ header > * { pointer-events: auto; }
 
 /* ===== MAP STAGE ===== */
 #map-stage {
-  position: fixed; inset: 48px 0 80px 0;
+  position: fixed; inset: 48px 0 100px 0;
   display: flex; justify-content: center; align-items: center;
   z-index: 2;
   overflow: hidden;
@@ -327,50 +327,88 @@ header > * { pointer-events: auto; }
 .eye-icon { margin-left: auto; width: 14px; height: 14px; opacity: 0.4; transition: all 0.3s; }
 .layer-item:hover .eye-icon { opacity: 1; }
 
-/* ===== TIMELINE — ERA CARDS ===== */
+/* ===== TIMELINE ===== */
 #timeline-bar {
-  position: fixed; bottom: 0; left: 0; right: 0; height: 80px;
-  background: linear-gradient(to top, rgba(10,9,8,0.98) 0%, rgba(10,9,8,0.85) 70%, transparent 100%);
-  z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-  padding: 0 0 14px;
+  position: fixed; bottom: 0; left: 0; right: 0; height: 100px;
+  background: linear-gradient(to top, rgba(10,9,8,0.98) 0%, rgba(10,9,8,0.8) 60%, transparent 100%);
+  z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0 40px;
   opacity: 0; animation: fadeSlideUp 0.8s 0.3s ease forwards;
 }
-.era-strip {
-  display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden;
-  padding: 0 20px; max-width: 100%; scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+.timeline-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.6rem; color: var(--ink-faint); margin-bottom: 8px;
+  letter-spacing: 0.18em; font-family: var(--font-mono); font-weight: 300;
+  text-transform: uppercase;
 }
-.era-strip::-webkit-scrollbar { display:none; }
-.era-card {
-  flex-shrink: 0; scroll-snap-align: center;
-  padding: 8px 16px; border-radius: 20px;
-  border: 1px solid var(--border);
-  background: rgba(30,25,18,0.6);
-  cursor: pointer; transition: all 0.35s ease;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  min-width: 72px;
+.timeline-label svg { width: 13px; height: 13px; opacity: 0.4; }
+
+.timeline-track-wrap {
+  position: relative; width: 100%; max-width: 900px; height: 38px;
+  display: flex; align-items: center;
 }
-.era-card:active { transform: scale(0.95); }
-.era-card-label {
-  font-family: var(--font-display); font-size: 0.78rem; font-weight: 600;
-  color: var(--ink-dim); white-space: nowrap; transition: color 0.3s;
+.timeline-track {
+  position: absolute; left: 0; right: 0; height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold-dim), rgba(196,162,101,0.15), var(--gold-dim), transparent);
+  top: 50%; transform: translateY(-50%);
 }
-.era-card-sub {
-  font-family: var(--font-mono); font-size: 0.5rem; font-weight: 300;
-  color: var(--ink-faint); white-space: nowrap; letter-spacing: 0.04em; transition: color 0.3s;
+.timeline-progress {
+  position: absolute; left: 0; height: 2px;
+  background: linear-gradient(to right, var(--accent), rgba(107,196,184,0.3));
+  top: 50%; transform: translateY(-50%);
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  border-radius: 1px;
+  box-shadow: 0 0 8px var(--accent-glow);
 }
-.era-card.active {
-  border-color: rgba(107,196,184,0.4);
-  background: rgba(107,196,184,0.08);
-  box-shadow: 0 0 16px rgba(107,196,184,0.08);
+
+.timeline-nodes {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  display: flex; justify-content: space-between; pointer-events: none;
 }
-.era-card.active .era-card-label { color: var(--accent); }
-.era-card.active .era-card-sub { color: rgba(107,196,184,0.6); }
-.era-card.visited { border-color: rgba(196,162,101,0.2); }
-.era-card.visited .era-card-label { color: var(--gold-dim); }
+.t-node {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  cursor: pointer; pointer-events: auto; transition: all 0.3s;
+  position: relative;
+}
+.t-node-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--bg); border: 1.5px solid var(--gold-dim);
+  transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+  position: relative; z-index: 2;
+}
+.t-node:hover .t-node-dot {
+  border-color: var(--gold); background: var(--gold);
+  box-shadow: 0 0 10px rgba(196,162,101,0.3);
+}
+.t-node.active .t-node-dot {
+  width: 12px; height: 12px; background: var(--accent); border-color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow), 0 0 40px rgba(107,196,184,0.1);
+}
+.t-node.visited .t-node-dot {
+  background: var(--gold-dim); border-color: var(--gold-dim);
+}
+.t-node-label {
+  font-size: 0.58rem; color: var(--ink-faint);
+  font-family: var(--font-mono); font-weight: 300;
+  transition: color 0.3s; white-space: nowrap; letter-spacing: 0.06em;
+}
+.t-node:hover .t-node-label { color: var(--ink); }
+.t-node.active .t-node-label { color: var(--accent); font-weight: 400; }
+
+#current-year-display {
+  position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+  background: var(--panel); border: 1px solid rgba(107,196,184,0.3); color: var(--accent);
+  padding: 4px 16px; border-radius: 14px;
+  font-size: 0.75rem; font-weight: 600;
+  font-family: var(--font-display); letter-spacing: 0.08em;
+  box-shadow: 0 0 20px rgba(107,196,184,0.08);
+  pointer-events: none; white-space: nowrap;
+  backdrop-filter: blur(12px);
+  transition: all 0.4s ease;
+}
 
 .timeline-hint {
-  margin-top: 6px; font-size: 0.5rem; color: var(--ink-faint); opacity: 0.4;
+  margin-top: 8px; font-size: 0.55rem; color: var(--ink-faint); opacity: 0.5;
   letter-spacing: 0.12em; font-family: var(--font-mono); font-weight: 300;
 }
 
@@ -433,10 +471,10 @@ header > * { pointer-events: auto; }
     border-radius: 16px 16px 0 0;
   }
   #left-panel.open { transform: translateY(0); }
-  #timeline-bar { padding: 0; height: 70px; }
-  #map-stage { inset: 48px 0 70px 0; }
-  .era-card { padding: 6px 12px; min-width: 60px; }
-  .era-card-label { font-size: 0.7rem; }
+  #timeline-bar { padding: 0 20px; }
+  .timeline-track-wrap { max-width: 100%; }
+  .t-node-label { font-size: 0.5rem; }
+  #map-stage { inset: 48px 0 100px 0; }
 }
 
 
@@ -646,13 +684,25 @@ header > * { pointer-events: auto; }
 
 
 /* === TERM GLOSSARY === */
-.ch-term { color:var(--accent); text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; text-decoration-color:rgba(107,196,184,0.35); cursor:pointer; }
-.ch-term:active { text-decoration-color:var(--accent); }
+.ch-term { transition:all 0.2s; cursor:default; }
+.terms-on .ch-term { color:var(--accent); text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; text-decoration-color:rgba(107,196,184,0.35); cursor:pointer; }
+.terms-on .ch-term:active { text-decoration-color:var(--accent); }
 .ch-popup { background:var(--panel,rgba(18,15,12,0.96)); border:1px solid rgba(196,162,101,0.25); border-radius:8px; padding:12px 14px; margin:8px 0 12px; font-size:0.82rem; line-height:1.8; display:none; animation:chFade 0.2s ease; }
 .ch-popup.show { display:block; }
 .ch-popup .pop-t { color:var(--accent); font-weight:600; font-size:0.78rem; margin-bottom:4px; letter-spacing:0.04em; }
 .ch-popup .pop-b { color:rgba(227,217,195,0.65); }
+.ch-popup .pop-close { position:absolute; top:6px; right:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:none; background:none; color:rgba(138,125,107,0.6); cursor:pointer; font-size:1rem; border-radius:50%; }
+.ch-popup .pop-close:active { background:rgba(196,162,101,0.1); }
 @keyframes chFade { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+
+/* === TERM TOGGLE BUTTON === */
+.term-toggle {
+  padding:5px 10px; border-radius:14px; border:1px solid rgba(107,196,184,0.15);
+  background:none; color:rgba(138,125,107,0.7); cursor:pointer;
+  font-family:var(--font-mono); font-size:0.58rem; letter-spacing:0.05em;
+  transition:all 0.3s; white-space:nowrap;
+}
+.term-toggle.on { border-color:rgba(107,196,184,0.4); color:var(--accent); background:rgba(107,196,184,0.06); }
 
 /* === CROSS-COUNTRY JUMP === */
 .ch-xlink { display:inline-flex; align-items:center; gap:4px; font-size:0.65rem; padding:3px 10px; border-radius:12px; background:rgba(107,196,184,0.06); color:var(--accent); border:1px solid rgba(107,196,184,0.15); cursor:pointer; margin:4px 4px 4px 0; transition:all 0.2s; font-family:var(--font-mono,'DM Mono',monospace); letter-spacing:0.03em; }
@@ -664,12 +714,27 @@ header > * { pointer-events: auto; }
 .ch-para.has-note { border-left-color:rgba(224,160,80,0.2); }
 .ch-para .ndot { position:absolute; left:-1px; top:10px; width:5px; height:5px; border-radius:50%; background:#e0a050; opacity:0; transition:opacity 0.3s; }
 .ch-para.has-note .ndot { opacity:0.7; }
-.ch-notebox { display:none; margin:6px 0 14px; padding:10px 12px; background:rgba(30,25,18,0.6); border:1px solid rgba(196,162,101,0.12); border-radius:8px; }
+.ch-notebox { display:none; margin:6px 0 14px; padding:10px 12px; background:rgba(30,25,18,0.6); border:1px solid rgba(196,162,101,0.12); border-radius:8px; position:relative; }
 .ch-notebox.show { display:block; animation:chFade 0.2s ease; }
-.ch-notebox textarea { width:100%; border:none; background:transparent; color:var(--ink,#e8dcc8); font-family:var(--font-body); font-size:0.78rem; line-height:1.7; resize:none; outline:none; min-height:36px; }
+.ch-notebox textarea { width:100%; border:none; background:transparent; color:var(--ink,#e8dcc8); font-family:var(--font-body); font-size:16px; line-height:1.7; resize:none; outline:none; min-height:36px; }
 .ch-notebox textarea::placeholder { color:rgba(138,125,107,0.5); }
+.ch-notebox .nb-close { position:absolute; top:4px; right:6px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:none; background:none; color:rgba(138,125,107,0.5); cursor:pointer; border-radius:50%; font-size:0.9rem; }
+.ch-notebox .nb-close:active { background:rgba(196,162,101,0.08); }
 .ch-saved { font-size:0.58rem; color:#e0a050; opacity:0; transition:opacity 0.3s; margin-top:3px; font-family:var(--font-mono); }
 .ch-saved.show { opacity:1; }
+
+/* === NAV STACK RETURN BUTTON === */
+.nav-return-btn {
+  position:fixed; bottom:72px; left:50%; transform:translateX(-50%); z-index:10003;
+  padding:8px 20px; border-radius:20px;
+  border:1px solid rgba(107,196,184,0.3); background:rgba(18,15,12,0.95);
+  color:var(--accent); cursor:pointer; backdrop-filter:blur(12px);
+  font-family:var(--font-mono); font-size:0.7rem; letter-spacing:0.05em;
+  display:none; align-items:center; gap:6px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4); transition:all 0.3s;
+}
+.nav-return-btn:active { transform:translateX(-50%) scale(0.95); background:rgba(107,196,184,0.1); }
+.nav-return-btn svg { width:12px; height:12px; }
 
 /* === NOTES PANEL === */
 .ch-npanel { position:fixed; inset:0; z-index:10001; background:var(--bg,#0a0908); transform:translateX(100%); transition:transform 0.35s cubic-bezier(0.4,0,0.2,1); overflow-y:auto; -webkit-overflow-scrolling:touch; }
@@ -779,16 +844,26 @@ header > * { pointer-events: auto; }
 
 <!-- TIMELINE -->
 <div id="timeline-bar">
-  <div class="era-strip" id="era-strip">
-    <div class="era-card" data-year="prehistoric" onclick="setEra('prehistoric')"><span class="era-card-label">史前</span><span class="era-card-sub">远古</span></div>
-    <div class="era-card" data-year="3000bce" onclick="setEra('3000bce')"><span class="era-card-label">前3000</span><span class="era-card-sub">文明初现</span></div>
-    <div class="era-card" data-year="500bce" onclick="setEra('500bce')"><span class="era-card-label">前500</span><span class="era-card-sub">古典时代</span></div>
-    <div class="era-card" data-year="200ce" onclick="setEra('200ce')"><span class="era-card-label">200</span><span class="era-card-sub">帝国并立</span></div>
-    <div class="era-card active" data-year="1000ce" onclick="setEra('1000ce')"><span class="era-card-label">1000</span><span class="era-card-sub">中世纪</span></div>
-    <div class="era-card" data-year="1400ce" onclick="setEra('1400ce')"><span class="era-card-label">1400</span><span class="era-card-sub">大航海前</span></div>
-    <div class="era-card" data-year="1800ce" onclick="setEra('1800ce')"><span class="era-card-label">1800</span><span class="era-card-sub">工业革命</span></div>
-    <div class="era-card" data-year="modern" onclick="setEra('modern')"><span class="era-card-label">现代</span><span class="era-card-sub">今天</span></div>
+  <div class="timeline-label">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    TIMELINE
   </div>
+  <div class="timeline-track-wrap">
+    <div class="timeline-track"></div>
+    <div class="timeline-progress" id="timeline-progress"></div>
+    <div class="timeline-nodes">
+      <div class="t-node" data-year="prehistoric"><div class="t-node-dot"></div><span class="t-node-label">史前</span></div>
+      <div class="t-node" data-year="3000bce"><div class="t-node-dot"></div><span class="t-node-label">前3000</span></div>
+      <div class="t-node" data-year="500bce"><div class="t-node-dot"></div><span class="t-node-label">前500</span></div>
+      <div class="t-node" data-year="200ce"><div class="t-node-dot"></div><span class="t-node-label">200</span></div>
+      <div class="t-node active" data-year="1000ce"><div class="t-node-dot"></div><span class="t-node-label">1000</span></div>
+      <div class="t-node" data-year="1400ce"><div class="t-node-dot"></div><span class="t-node-label">1400</span></div>
+      <div class="t-node" data-year="1800ce"><div class="t-node-dot"></div><span class="t-node-label">1800</span></div>
+      <div class="t-node" data-year="modern"><div class="t-node-dot"></div><span class="t-node-label">现代</span></div>
+    </div>
+    <div id="current-year-display">公元 1000 年</div>
+  </div>
+  <div class="timeline-hint">点击节点穿越时空</div>
 </div>
 
 <script>
@@ -1215,26 +1290,49 @@ let playInterval = null;
 let hotspotsVisible = true;
 
 function init() {
+  // Timeline nodes
+  document.querySelectorAll('.t-node').forEach(node => {
+    node.addEventListener('click', () => setEra(node.dataset.year));
+  });
+
+  // Nav tabs
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  // Layer toggles
+  document.querySelectorAll('.layer-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const eye = item.querySelector('.eye-icon');
+      const isOn = eye.getAttribute('stroke') !== 'var(--ink-faint)';
+      if (isOn) {
+        eye.setAttribute('stroke', 'var(--ink-faint)');
+        eye.querySelector('circle').setAttribute('fill', 'none');
+        if (item.dataset.layer === 'political') hotspotsVisible = false;
+      } else {
+        eye.setAttribute('stroke', 'var(--accent)');
+        eye.querySelector('circle').setAttribute('fill', 'var(--accent)');
+        if (item.dataset.layer === 'political') hotspotsVisible = true;
+      }
+      updateHotspotsVisibility();
+    });
+  });
+
   document.getElementById('overlay').addEventListener('click', closePanel);
 
-  // Keyboard support
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closePanel();
   });
 
-  // Sync overlay to image bounds
   const img = document.getElementById('map-image');
   img.addEventListener('load', syncOverlay);
   window.addEventListener('resize', syncOverlay);
   syncOverlay();
 
   setEra('1000ce');
-
-  // Scroll active era card into view
-  setTimeout(() => {
-    const active = document.querySelector('.era-card.active');
-    if(active) active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
-  }, 500);
 }
 
 // Keep hotspots-overlay exactly on top of the rendered image area
@@ -1261,19 +1359,23 @@ function setEra(eraId) {
   const prevEraId = currentEraId;
   currentEraId = eraId;
 
-  // Update era cards
+  // Update timeline nodes
   const eraIdx = eras.findIndex(e => e.id === eraId);
-  document.querySelectorAll('.era-card').forEach((c, i) => {
-    c.classList.toggle('active', c.dataset.year === eraId);
-    c.classList.toggle('visited', i < eraIdx);
+  document.querySelectorAll('.t-node').forEach((n, i) => {
+    n.classList.toggle('active', n.dataset.year === eraId);
+    n.classList.toggle('visited', i < eraIdx);
   });
 
-  // Scroll active card into view
-  const activeCard = document.querySelector('.era-card.active');
-  if(activeCard) activeCard.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+  // Update progress bar
+  const progress = document.getElementById('timeline-progress');
+  const pct = (eraIdx / (eras.length - 1)) * 100;
+  progress.style.width = pct + '%';
 
   const era = eras.find(e => e.id === eraId);
   if (!era) return;
+
+  // Update year display
+  document.getElementById('current-year-display').textContent = era.yearLabel;
 
   // Show era transition for dramatic effect (skip on first load)
   if (prevEraId !== eraId && prevEraId) {
@@ -1490,100 +1592,6 @@ const usaSummaryEvents = [
   { ch:'ch10', year:'2021.1.6', title:'国会山骚乱', tags:['politics'], hi:1, desc:'自1814年以来国会大厦首次被攻占——攻击者是美国人自己。和平权力交接的传统受到245年来最严重挑战。' },
 ];
 
-
-let usaMode = 'summary';
-
-function openUSAHistory() {
-  const page = document.getElementById('usa-history-page');
-  page.style.display = 'block';
-  document.body.style.overflow = 'hidden';
-  buildChapterNav();
-  renderUSA();
-  setTimeout(() => setupScrollSpy(), 100);
-}
-
-function closeUSAHistory() {
-  document.getElementById('usa-history-page').style.display = 'none';
-  document.body.style.overflow = '';
-}
-
-function setUSAMode(m) {
-  usaMode = m;
-  document.querySelectorAll('.usa-mode-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('mode-'+m).classList.add('active');
-  renderUSA();
-}
-
-function buildChapterNav() {
-  const nav = document.getElementById('usa-chapter-nav');
-  nav.innerHTML = '<div class="usa-nav-label">章节导航</div>' +
-    usaChapters.map((c,i) =>
-      `<button class="usa-ch-btn ${i===0?'active':''}" data-ch="${c.id}" onclick="jumpCh('${c.id}',this)">
-        <span class="ch-num">${c.num}</span>${c.title}
-      </button>`
-    ).join('');
-}
-
-function jumpCh(id, btn) {
-  document.querySelectorAll('.usa-ch-btn').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  const el = document.getElementById('usa-'+id);
-  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function setupScrollSpy() {
-  const scroller = document.getElementById('usa-scroll-container');
-  if(!scroller || scroller._spy) return;
-  scroller._spy = true;
-  scroller.addEventListener('scroll', () => {
-    let cur = 'ch1';
-    document.querySelectorAll('.usa-chapter-block').forEach(b => {
-      const r = b.getBoundingClientRect();
-      if(r.top < 250) cur = b.id.replace('usa-','');
-    });
-    document.querySelectorAll('.usa-ch-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.ch === cur);
-    });
-  });
-}
-
-function tagHTML(t) {
-  const labels = {war:'⚔ 战争',politics:'📜 政治',economy:'🏭 经济',society:'✊ 社会'};
-  return `<span class="usa-tag ${t}">${labels[t]||t}</span>`;
-}
-
-function renderUSA() {
-  const box = document.getElementById('usa-content');
-  if(usaMode === 'summary') {
-    box.innerHTML = usaChapters.map(c => {
-      const evts = usaSummaryEvents.filter(e=>e.ch===c.id);
-      return `<div id="usa-${c.id}" class="usa-chapter-block">
-        <div class="usa-chapter-head">
-          <div class="usa-chapter-num">${c.sub}</div>
-          <div class="usa-chapter-title">${c.num}：${c.title}</div>
-        </div>
-        ${evts.map(e => `<div class="usa-event ${e.hi?'high':''}">
-          <div class="usa-event-year">${e.year}</div>
-          <div class="usa-event-title">${e.title}</div>
-          <div class="usa-event-tags">${e.tags.map(tagHTML).join('')}</div>
-          <div class="usa-event-desc">${e.desc}</div>
-        </div>`).join('')}
-      </div>`;
-    }).join('');
-  } else {
-    box.innerHTML = usaChapters.map(c => {
-      const txt = usaFullText[c.id] || '';
-      return `<div id="usa-${c.id}" class="usa-chapter-block">
-        <div class="usa-chapter-head">
-          <div class="usa-chapter-num">${c.sub}</div>
-          <div class="usa-chapter-title">${c.num}：${c.title}</div>
-        </div>
-        <div class="usa-full-text">${txt}</div>
-      </div>`;
-    }).join('');
-  }
-  document.getElementById('usa-scroll-container').scrollTop = 0;
-}
 
 function enterCountryHistory(regionId, title) {
   const routeMap = {
@@ -2258,6 +2266,11 @@ function openCountryHistory(key, title, timeRange, chapters, events, fullText) {
 function closeCountryHistory() {
   document.getElementById('country-history-page').style.display = 'none';
   document.body.style.overflow = '';
+  // Clear nav stack when manually closing (not when jumping)
+  if(!_navStack.length) {
+    var btn = document.getElementById('nav-return-btn');
+    if(btn) btn.style.display = 'none';
+  }
 }
 
 function setCountryMode(mode) {
@@ -2411,24 +2424,61 @@ function toggleNote(pid) {
   const nb = document.getElementById('nb-'+pid);
   if(!nb) return;
   const isOpen = nb.classList.contains('show');
-  document.querySelectorAll('.ch-notebox.show').forEach(n=>n.classList.remove('show'));
+  closeAllNotes();
   if(!isOpen){nb.classList.add('show');nb.querySelector('textarea').focus();}
+}
+function closeAllNotes() {
+  document.querySelectorAll('.ch-notebox.show').forEach(n=>n.classList.remove('show'));
+}
+function closeNote(pid) {
+  const nb = document.getElementById('nb-'+pid);
+  if(nb) nb.classList.remove('show');
 }
 
 // Long press handler for notes
-let _pressTimer=null;
+let _pressTimer=null, _pressStartY=0;
 document.addEventListener('touchstart', e => {
   const para = e.target.closest('.ch-para');
   if(!para) return;
-  _pressTimer = setTimeout(()=>{ toggleNote(para.id); _pressTimer=null; }, 500);
+  // Don't trigger if tapping inside an open notebox
+  if(e.target.closest('.ch-notebox')) return;
+  _pressStartY = e.touches[0].clientY;
+  _pressTimer = setTimeout(()=>{ 
+    toggleNote(para.id); 
+    _pressTimer=null; 
+    // Prevent context menu
+    e.target.addEventListener('contextmenu', function prevent(ev){ev.preventDefault();e.target.removeEventListener('contextmenu',prevent);});
+  }, 500);
 }, {passive:true});
+document.addEventListener('touchmove', e => {
+  if(_pressTimer && Math.abs(e.touches[0].clientY - _pressStartY) > 10) {
+    clearTimeout(_pressTimer); _pressTimer=null;
+  }
+});
 document.addEventListener('touchend', ()=>{if(_pressTimer){clearTimeout(_pressTimer);_pressTimer=null;}});
+// Close notes on outside tap
+document.addEventListener('click', e => {
+  if(!e.target.closest('.ch-notebox') && !e.target.closest('.ch-para .ndot')) {
+    closeAllNotes();
+  }
+});
 document.addEventListener('touchmove', ()=>{if(_pressTimer){clearTimeout(_pressTimer);_pressTimer=null;}});
+
+// === TERM TOGGLE ===
+let _termsOn = false;
+function toggleTerms() {
+  _termsOn = !_termsOn;
+  const content = document.getElementById('country-content');
+  const btn = document.getElementById('term-toggle');
+  if(content) content.classList.toggle('terms-on', _termsOn);
+  if(btn) btn.classList.toggle('on', _termsOn);
+}
 
 // Term popup handler
 let _openPop = null;
 document.addEventListener('click', e => {
   if(_openPop){_openPop.remove();_openPop=null;}
+  if(!_termsOn) return;
   const term = e.target.closest('.ch-term');
   if(term){
     e.stopPropagation();
@@ -2437,7 +2487,8 @@ document.addEventListener('click', e => {
     if(!def) return;
     const pop = document.createElement('div');
     pop.className = 'ch-popup show';
-    pop.innerHTML = '<div class="pop-t">'+key+'</div><div class="pop-b">'+def+'</div>';
+    pop.style.position = 'relative';
+    pop.innerHTML = '<button class="pop-close" onclick="this.parentElement.remove()">×</button><div class="pop-t">'+key+'</div><div class="pop-b">'+def+'</div>';
     term.insertAdjacentElement('afterend', pop);
     pop.scrollIntoView({behavior:'smooth', block:'nearest'});
     _openPop = pop;
@@ -2529,6 +2580,7 @@ openCountryHistory = function(key, title, timeRange, chapters, events, fullText)
   _origOpenCountry(key, title, timeRange, chapters, events, fullText);
   document.getElementById('mob-ch-btn').style.display = '';
   document.getElementById('read-progress').style.display = '';
+  updateReturnBtn();
   setupReadingUI();
   // Restore scroll
   setTimeout(function(){
@@ -2574,16 +2626,8 @@ function exportNotes() {
 
 
 // === CROSS-COUNTRY FUNCTIONS ===
-function addXLinks(text, myKey) {
-  var others = Object.keys(ALL_COUNTRIES).filter(function(k){return k!==myKey;});
-  others.forEach(function(ck){
-    var c = ALL_COUNTRIES[ck];
-    var name = c.name;
-    var re = new RegExp('(?<!data-term=")(' + name + ')(?![^<]*<\\/span>)', 'g');
-    text = text.replace(re, '<span class="ch-xlink" onclick="jumpToCountry(\''+ck+'\')">$1 →</span>');
-  });
-  return text;
-}
+// Inline links disabled — use the globe button on chapter headers for era jumps
+function addXLinks(text, myKey) { return text; }
 
 function jumpToCountry(targetKey) {
   var c = ALL_COUNTRIES[targetKey];
@@ -2670,11 +2714,61 @@ function doEraJump(targetKey, targetChId) {
   var pk = activeCountry.key + '\u2192' + targetKey;
   _jumpPins[pk] = (_jumpPins[pk]||0) + 1;
   localStorage.setItem('ch_pins', JSON.stringify(_jumpPins));
+  
+  // Push current state to nav stack
+  var scroller = document.getElementById('country-scroll-container');
+  _navStack.push({
+    key: activeCountry.key,
+    title: activeCountry.title,
+    range: activeCountry.timeRange,
+    chapters: activeCountry.chapters,
+    events: activeCountry.events,
+    fullText: activeCountry.fullText,
+    mode: countryMode,
+    scrollTop: scroller ? scroller.scrollTop : 0
+  });
+  updateReturnBtn();
+  
+  // Jump to target in SAME mode
+  var savedMode = countryMode;
   closeCountryHistory();
   var c = ALL_COUNTRIES[targetKey];
   setTimeout(function(){
     openCountryHistory(targetKey, c.title, c.range, c.chapters(), c.events(), c.fullText());
+    // Restore mode
+    if(savedMode === 'full') setCountryMode('full');
     setTimeout(function(){scrollToCountryChapter(targetChId);}, 400);
+  }, 200);
+}
+
+// === NAVIGATION STACK ===
+var _navStack = [];
+
+function updateReturnBtn() {
+  var btn = document.getElementById('nav-return-btn');
+  if(!btn) return;
+  if(_navStack.length > 0) {
+    var prev = _navStack[_navStack.length-1];
+    var name = ALL_COUNTRIES[prev.key] ? ALL_COUNTRIES[prev.key].name : '';
+    document.getElementById('nav-return-label').textContent = '返回' + name;
+    btn.style.display = 'flex';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+function navBack() {
+  if(!_navStack.length) return;
+  var prev = _navStack.pop();
+  updateReturnBtn();
+  closeCountryHistory();
+  setTimeout(function(){
+    openCountryHistory(prev.key, prev.title, prev.range, prev.chapters, prev.events, prev.fullText);
+    if(prev.mode === 'full') setCountryMode('full');
+    setTimeout(function(){
+      var s = document.getElementById('country-scroll-container');
+      if(s) s.scrollTop = prev.scrollTop;
+    }, 300);
   }, 200);
 }
 
@@ -2707,7 +2801,7 @@ function renderCountryContent() {
         const hasNote = _notes[pid] && _notes[pid].trim();
         let processed = termify(p);
         processed = addXLinks(processed, key);
-        return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}"><div class="ndot"></div><p>${processed}</p><div class="ch-notebox" id="nb-${pid}"><textarea placeholder="写下你的想法..." oninput="saveNote('${pid}',this.value)">${_notes[pid]||''}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
+        return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}"><div class="ndot"></div><p>${processed}</p><div class="ch-notebox" id="nb-${pid}"><button class="nb-close" onclick="closeNote('${pid}')">×</button><textarea placeholder="写下你的想法..." oninput="saveNote('${pid}',this.value)">${_notes[pid]||''}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
       }).join('');
       return `<div id="ch-${key}-${c.id}" class="usa-chapter-block">
         <div class="usa-chapter-head" style="position:relative;">
@@ -2750,7 +2844,7 @@ init();
 <!-- GENERIC COUNTRY HISTORY PAGE (reuses USA CSS classes) -->
 <div id="country-history-page" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);animation:usaFadeIn 0.4s ease;">
   <div class="usa-topbar">
-    <button class="usa-back-btn" onclick="closeCountryHistory()">
+    <button class="usa-back-btn" onclick="_navStack=[];updateReturnBtn();closeCountryHistory()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
       <span>返回</span>
     </button>
@@ -2758,9 +2852,13 @@ init();
       <span class="ch-title-text" style="font-family:var(--font-serif);color:rgba(227,217,195,0.85);font-size:1.05rem;letter-spacing:1px;"></span>
       <span class="ch-time-range" style="color:rgba(227,217,195,0.2);font-family:var(--font-mono);font-size:0.6rem;margin-left:10px;"></span>
     </div>
-    <div style="display:flex;gap:3px;background:rgba(107,196,184,0.06);border-radius:16px;padding:3px;">
-      <button class="ch-np-btn" onclick="openNotesPanel()" style="margin-right:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button><button id="ch-mode-summary" onclick="setCountryMode('summary')" class="usa-mode-btn active">精炼版</button>
-      <button id="ch-mode-full" onclick="setCountryMode('full')" class="usa-mode-btn">完整版</button>
+    <div style="display:flex;gap:3px;align-items:center;">
+      <button class="term-toggle" id="term-toggle" onclick="toggleTerms()">术语</button>
+      <button class="ch-np-btn" onclick="openNotesPanel()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></button>
+      <div style="display:flex;gap:3px;background:rgba(107,196,184,0.06);border-radius:16px;padding:3px;">
+        <button id="ch-mode-summary" onclick="setCountryMode('summary')" class="usa-mode-btn active">精炼版</button>
+        <button id="ch-mode-full" onclick="setCountryMode('full')" class="usa-mode-btn">完整版</button>
+      </div>
     </div>
   </div>
   <div class="usa-body">
@@ -2770,6 +2868,12 @@ init();
     </div>
   </div>
 </div>
+
+<!-- Nav Stack Return Button -->
+<button class="nav-return-btn" id="nav-return-btn" onclick="navBack()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+  <span id="nav-return-label">返回</span>
+</button>
 
 
 <div id="ch-notes-panel" class="ch-npanel">
