@@ -5,7 +5,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chronicle Map — 世界历史地图</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Mono:wght@300;400&display=swap');
@@ -460,17 +460,24 @@ header > * { pointer-events: auto; }
   #left-panel { width: 360px; }
 }
 @media (max-width: 768px) {
-  .nav-tabs { display: none; }
+  .nav-tabs { 
+    gap:4px; padding:0; 
+    position:fixed; bottom:100px; left:10px; z-index:99;
+    flex-direction:column; background:rgba(18,15,12,0.9); 
+    border-radius:10px; border:1px solid var(--border);
+    backdrop-filter:blur(12px); padding:4px;
+  }
+  .nav-tab { font-size:0.55rem; padding:6px 10px; border-radius:6px; }
   header { padding: 0 16px; }
   .brand-text p { display: none; }
   #left-panel {
-    width: 100%; height: 60vh;
-    top: auto; bottom: 0;
-    border-right: none; border-top: 1px solid var(--border);
-    transform: translateY(100%);
-    border-radius: 16px 16px 0 0;
+    width: 85%; height: 100%;
+    top: 0; bottom: 0; left: 0;
+    border-right: 1px solid var(--border); border-top: none;
+    transform: translateX(-100%);
+    border-radius: 0 12px 12px 0;
   }
-  #left-panel.open { transform: translateY(0); }
+  #left-panel.open { transform: translateX(0); }
   #timeline-bar { padding: 0 20px; }
   .timeline-track-wrap { max-width: 100%; }
   .t-node-label { font-size: 0.5rem; }
@@ -716,7 +723,7 @@ header > * { pointer-events: auto; }
 .ch-para.has-note .ndot { opacity:0.7; }
 .ch-notebox { display:none; margin:6px 0 14px; padding:10px 12px; background:rgba(30,25,18,0.6); border:1px solid rgba(196,162,101,0.12); border-radius:8px; position:relative; }
 .ch-notebox.show { display:block; animation:chFade 0.2s ease; }
-.ch-notebox textarea { width:100%; border:none; background:transparent; color:var(--ink,#e8dcc8); font-family:var(--font-body); font-size:16px; line-height:1.7; resize:none; outline:none; min-height:36px; }
+.ch-notebox textarea { width:100%; border:none; background:transparent; color:var(--ink,#e8dcc8); font-family:var(--font-body); font-size:0.78rem; line-height:1.7; resize:none; outline:none; min-height:36px; }
 .ch-notebox textarea::placeholder { color:rgba(138,125,107,0.5); }
 .ch-notebox .nb-close { position:absolute; top:4px; right:6px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:none; background:none; color:rgba(138,125,107,0.5); cursor:pointer; border-radius:50%; font-size:0.9rem; }
 .ch-notebox .nb-close:active { background:rgba(196,162,101,0.08); }
@@ -1471,6 +1478,11 @@ function openPanel(regionId) {
 
   const body = document.getElementById('panel-body');
   body.innerHTML = `
+    <button class="enter-btn" onclick="enterCountryHistory('${regionId}', '${info.title}')" style="margin-bottom:16px;">
+      进入这片土地的历史
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    </button>
+
     <div class="info-section">
       <div class="info-label">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1500,11 +1512,6 @@ function openPanel(regionId) {
       <p class="desc-text" style="color:var(--gold);">${currentHotspot.desc}</p>
     </div>
     ` : ''}
-
-    <button class="enter-btn" onclick="enterCountryHistory('${regionId}', '${info.title}')">
-      进入这片土地的历史
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-    </button>
   `;
 
   document.getElementById('left-panel').classList.add('open');
@@ -2413,13 +2420,30 @@ const _jumpPins = JSON.parse(localStorage.getItem('ch_pins')||'{}');
 // === NOTE SYSTEM ===
 const _notes = JSON.parse(localStorage.getItem('ch_notes')||'{}');
 function saveNote(pid, val) {
-  if(val.trim()) _notes[pid] = val; else delete _notes[pid];
+  if(val.trim()) {
+    // Save the paragraph text as context
+    var paraEl = document.getElementById(pid);
+    var ctx = '';
+    if(paraEl) {
+      var p = paraEl.querySelector('p');
+      if(p) ctx = p.textContent.substring(0, 80);
+    }
+    _notes[pid] = {text:val, ctx:ctx};
+  } else {
+    delete _notes[pid];
+  }
   localStorage.setItem('ch_notes', JSON.stringify(_notes));
   const el = document.getElementById(pid);
   if(el) el.classList.toggle('has-note', !!val.trim());
   const sv = document.getElementById('sv-'+pid);
   if(sv){sv.classList.add('show');setTimeout(()=>sv.classList.remove('show'),1200);}
 }
+// Migrate old string-format notes
+Object.keys(_notes).forEach(k => { if(typeof _notes[k] === 'string') _notes[k] = {text:_notes[k], ctx:''}; });
+
+function getNoteText(pid) { var n = _notes[pid]; return n ? (typeof n === 'string' ? n : n.text) : ''; }
+function getNoteCtx(pid) { var n = _notes[pid]; return n && n.ctx ? n.ctx : ''; }
+
 function toggleNote(pid) {
   const nb = document.getElementById('nb-'+pid);
   if(!nb) return;
@@ -2435,18 +2459,29 @@ function closeNote(pid) {
   if(nb) nb.classList.remove('show');
 }
 
+// Dynamic viewport: prevent iOS zoom on textarea focus
+var _vpMeta = document.querySelector('meta[name="viewport"]');
+document.addEventListener('focusin', function(e) {
+  if(e.target.tagName === 'TEXTAREA' && e.target.closest('.ch-notebox')) {
+    _vpMeta.setAttribute('content','width=device-width, initial-scale=1.0, maximum-scale=1.0');
+  }
+});
+document.addEventListener('focusout', function(e) {
+  if(e.target.tagName === 'TEXTAREA' && e.target.closest('.ch-notebox')) {
+    _vpMeta.setAttribute('content','width=device-width, initial-scale=1.0');
+  }
+});
+
 // Long press handler for notes
 let _pressTimer=null, _pressStartY=0;
 document.addEventListener('touchstart', e => {
   const para = e.target.closest('.ch-para');
   if(!para) return;
-  // Don't trigger if tapping inside an open notebox
   if(e.target.closest('.ch-notebox')) return;
   _pressStartY = e.touches[0].clientY;
   _pressTimer = setTimeout(()=>{ 
     toggleNote(para.id); 
     _pressTimer=null; 
-    // Prevent context menu
     e.target.addEventListener('contextmenu', function prevent(ev){ev.preventDefault();e.target.removeEventListener('contextmenu',prevent);});
   }, 500);
 }, {passive:true});
@@ -2456,7 +2491,6 @@ document.addEventListener('touchmove', e => {
   }
 });
 document.addEventListener('touchend', ()=>{if(_pressTimer){clearTimeout(_pressTimer);_pressTimer=null;}});
-// Close notes on outside tap
 document.addEventListener('click', e => {
   if(!e.target.closest('.ch-notebox') && !e.target.closest('.ch-para .ndot')) {
     closeAllNotes();
@@ -2501,17 +2535,24 @@ function openNotesPanel() {
   if(!panel) return;
   let cards = [];
   Object.keys(_notes).forEach(pid => {
-    if(!_notes[pid] || !_notes[pid].trim()) return;
+    var note = _notes[pid];
+    var text = typeof note === 'string' ? note : note.text;
+    var ctx = typeof note === 'object' ? (note.ctx||'') : '';
+    if(!text || !text.trim()) return;
     let loc = '';
     if(activeCountry) {
       activeCountry.chapters.forEach(c => {
         if(pid.startsWith('p-'+activeCountry.key+'-'+c.id)) loc = activeCountry.title.replace('史','') + ' · ' + c.title;
       });
     }
-    cards.push({pid, text:_notes[pid], loc:loc||pid});
+    cards.push({pid, text, ctx, loc:loc||pid});
   });
   panel.querySelector('.ch-np-body').innerHTML = cards.length
-    ? cards.map(n => '<div class="ch-np-card"><div class="ch-np-loc">'+n.loc+'</div><div class="ch-np-text">'+n.text+'</div><div class="ch-np-del" onclick="deleteNote(\''+n.pid+'\')">删除</div></div>').join('')
+    ? cards.map(n => '<div class="ch-np-card">'
+      +'<div class="ch-np-loc">'+n.loc+'</div>'
+      +(n.ctx ? '<div style="font-size:0.68rem;color:rgba(138,125,107,0.7);font-style:italic;margin-bottom:6px;line-height:1.6;border-left:2px solid rgba(107,196,184,0.2);padding-left:8px;">「'+n.ctx+'…」</div>' : '')
+      +'<div class="ch-np-text">'+n.text+'</div>'
+      +'<div class="ch-np-del" onclick="deleteNote(\''+n.pid+'\')">删除</div></div>').join('')
     : '<div class="ch-np-empty">长按段落可以写笔记</div>';
   panel.classList.add('open');
 }
@@ -2611,16 +2652,30 @@ setCountryMode = function(mode) {
 function exportNotes() {
   let text = 'Chronicle 阅读笔记\n' + new Date().toLocaleString('zh-CN') + '\n\n';
   Object.keys(_notes).forEach(pid => {
-    if(!_notes[pid]||!_notes[pid].trim()) return;
+    var note = _notes[pid];
+    var noteText = typeof note === 'string' ? note : note.text;
+    var ctx = typeof note === 'object' ? (note.ctx||'') : '';
+    if(!noteText||!noteText.trim()) return;
     let loc = pid;
     if(activeCountry) activeCountry.chapters.forEach(c => {
       if(pid.includes(c.id)) loc = activeCountry.title.replace('史','') + ' · ' + c.title;
     });
-    text += '[' + loc + ']\n' + _notes[pid] + '\n\n';
+    text += '[' + loc + ']\n';
+    if(ctx) text += '原文：' + ctx + '…\n';
+    text += '笔记：' + noteText + '\n\n';
   });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));
-  a.download = 'chronicle-notes.txt'; a.click();
+  if(navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){
+      alert('已复制到剪贴板');
+    }).catch(function(){ fallbackCopy(text); });
+  } else { fallbackCopy(text); }
+}
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText='position:fixed;left:-999px';
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
+  alert('已复制到剪贴板');
 }
 
 
@@ -2729,15 +2784,35 @@ function doEraJump(targetKey, targetChId) {
   });
   updateReturnBtn();
   
-  // Jump to target in SAME mode
+  // Seamless swap — don't close/reopen, just update content directly
   var savedMode = countryMode;
-  closeCountryHistory();
   var c = ALL_COUNTRIES[targetKey];
+  
+  // Fade transition
+  var page = document.getElementById('country-history-page');
+  var content = document.getElementById('country-content');
+  content.style.opacity = '0';
+  content.style.transition = 'opacity 0.2s';
+  
   setTimeout(function(){
-    openCountryHistory(targetKey, c.title, c.range, c.chapters(), c.events(), c.fullText());
-    // Restore mode
-    if(savedMode === 'full') setCountryMode('full');
-    setTimeout(function(){scrollToCountryChapter(targetChId);}, 400);
+    // Update activeCountry directly without closing the page
+    activeCountry = { key:targetKey, title:c.title, timeRange:c.range, chapters:c.chapters(), events:c.events(), fullText:c.fullText() };
+    page.querySelector('.ch-title-text').textContent = c.title;
+    page.querySelector('.ch-time-range').textContent = c.range;
+    
+    // Set mode (this also renders content)
+    countryMode = 'summary';
+    document.getElementById('ch-mode-summary').classList.add('active');
+    document.getElementById('ch-mode-full').classList.remove('active');
+    buildCountryNav();
+    if(savedMode === 'full') {
+      setCountryMode('full');
+    } else {
+      renderCountryContent();
+    }
+    
+    content.style.opacity = '1';
+    setTimeout(function(){scrollToCountryChapter(targetChId);}, 200);
   }, 200);
 }
 
@@ -2761,14 +2836,33 @@ function navBack() {
   if(!_navStack.length) return;
   var prev = _navStack.pop();
   updateReturnBtn();
-  closeCountryHistory();
+  
+  // Seamless swap
+  var content = document.getElementById('country-content');
+  var page = document.getElementById('country-history-page');
+  content.style.opacity = '0';
+  content.style.transition = 'opacity 0.2s';
+  
   setTimeout(function(){
-    openCountryHistory(prev.key, prev.title, prev.range, prev.chapters, prev.events, prev.fullText);
-    if(prev.mode === 'full') setCountryMode('full');
+    activeCountry = { key:prev.key, title:prev.title, timeRange:prev.range, chapters:prev.chapters, events:prev.events, fullText:prev.fullText };
+    page.querySelector('.ch-title-text').textContent = prev.title;
+    page.querySelector('.ch-time-range').textContent = prev.range;
+    
+    countryMode = 'summary';
+    document.getElementById('ch-mode-summary').classList.add('active');
+    document.getElementById('ch-mode-full').classList.remove('active');
+    buildCountryNav();
+    if(prev.mode === 'full') {
+      setCountryMode('full');
+    } else {
+      renderCountryContent();
+    }
+    
+    content.style.opacity = '1';
     setTimeout(function(){
       var s = document.getElementById('country-scroll-container');
       if(s) s.scrollTop = prev.scrollTop;
-    }, 300);
+    }, 100);
   }, 200);
 }
 
@@ -2798,10 +2892,10 @@ function renderCountryContent() {
       const text = fullText[c.id] || '(内容建设中)';
       const paragraphs = text.split('\n').filter(p=>p.trim()).map((p,pi) => {
         const pid = 'p-'+key+'-'+c.id+'-'+pi;
-        const hasNote = _notes[pid] && _notes[pid].trim();
+        const hasNote = getNoteText(pid).trim();
         let processed = termify(p);
         processed = addXLinks(processed, key);
-        return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}"><div class="ndot"></div><p>${processed}</p><div class="ch-notebox" id="nb-${pid}"><button class="nb-close" onclick="closeNote('${pid}')">×</button><textarea placeholder="写下你的想法..." oninput="saveNote('${pid}',this.value)">${_notes[pid]||''}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
+        return `<div class="ch-para${hasNote?' has-note':''}" id="${pid}"><div class="ndot"></div><p>${processed}</p><div class="ch-notebox" id="nb-${pid}"><button class="nb-close" onclick="closeNote('${pid}')">×</button><textarea placeholder="写下你的想法..." oninput="saveNote('${pid}',this.value)">${getNoteText(pid)}</textarea><div class="ch-saved" id="sv-${pid}">已保存</div></div></div>`;
       }).join('');
       return `<div id="ch-${key}-${c.id}" class="usa-chapter-block">
         <div class="usa-chapter-head" style="position:relative;">
