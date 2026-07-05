@@ -1,25 +1,21 @@
 {
-  "name": "Scholar's Study",
-  "short_name": "Study",
-  "description": "A pixel-art interactive museum",
-  "start_url": "./",
-  "scope": "./",
-  "display": "fullscreen",
-  "orientation": "any",
-  "background_color": "#050302",
-  "theme_color": "#050302",
+  "name": "Chronicle Map — 世界历史地图",
+  "short_name": "历史地图",
+  "start_url": "history.html",
+  "display": "standalone",
+  "background_color": "#0a0908",
+  "theme_color": "#0a0908",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "images/map_1000ce.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "images/map_1000ce.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }

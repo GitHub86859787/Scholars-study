@@ -568,6 +568,9 @@ header > * { pointer-events: auto; }
   font-size:0.5rem; color:rgba(227,217,195,0.2); display:block;
   margin-bottom:2px; letter-spacing:1.5px; text-transform:uppercase;
 }
+.reader-extra-btn { color:var(--gold-dim); }
+.reader-extra-btn .ch-num { color:var(--gold-dim); opacity:0.5; }
+.reader-extra-btn:hover { color:var(--gold); }
 
 /* Main content area */
 .reader-scroll {
@@ -789,18 +792,41 @@ header > * { pointer-events: auto; }
   display:flex; align-items:center; gap:8px;
   padding:12px 16px; border-bottom:1px solid var(--border);
   background:rgba(18,15,12,0.95); backdrop-filter:blur(12px);
+  position:relative; z-index:2;
 }
 .ws-topbar .ws-title { flex:1; font-family:var(--font-display); font-size:0.9rem; color:rgba(227,217,195,0.8); letter-spacing:0.5px; }
 .ws-btn {
   padding:6px 12px; border-radius:12px; border:1px solid var(--border);
   background:none; color:var(--ink-dim); cursor:pointer;
   font-family:var(--font-mono); font-size:0.6rem; letter-spacing:0.04em; transition:all 0.2s;
+  white-space:nowrap;
 }
 .ws-btn:active { transform:scale(0.95); }
 .ws-btn.accent { border-color:rgba(107,196,184,0.3); color:var(--accent); }
 .ws-btn.warn { border-color:rgba(224,160,80,0.3); color:#e0a050; }
 
-.ws-body { height:calc(100vh - 50px); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+/* Progress bar */
+.ws-progress { position:absolute; bottom:0; left:0; height:2px; background:var(--accent); width:0; transition:width 0.15s linear; box-shadow:0 0 6px var(--accent-glow); }
+
+.ws-body { height:calc(100vh - 50px); overflow-y:auto; -webkit-overflow-scrolling:touch; position:relative; }
+
+/* Chapter tabs */
+.ws-chapter-tabs {
+  display:flex; gap:6px; overflow-x:auto; padding:10px 16px;
+  border-bottom:1px solid var(--border); -webkit-overflow-scrolling:touch;
+}
+.ws-chapter-tabs::-webkit-scrollbar { display:none; }
+.ws-ch-tab {
+  flex-shrink:0; padding:6px 14px; border-radius:14px; border:1px solid var(--border);
+  background:none; color:var(--ink-dim); cursor:pointer; font-size:0.68rem;
+  font-family:var(--font-body); white-space:nowrap; transition:all 0.2s;
+}
+.ws-ch-tab.active { border-color:rgba(107,196,184,0.4); color:var(--accent); background:rgba(107,196,184,0.06); }
+.ws-ch-tab .ws-ch-del { margin-left:6px; opacity:0.5; }
+.ws-ch-add {
+  flex-shrink:0; width:30px; height:30px; border-radius:50%; border:1px dashed var(--border);
+  background:none; color:var(--ink-faint); cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
 
 /* Paste mode */
 .ws-paste-area {
@@ -815,6 +841,11 @@ header > * { pointer-events: auto; }
 }
 .ws-paste-area textarea::placeholder { color:var(--ink-faint); }
 .ws-paste-hint { font-size:0.65rem; color:var(--ink-faint); font-family:var(--font-mono); }
+.ws-paste-area input.ws-ch-title-input {
+  width:100%; max-width:600px; border:1px solid var(--border); border-radius:10px;
+  background:rgba(30,25,18,0.4); color:var(--ink); padding:10px 14px;
+  font-family:var(--font-body); font-size:0.78rem; outline:none;
+}
 
 /* Read mode */
 .ws-content { padding:20px 18px 120px; max-width:700px; margin:0 auto; }
@@ -824,7 +855,9 @@ header > * { pointer-events: auto; }
 }
 .ws-content .ws-marked { background:rgba(107,196,184,0.12); border-bottom:1px solid rgba(107,196,184,0.4); padding:0 2px; cursor:pointer; }
 .ws-content .ws-para { position:relative; padding-left:10px; border-left:2px solid transparent; }
-.ws-content .ws-para.has-note { border-left-color:rgba(224,160,80,0.2); }
+.ws-content .ws-para.has-note { border-left-color:rgba(224,160,80,0.35); }
+.ws-content .ws-para .ndot { position:absolute; left:-1px; top:10px; width:5px; height:5px; border-radius:50%; background:#e0a050; opacity:0; transition:opacity 0.3s; }
+.ws-content .ws-para.has-note .ndot { opacity:0.8; }
 
 /* Bottom bar */
 .ws-bottom {
@@ -848,6 +881,64 @@ header > * { pointer-events: auto; }
   color:var(--accent); font-size:0.65rem; font-family:var(--font-mono); cursor:pointer;
 }
 .ws-terms-list .ws-term-tag:active { background:rgba(107,196,184,0.15); }
+
+/* Notes viewer panel */
+.ws-notes-panel {
+  position:fixed; top:0; right:0; bottom:0; width:88%; max-width:420px; z-index:10005;
+  background:rgba(18,15,12,0.98); backdrop-filter:blur(20px);
+  transform:translateX(100%); transition:transform 0.3s ease;
+  display:flex; flex-direction:column;
+}
+.ws-notes-panel.open { transform:translateX(0); }
+.ws-np-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px; border-bottom:1px solid var(--border); }
+.ws-np-title { font-family:var(--font-display); font-size:0.85rem; color:rgba(227,217,195,0.85); }
+.ws-np-body { flex:1; overflow-y:auto; padding:12px 16px; -webkit-overflow-scrolling:touch; }
+.ws-np-card { padding:12px 14px; margin-bottom:10px; background:rgba(30,25,18,0.5); border-radius:8px; border-left:2px solid rgba(224,160,80,0.3); }
+.ws-np-card .ws-np-ch { font-size:0.55rem; color:var(--ink-faint); font-family:var(--font-mono); margin-bottom:6px; }
+.ws-np-card .ws-np-ctx { font-size:0.66rem; color:rgba(138,125,107,0.75); font-style:italic; margin-bottom:6px; line-height:1.6; }
+.ws-np-card textarea { width:100%; border:none; background:transparent; color:var(--ink); font-family:var(--font-body); font-size:0.76rem; line-height:1.7; resize:none; outline:none; min-height:40px; }
+.ws-np-card .ws-np-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:6px; }
+.ws-np-card .ws-np-jump, .ws-np-card .ws-np-del { font-size:0.6rem; color:var(--accent); cursor:pointer; }
+.ws-np-card .ws-np-del { color:#e0a050; }
+.ws-np-empty { text-align:center; padding:40px 20px; color:rgba(138,125,107,0.6); font-size:0.78rem; line-height:1.8; }
+
+/* Import answers modal */
+.ws-import-modal {
+  position:fixed; inset:0; z-index:10006; background:rgba(0,0,0,0.6);
+  display:none; align-items:center; justify-content:center; padding:20px;
+}
+.ws-import-modal.show { display:flex; }
+.ws-import-box {
+  width:100%; max-width:500px; max-height:80vh; background:rgba(24,20,16,0.98);
+  border:1px solid var(--border); border-radius:14px; padding:20px;
+  display:flex; flex-direction:column; gap:12px;
+}
+.ws-import-box textarea {
+  width:100%; height:35vh; border:1px solid var(--border); border-radius:8px;
+  background:rgba(30,25,18,0.5); color:var(--ink); padding:12px;
+  font-family:var(--font-body); font-size:0.76rem; line-height:1.8; resize:none; outline:none;
+}
+.ws-import-box .ws-import-hint { font-size:0.6rem; color:var(--ink-faint); line-height:1.6; }
+.ws-import-box .ws-import-actions { display:flex; gap:10px; justify-content:flex-end; }
+
+/* Export mode picker */
+.ws-export-modal {
+  position:fixed; inset:0; z-index:10006; background:rgba(0,0,0,0.6);
+  display:none; align-items:center; justify-content:center; padding:20px;
+}
+.ws-export-modal.show { display:flex; }
+.ws-export-box {
+  width:100%; max-width:340px; background:rgba(24,20,16,0.98);
+  border:1px solid var(--border); border-radius:14px; padding:20px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.ws-export-box .ws-export-title { font-size:0.8rem; color:rgba(227,217,195,0.85); margin-bottom:4px; font-family:var(--font-display); }
+.ws-export-opt {
+  padding:12px 14px; border-radius:10px; border:1px solid var(--border);
+  background:rgba(30,25,18,0.4); cursor:pointer; text-align:left;
+}
+.ws-export-opt .ws-eo-title { font-size:0.76rem; color:var(--accent); margin-bottom:3px; }
+.ws-export-opt .ws-eo-desc { font-size:0.62rem; color:var(--ink-faint); line-height:1.5; }
 </style>
 </head>
 <body>
@@ -1829,11 +1920,67 @@ function buildCountryNav() {
   if(!activeCountry) return;
   const nav = document.getElementById('country-chapter-nav');
   nav.innerHTML = '<div class="reader-nav-label">章节导航</div>' +
+    '<button class="reader-ch-btn reader-extra-btn" onclick="openPeopleView()"><span class="ch-num">◆</span>人物志</button>' +
+    '<button class="reader-ch-btn reader-extra-btn" onclick="openRegionView()"><span class="ch-num">◆</span>地区表</button>' +
+    '<div style="height:1px;background:var(--border);margin:8px 14px;"></div>' +
     activeCountry.chapters.map((c,i) =>
       `<button class="reader-ch-btn${i===0?' active':''}" data-ch="${c.id}" onclick="scrollToCountryChapter('${c.id}',this)">
         <span class="ch-num">${c.num}</span>${c.title}
       </button>`
     ).join('');
+}
+
+// === PEOPLE & REGION SECTIONS (framework — data optional per country) ===
+async function openPeopleView() {
+  if(!activeCountry) return;
+  closeChapterNav();
+  showToast('加载中...');
+  let data = null;
+  try {
+    const resp = await fetch(activeCountry.key + '_people.json');
+    if(resp.ok) data = await resp.json();
+  } catch(e) {}
+  showSidePanel('人物志', data && data.length ? data.map(p =>
+    `<div class="ws-np-card" style="border-left-color:rgba(107,196,184,0.3);">
+      <div style="font-size:0.85rem;color:var(--accent);margin-bottom:4px;font-family:var(--font-display);">${p.name}${p.years?'<span style=\"color:var(--ink-faint);font-size:0.65rem;margin-left:8px;\">'+p.years+'</span>':''}</div>
+      <div style="font-size:0.76rem;color:rgba(227,217,195,0.75);line-height:1.8;">${p.desc}</div>
+    </div>`
+  ).join('') : '<div class="ws-np-empty">这个国家还没有人物介绍<br>发送人物资料给我，我可以加进来</div>');
+}
+
+async function openRegionView() {
+  if(!activeCountry) return;
+  closeChapterNav();
+  showToast('加载中...');
+  let data = null;
+  try {
+    const resp = await fetch(activeCountry.key + '_regions.json');
+    if(resp.ok) data = await resp.json();
+  } catch(e) {}
+  showSidePanel('地区表', data && data.length ? data.map(r =>
+    `<div class="ws-np-card" style="border-left-color:rgba(196,162,101,0.3);">
+      <div style="font-size:0.85rem;color:var(--gold);margin-bottom:4px;font-family:var(--font-display);">${r.name}</div>
+      <div style="font-size:0.76rem;color:rgba(227,217,195,0.75);line-height:1.8;">${r.desc}</div>
+    </div>`
+  ).join('') : '<div class="ws-np-empty">这个国家还没有地区表<br>发送地区资料给我，我可以加进来</div>');
+}
+
+function showSidePanel(title, bodyHtml) {
+  let panel = document.getElementById('generic-side-panel');
+  if(!panel) {
+    panel = document.createElement('div');
+    panel.id = 'generic-side-panel';
+    panel.className = 'ws-notes-panel';
+    panel.innerHTML = '<div class="ws-np-hdr"><div class="ws-np-title" id="gsp-title"></div><button class="ws-btn" onclick="closeSidePanel()">×</button></div><div class="ws-np-body" id="gsp-body"></div>';
+    document.body.appendChild(panel);
+  }
+  document.getElementById('gsp-title').textContent = title;
+  document.getElementById('gsp-body').innerHTML = bodyHtml;
+  panel.classList.add('open');
+}
+function closeSidePanel() {
+  const panel = document.getElementById('generic-side-panel');
+  if(panel) panel.classList.remove('open');
 }
 
 function scrollToCountryChapter(chId, btn) {
@@ -2466,28 +2613,63 @@ function setupCountryScrollSpy() {
 
 
 // === LEARNING WORKSHOP ===
+// Data model: chapters = [{id, title, text}], notes keyed by "chId-p-N"
+let _wsChapters = JSON.parse(localStorage.getItem('ws_chapters') || '[]');
+let _wsActiveId = localStorage.getItem('ws_active') || '';
 let _wsTerms = JSON.parse(localStorage.getItem('ws_terms') || '[]');
 let _wsNotes = JSON.parse(localStorage.getItem('ws_notes') || '{}');
-let _wsText = localStorage.getItem('ws_text') || '';
+let _wsExportOrder = JSON.parse(localStorage.getItem('ws_export_order') || '[]');
+
+// Migrate old single-chapter format (ws_text + ws-p-N notes) if present
+(function migrateOldWorkshop() {
+  var oldText = localStorage.getItem('ws_text');
+  if (oldText && !_wsChapters.length) {
+    var chId = 'wc' + Date.now();
+    _wsChapters = [{ id: chId, title: '章节 1', text: oldText }];
+    var migratedNotes = {};
+    Object.keys(_wsNotes).forEach(function(k) {
+      if (k.indexOf('ws-p-') === 0) {
+        migratedNotes[chId + '-p-' + k.replace('ws-p-', '')] = _wsNotes[k];
+      } else {
+        migratedNotes[k] = _wsNotes[k];
+      }
+    });
+    _wsNotes = migratedNotes;
+    _wsActiveId = chId;
+    localStorage.setItem('ws_chapters', JSON.stringify(_wsChapters));
+    localStorage.setItem('ws_active', chId);
+    localStorage.setItem('ws_notes', JSON.stringify(_wsNotes));
+    localStorage.removeItem('ws_text');
+  }
+})();
+
+function wsSaveChapters() { localStorage.setItem('ws_chapters', JSON.stringify(_wsChapters)); }
+function wsSaveNotes() { localStorage.setItem('ws_notes', JSON.stringify(_wsNotes)); }
+function wsSaveTerms() { localStorage.setItem('ws_terms', JSON.stringify(_wsTerms)); }
+function wsActiveChapter() { return _wsChapters.find(function(c){ return c.id === _wsActiveId; }); }
 
 function openWorkshop() {
   document.getElementById('workshop-page').style.display = 'block';
   document.body.style.overflow = 'hidden';
-  if (_wsText) {
+  if (_wsChapters.length) {
+    if (!wsActiveChapter()) _wsActiveId = _wsChapters[0].id;
     renderWorkshopReader();
-    // Restore scroll position
     setTimeout(function() {
-      var saved = localStorage.getItem('ws_scroll');
+      var saved = localStorage.getItem('ws_scroll_' + _wsActiveId);
       var body = document.getElementById('ws-body');
       if (saved && body) body.scrollTop = parseInt(saved) || 0;
     }, 100);
   }
-  // Save scroll on scroll
   var body = document.getElementById('ws-body');
   if (!body._scrollBound) {
     body._scrollBound = true;
     body.addEventListener('scroll', function() {
-      localStorage.setItem('ws_scroll', body.scrollTop);
+      if (_wsActiveId) localStorage.setItem('ws_scroll_' + _wsActiveId, body.scrollTop);
+      // Progress bar
+      var sh = body.scrollHeight - body.clientHeight;
+      var pct = sh > 0 ? (body.scrollTop / sh) * 100 : 0;
+      var pb = document.getElementById('ws-progress');
+      if (pb) pb.style.width = pct + '%';
     }, { passive: true });
   }
 }
@@ -2499,15 +2681,56 @@ function closeWorkshop() {
 
 function loadWorkshopText() {
   var input = document.getElementById('ws-input');
+  var titleInput = document.getElementById('ws-ch-title');
   var text = input.value.trim();
   if (!text) return;
-  _wsText = text;
-  localStorage.setItem('ws_text', text);
-  _wsTerms = [];
-  _wsNotes = {};
-  localStorage.setItem('ws_terms', '[]');
-  localStorage.setItem('ws_notes', '{}');
+  var chId = 'wc' + Date.now();
+  var title = titleInput.value.trim() || ('章节 ' + (_wsChapters.length + 1));
+  _wsChapters.push({ id: chId, title: title, text: text });
+  _wsActiveId = chId;
+  wsSaveChapters();
+  localStorage.setItem('ws_active', _wsActiveId);
+  input.value = '';
+  titleInput.value = '';
   renderWorkshopReader();
+}
+
+function addAnotherChapter() {
+  document.getElementById('ws-reader').style.display = 'none';
+  document.getElementById('ws-bottom').style.display = 'none';
+  document.getElementById('ws-chapter-tabs').style.display = 'none';
+  document.getElementById('ws-paste').style.display = 'flex';
+}
+
+function switchWsChapter(chId) {
+  _wsActiveId = chId;
+  localStorage.setItem('ws_active', chId);
+  renderWorkshopReader();
+  setTimeout(function() {
+    var saved = localStorage.getItem('ws_scroll_' + chId);
+    var body = document.getElementById('ws-body');
+    if (body) body.scrollTop = saved ? (parseInt(saved) || 0) : 0;
+  }, 50);
+}
+
+function deleteWsChapter(chId, ev) {
+  if (ev) ev.stopPropagation();
+  if (!confirm('删除这个章节？想法笔记也会一并删除。')) return;
+  _wsChapters = _wsChapters.filter(function(c) { return c.id !== chId; });
+  wsSaveChapters();
+  Object.keys(_wsNotes).forEach(function(pid) { if (pid.indexOf(chId + '-') === 0) delete _wsNotes[pid]; });
+  wsSaveNotes();
+  localStorage.removeItem('ws_scroll_' + chId);
+  if (_wsActiveId === chId) _wsActiveId = _wsChapters.length ? _wsChapters[0].id : '';
+  if (_wsChapters.length) {
+    localStorage.setItem('ws_active', _wsActiveId);
+    renderWorkshopReader();
+  } else {
+    document.getElementById('ws-paste').style.display = 'flex';
+    document.getElementById('ws-reader').style.display = 'none';
+    document.getElementById('ws-bottom').style.display = 'none';
+    document.getElementById('ws-chapter-tabs').style.display = 'none';
+  }
 }
 
 function renderWorkshopReader() {
@@ -2515,19 +2738,33 @@ function renderWorkshopReader() {
   document.getElementById('ws-reader').style.display = 'block';
   document.getElementById('ws-bottom').style.display = 'flex';
 
+  var tabs = document.getElementById('ws-chapter-tabs');
+  if (_wsChapters.length > 1) {
+    tabs.style.display = 'flex';
+    tabs.innerHTML = _wsChapters.map(function(c) {
+      return '<button class="ws-ch-tab' + (c.id === _wsActiveId ? ' active' : '') + '" onclick="switchWsChapter(\'' + c.id + '\')">' +
+        c.title + '<span class="ws-ch-del" onclick="deleteWsChapter(\'' + c.id + '\',event)">×</span></button>';
+    }).join('') + '<button class="ws-ch-add" onclick="addAnotherChapter()">+</button>';
+  } else {
+    tabs.style.display = 'none';
+  }
+
+  var ch = wsActiveChapter();
+  if (!ch) return;
   var content = document.getElementById('ws-content');
-  var paras = _wsText.split('\n').filter(function(p) { return p.trim(); });
+  var paras = ch.text.split('\n').filter(function(p) { return p.trim(); });
 
   content.innerHTML = paras.map(function(p, i) {
-    var pid = 'ws-p-' + i;
+    var pid = ch.id + '-p-' + i;
     var hasNote = _wsNotes[pid] ? true : false;
     var html = highlightTerms(p);
-    return '<div class="ws-para' + (hasNote ? ' has-note' : '') + '" id="' + pid + '"><p>' + html + '</p>' +
+    return '<div class="ws-para' + (hasNote ? ' has-note' : '') + '" id="' + pid + '"><div class="ndot"></div><p>' + html + '</p>' +
       '<div class="ch-notebox" id="nb-' + pid + '"><button class="nb-close" onclick="closeWsNote(\'' + pid + '\')">×</button>' +
       '<textarea placeholder="写想法..." oninput="saveWsNote(\'' + pid + '\',this.value)">' + (_wsNotes[pid] || '') + '</textarea></div></div>';
   }).join('');
 
   renderWsTermsList();
+  updateWsNotesBtn();
 }
 
 function highlightTerms(text) {
@@ -2542,14 +2779,14 @@ function addWorkshopTerm() {
   var term = input.value.trim();
   if (!term || _wsTerms.includes(term)) { input.value = ''; return; }
   _wsTerms.push(term);
-  localStorage.setItem('ws_terms', JSON.stringify(_wsTerms));
+  wsSaveTerms();
   input.value = '';
   renderWorkshopReader();
 }
 
 function removeWsTerm(term) {
   _wsTerms = _wsTerms.filter(function(t) { return t !== term; });
-  localStorage.setItem('ws_terms', JSON.stringify(_wsTerms));
+  wsSaveTerms();
   renderWorkshopReader();
 }
 
@@ -2562,12 +2799,12 @@ function renderWsTermsList() {
     }).join('');
 }
 
-// Workshop notes (reuse long-press pattern)
 function saveWsNote(pid, val) {
   if (val.trim()) _wsNotes[pid] = val; else delete _wsNotes[pid];
-  localStorage.setItem('ws_notes', JSON.stringify(_wsNotes));
+  wsSaveNotes();
   var el = document.getElementById(pid);
   if (el) el.classList.toggle('has-note', !!val.trim());
+  updateWsNotesBtn();
 }
 
 function closeWsNote(pid) {
@@ -2575,20 +2812,54 @@ function closeWsNote(pid) {
   if (nb) nb.classList.remove('show');
 }
 
-// Long-press for workshop notes
+function updateWsNotesBtn() {
+  var btn = document.getElementById('ws-notes-btn');
+  if (!btn) return;
+  var count = Object.keys(_wsNotes).filter(function(k) { return _wsNotes[k] && _wsNotes[k].trim(); }).length;
+  btn.textContent = count ? ('笔记 (' + count + ')') : '笔记';
+}
+
+// === ROBUST LONG-PRESS: cancels on ANY scroll movement of the container, not just finger drift ===
 document.addEventListener('touchstart', function(e) {
   var para = e.target.closest('.ws-para');
   if (!para || e.target.closest('.ch-notebox')) return;
-  var _wsTimer = setTimeout(function() {
+  if (e.touches.length > 1) return;
+  var startY = e.touches[0].clientY;
+  var startX = e.touches[0].clientX;
+  var wsBody = document.getElementById('ws-body');
+  var startScroll = wsBody ? wsBody.scrollTop : 0;
+  var cancelled = false;
+  var timer = setTimeout(function() {
+    if (cancelled) return;
     var nb = document.getElementById('nb-' + para.id);
     if (nb) { nb.classList.add('show'); nb.querySelector('textarea').focus(); }
-  }, 500);
-  var cancel = function() { clearTimeout(_wsTimer); };
-  document.addEventListener('touchend', cancel, { once: true });
-  document.addEventListener('touchmove', function(ev) {
-    if (Math.abs(ev.touches[0].clientY - e.touches[0].clientY) > 10) cancel();
-  }, { once: true });
+    cleanup();
+  }, 550);
+  function cancel() { if (cancelled) return; cancelled = true; clearTimeout(timer); cleanup(); }
+  function onMove(ev) {
+    if (!ev.touches || !ev.touches[0]) return;
+    var dx = Math.abs(ev.touches[0].clientX - startX);
+    var dy = Math.abs(ev.touches[0].clientY - startY);
+    var scrollMoved = wsBody ? Math.abs(wsBody.scrollTop - startScroll) : 0;
+    if (dx > 6 || dy > 6 || scrollMoved > 2) cancel();
+  }
+  function onEnd() { cancel(); }
+  function cleanup() {
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    document.removeEventListener('touchcancel', onEnd);
+  }
+  document.addEventListener('touchmove', onMove, { passive: true });
+  document.addEventListener('touchend', onEnd, { passive: true });
+  document.addEventListener('touchcancel', onEnd, { passive: true });
 }, { passive: true });
+
+// Close notes on outside tap
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.ch-notebox') && !e.target.closest('.ws-para .ndot')) {
+    document.querySelectorAll('#workshop-page .ch-notebox.show').forEach(function(n) { n.classList.remove('show'); });
+  }
+});
 
 // Enter key to add term
 document.addEventListener('keydown', function(e) {
@@ -2598,22 +2869,93 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-function exportWorkshop() {
+// === NOTES VIEWER / EDITOR PANEL ===
+function openWsNotesPanel() {
+  var panel = document.getElementById('ws-notes-panel');
+  var body = document.getElementById('ws-np-body');
+  var entries = [];
+  _wsChapters.forEach(function(ch) {
+    var paras = ch.text.split('\n').filter(function(p) { return p.trim(); });
+    paras.forEach(function(p, i) {
+      var pid = ch.id + '-p-' + i;
+      if (_wsNotes[pid] && _wsNotes[pid].trim()) {
+        entries.push({ pid: pid, chTitle: ch.title, ctx: p.substring(0, 70), note: _wsNotes[pid] });
+      }
+    });
+  });
+  body.innerHTML = entries.length ? entries.map(function(en) {
+    return '<div class="ws-np-card">' +
+      '<div class="ws-np-ch">' + en.chTitle + '</div>' +
+      '<div class="ws-np-ctx">「' + en.ctx + '…」</div>' +
+      '<textarea oninput="saveWsNote(\'' + en.pid + '\',this.value)">' + en.note + '</textarea>' +
+      '<div class="ws-np-actions">' +
+      '<span class="ws-np-jump" onclick="jumpToWsNote(\'' + en.pid + '\')">跳转原文</span>' +
+      '<span class="ws-np-del" onclick="deleteWsNoteFromPanel(\'' + en.pid + '\')">删除</span>' +
+      '</div></div>';
+  }).join('') : '<div class="ws-np-empty">还没有想法笔记<br>长按段落即可写下</div>';
+  panel.classList.add('open');
+}
+function closeWsNotesPanel() { document.getElementById('ws-notes-panel').classList.remove('open'); }
+function deleteWsNoteFromPanel(pid) {
+  delete _wsNotes[pid];
+  wsSaveNotes();
+  updateWsNotesBtn();
+  openWsNotesPanel();
+}
+function jumpToWsNote(pid) {
+  var chId = pid.split('-p-')[0];
+  closeWsNotesPanel();
+  if (chId !== _wsActiveId) switchWsChapter(chId);
+  setTimeout(function() {
+    var el = document.getElementById(pid);
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }, 200);
+}
+
+// === EXPORT (two formats) ===
+function openExportModal() { document.getElementById('ws-export-modal').classList.add('show'); }
+function closeExportModal() { document.getElementById('ws-export-modal').classList.remove('show'); }
+
+function wsCollectNoteEntries() {
+  var entries = [];
+  _wsChapters.forEach(function(ch) {
+    var paras = ch.text.split('\n').filter(function(p) { return p.trim(); });
+    paras.forEach(function(p, i) {
+      var pid = ch.id + '-p-' + i;
+      if (_wsNotes[pid] && _wsNotes[pid].trim()) {
+        entries.push({ pid: pid, chTitle: ch.title, ctx: p.substring(0, 80), note: _wsNotes[pid] });
+      }
+    });
+  });
+  return entries;
+}
+
+function doExportWorkshop(mode) {
+  closeExportModal();
+  var entries = wsCollectNoteEntries();
   var output = '';
-  if (_wsTerms.length) {
-    output += '【术语待查】\n' + _wsTerms.join('\n') + '\n\n';
-  }
-  var noteEntries = Object.keys(_wsNotes).filter(function(k) { return _wsNotes[k].trim(); });
-  if (noteEntries.length) {
-    output += '【想法笔记】\n';
-    noteEntries.forEach(function(pid) {
-      var idx = parseInt(pid.replace('ws-p-', ''));
-      var paras = _wsText.split('\n').filter(function(p) { return p.trim(); });
-      var ctx = paras[idx] ? paras[idx].substring(0, 80) : '';
-      output += '原文：' + ctx + '…\n想法：' + _wsNotes[pid] + '\n\n';
+
+  if (mode === 'full') {
+    if (_wsTerms.length) output += '【术语待查】\n' + _wsTerms.join('\n') + '\n\n';
+    if (entries.length) {
+      output += '【想法笔记】\n';
+      entries.forEach(function(en) {
+        output += '[' + en.chTitle + ']\n原文：' + en.ctx + '…\n想法：' + en.note + '\n\n';
+      });
+    }
+  } else {
+    // Pure question format — numbered list, no context
+    entries.forEach(function(en, i) {
+      output += (i + 1) + '. ' + en.note + '\n';
     });
   }
-  if (!output) { showToast('没有内容'); return; }
+
+  if (!output.trim()) { showToast('没有内容'); return; }
+
+  // Save export order for later import correlation
+  _wsExportOrder = entries.map(function(en) { return en.pid; });
+  localStorage.setItem('ws_export_order', JSON.stringify(_wsExportOrder));
+
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(output).then(function() { showToast('已复制'); });
   } else {
@@ -2624,20 +2966,72 @@ function exportWorkshop() {
   }
 }
 
-function clearWorkshop() {
-  _wsText = ''; _wsTerms = []; _wsNotes = {};
-  localStorage.removeItem('ws_text');
-  localStorage.removeItem('ws_terms');
+// === IMPORT ANSWERS (close the loop) ===
+function openImportModal() {
+  if (!_wsExportOrder.length) { showToast('请先导出问题'); return; }
+  document.getElementById('ws-import-modal').classList.add('show');
+}
+function closeImportModal() { document.getElementById('ws-import-modal').classList.remove('show'); }
+
+function doImportAnswers() {
+  var text = document.getElementById('ws-import-input').value.trim();
+  if (!text) return;
+  // Split by numbered list markers: "1. " "2. " etc at line starts
+  var parts = text.split(/\n(?=\d+\.\s)/);
+  var matched = 0;
+  parts.forEach(function(part) {
+    var m = part.match(/^(\d+)\.\s*([\s\S]*)/);
+    if (!m) return;
+    var idx = parseInt(m[1]) - 1;
+    var answer = m[2].trim();
+    var pid = _wsExportOrder[idx];
+    if (pid && _wsNotes[pid] && answer) {
+      if (!_wsNotes[pid].includes('【解答】')) {
+        _wsNotes[pid] = _wsNotes[pid] + '\n\n【解答】' + answer;
+        matched++;
+      }
+    }
+  });
+  wsSaveNotes();
+  document.getElementById('ws-import-input').value = '';
+  closeImportModal();
+  renderWorkshopReader();
+  showToast(matched ? ('已整理 ' + matched + ' 条') : '未匹配到对应问题');
+}
+
+function confirmClearChapter() {
+  var ch = wsActiveChapter();
+  if (!ch) { clearAllWorkshop(); return; }
+  if (!confirm('清空当前章节「' + ch.title + '」？想法笔记也会一并删除。')) return;
+  deleteWsChapter(ch.id);
+  showToast('已清空');
+}
+
+function clearAllWorkshop() {
+  _wsChapters = []; _wsNotes = {}; _wsTerms = []; _wsActiveId = '';
+  localStorage.removeItem('ws_chapters');
   localStorage.removeItem('ws_notes');
-  localStorage.removeItem('ws_scroll');
+  localStorage.removeItem('ws_terms');
+  localStorage.removeItem('ws_active');
   document.getElementById('ws-paste').style.display = 'flex';
   document.getElementById('ws-reader').style.display = 'none';
   document.getElementById('ws-bottom').style.display = 'none';
-  document.getElementById('ws-input').value = '';
+  document.getElementById('ws-chapter-tabs').style.display = 'none';
   showToast('已清空');
 }
 
 init();
+
+// === OFFLINE SUPPORT (Service Worker) ===
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+      console.log('SW registered');
+    }).catch(function(err) {
+      console.log('SW registration failed', err);
+    });
+  });
+}
 </script>
 
 <!-- GENERIC COUNTRY HISTORY PAGE (reuses USA CSS classes) -->
@@ -2680,14 +3074,19 @@ init();
   <div class="ws-topbar">
     <button class="ws-btn" onclick="closeWorkshop()">← 返回</button>
     <div class="ws-title">学习工坊</div>
-    <button class="ws-btn accent" onclick="exportWorkshop()">导出</button>
-    <button class="ws-btn warn" onclick="clearWorkshop()">清空</button>
+    <button class="ws-btn" onclick="openWsNotesPanel()" id="ws-notes-btn">笔记</button>
+    <button class="ws-btn accent" onclick="openExportModal()">导出</button>
+    <button class="ws-btn" onclick="openImportModal()">导入答案</button>
+    <button class="ws-btn warn" onclick="confirmClearChapter()">清空</button>
+    <div class="ws-progress" id="ws-progress"></div>
   </div>
+  <div class="ws-chapter-tabs" id="ws-chapter-tabs" style="display:none;"></div>
   <div class="ws-body" id="ws-body">
     <div class="ws-paste-area" id="ws-paste">
+      <input type="text" class="ws-ch-title-input" id="ws-ch-title" placeholder="章节标题（可选，如：第三章）">
       <textarea id="ws-input" placeholder="把学习材料粘贴到这里..."></textarea>
       <button class="ws-btn accent" onclick="loadWorkshopText()" style="padding:10px 28px;font-size:0.72rem;">开始阅读</button>
-      <div class="ws-paste-hint">粘贴一章内容，长按写想法，底部输入框标记术语</div>
+      <div class="ws-paste-hint">粘贴一章内容，长按写想法，底部输入框标记术语。可添加多个章节</div>
     </div>
     <div id="ws-reader" style="display:none;">
       <div class="ws-terms-list" id="ws-terms-list"></div>
@@ -2697,6 +3096,44 @@ init();
   <div class="ws-bottom" id="ws-bottom" style="display:none;">
     <input type="text" id="ws-term-input" placeholder="输入术语名称，回车标记">
     <button class="ws-btn accent" onclick="addWorkshopTerm()">标记</button>
+  </div>
+</div>
+
+<!-- Workshop Notes Viewer/Editor -->
+<div class="ws-notes-panel" id="ws-notes-panel">
+  <div class="ws-np-hdr">
+    <div class="ws-np-title">想法笔记</div>
+    <button class="ws-btn" onclick="closeWsNotesPanel()">×</button>
+  </div>
+  <div class="ws-np-body" id="ws-np-body"></div>
+</div>
+
+<!-- Export mode picker -->
+<div class="ws-export-modal" id="ws-export-modal">
+  <div class="ws-export-box">
+    <div class="ws-export-title">选择导出格式</div>
+    <button class="ws-export-opt" onclick="doExportWorkshop('full')">
+      <div class="ws-eo-title">完整版</div>
+      <div class="ws-eo-desc">术语列表 + 原文片段与想法对照</div>
+    </button>
+    <button class="ws-export-opt" onclick="doExportWorkshop('questions')">
+      <div class="ws-eo-title">纯问题版</div>
+      <div class="ws-eo-desc">仅编号想法，方便整段发给 AI 提问</div>
+    </button>
+    <button class="ws-btn" onclick="closeExportModal()" style="align-self:center;margin-top:4px;">取消</button>
+  </div>
+</div>
+
+<!-- Import answers modal -->
+<div class="ws-import-modal" id="ws-import-modal">
+  <div class="ws-import-box">
+    <div class="ws-export-title">导入 AI 回答</div>
+    <div class="ws-import-hint">粘贴带编号的回答（1. ... 2. ...），会按顺序对应到你上次导出的问题，自动附加到对应笔记后面。</div>
+    <textarea id="ws-import-input" placeholder="1. 回答内容...&#10;2. 回答内容..."></textarea>
+    <div class="ws-import-actions">
+      <button class="ws-btn" onclick="closeImportModal()">取消</button>
+      <button class="ws-btn accent" onclick="doImportAnswers()">整理导入</button>
+    </div>
   </div>
 </div>
 
