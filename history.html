@@ -928,6 +928,26 @@ header > * { pointer-events: auto; }
 .ws-np-card .ws-np-jump, .ws-np-card .ws-np-del { font-size:0.6rem; color:var(--accent); cursor:pointer; }
 .ws-np-card .ws-np-del { color:#e0a050; }
 .ws-np-empty { text-align:center; padding:40px 20px; color:rgba(138,125,107,0.6); font-size:0.78rem; line-height:1.8; }
+
+/* Export format picker */
+.ws-export-modal {
+  position:fixed; inset:0; z-index:10006; background:rgba(0,0,0,0.6);
+  display:none; align-items:center; justify-content:center; padding:20px;
+}
+.ws-export-modal.show { display:flex; }
+.ws-export-box {
+  width:100%; max-width:340px; background:rgba(24,20,16,0.98);
+  border:1px solid var(--border); border-radius:14px; padding:20px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.ws-export-box .ws-export-title { font-size:0.8rem; color:rgba(227,217,195,0.85); margin-bottom:4px; font-family:var(--font-display); }
+.ws-export-opt {
+  padding:12px 14px; border-radius:10px; border:1px solid var(--border);
+  background:rgba(30,25,18,0.4); cursor:pointer; text-align:left;
+}
+.ws-export-opt:active { background:rgba(107,196,184,0.08); }
+.ws-export-opt .ws-eo-title { font-size:0.76rem; color:var(--accent); margin-bottom:3px; }
+.ws-export-opt .ws-eo-desc { font-size:0.62rem; color:var(--ink-faint); line-height:1.5; }
 </style>
 </head>
 <body>
@@ -2853,14 +2873,30 @@ function wsCollectNoteEntries() {
 
 function doExportWorkshop() {
   var entries = wsCollectNoteEntries();
+  if (!entries.length && !_wsTerms.length) { showToast('没有内容'); return; }
+  document.getElementById('ws-export-modal').classList.add('show');
+}
+
+function doExportFormat(mode) {
+  document.getElementById('ws-export-modal').classList.remove('show');
+  var entries = wsCollectNoteEntries();
   var output = '';
-  if (_wsTerms.length) output += '【术语待查】\n' + _wsTerms.join('\n') + '\n\n';
-  if (entries.length) {
-    output += '【想法笔记】\n';
-    entries.forEach(function(en) {
-      output += '[' + en.chTitle + ']\n原文：' + en.ctx + '…\n想法：' + en.note + '\n\n';
+
+  if (mode === 'full') {
+    if (_wsTerms.length) output += '【术语待查】\n' + _wsTerms.join('\n') + '\n\n';
+    if (entries.length) {
+      output += '【想法笔记】\n';
+      entries.forEach(function(en) {
+        output += '[' + en.chTitle + ']\n原文：' + en.ctx + '…\n想法：' + en.note + '\n\n';
+      });
+    }
+  } else {
+    // Pure question format — numbered list, no context, ready to paste into a chat
+    entries.forEach(function(en, i) {
+      output += (i + 1) + '. ' + en.note + '\n';
     });
   }
+
   if (!output.trim()) { showToast('没有内容'); return; }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(output).then(function() { showToast('已复制'); });
@@ -2933,7 +2969,7 @@ if ('serviceWorker' in navigator) {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
       <span class="ws-badge" id="ws-notes-badge" style="display:none;"></span>
     </button>
-    <button class="ws-icon-btn" onclick="doExportWorkshop()" title="导出">
+    <button class="ws-icon-btn" onclick="doExportWorkshop()" title="导出想法">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
     </button>
     <div class="ws-progress" id="ws-progress"></div>
@@ -2968,6 +3004,22 @@ if ('serviceWorker' in navigator) {
     </button>
   </div>
   <div class="ws-np-body" id="ws-np-body"></div>
+</div>
+
+<!-- Export format picker -->
+<div class="ws-export-modal" id="ws-export-modal">
+  <div class="ws-export-box">
+    <div class="ws-export-title">选择导出格式</div>
+    <button class="ws-export-opt" onclick="doExportFormat('full')">
+      <div class="ws-eo-title">完整版</div>
+      <div class="ws-eo-desc">术语列表 + 原文片段与想法对照</div>
+    </button>
+    <button class="ws-export-opt" onclick="doExportFormat('questions')">
+      <div class="ws-eo-title">纯问题版</div>
+      <div class="ws-eo-desc">仅编号想法，方便整段发给 AI 讨论</div>
+    </button>
+    <button class="ws-icon-btn" style="width:auto;height:auto;border-radius:16px;padding:8px 20px;align-self:center;margin-top:4px;font-family:var(--font-mono);font-size:0.68rem;" onclick="document.getElementById('ws-export-modal').classList.remove('show')">取消</button>
+  </div>
 </div>
 
 
