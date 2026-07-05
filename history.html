@@ -568,9 +568,6 @@ header > * { pointer-events: auto; }
   font-size:0.5rem; color:rgba(227,217,195,0.2); display:block;
   margin-bottom:2px; letter-spacing:1.5px; text-transform:uppercase;
 }
-.reader-extra-btn { color:var(--gold-dim); }
-.reader-extra-btn .ch-num { color:var(--gold-dim); opacity:0.5; }
-.reader-extra-btn:hover { color:var(--gold); }
 
 /* Main content area */
 .reader-scroll {
@@ -676,7 +673,17 @@ header > * { pointer-events: auto; }
 /* Swipe nav overlay */
 .swipe-nav-overlay { position:fixed; inset:0; z-index:10003; background:rgba(0,0,0,0.35); display:none; }
 
-@media (max-width:768px) {  }
+@media (max-width:768px) {
+  .ws-topbar { padding:10px 14px; gap:8px; }
+  .ws-title { font-size:0.82rem; }
+  .ws-content { padding:18px 16px 130px; }
+  .ws-content p { font-size:0.8rem; line-height:2.05; }
+  .ws-paste-area { padding:30px 16px; gap:14px; }
+  .ws-paste-area textarea { height:36vh; font-size:0.8rem; padding:16px; }
+  .ws-notes-panel { width:92%; }
+  .ws-bottom { padding:10px 12px; }
+  .ws-bottom input { font-size:0.76rem; padding:10px 14px; }
+}
 
 
 /* === READING PROGRESS BAR === */
@@ -789,49 +796,58 @@ header > * { pointer-events: auto; }
   background:var(--bg); animation:readerFadeIn 0.3s ease;
 }
 .ws-topbar {
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center; gap:10px;
   padding:12px 16px; border-bottom:1px solid var(--border);
   background:rgba(18,15,12,0.95); backdrop-filter:blur(12px);
   position:relative; z-index:2;
 }
-.ws-topbar .ws-title { flex:1; font-family:var(--font-display); font-size:0.9rem; color:rgba(227,217,195,0.8); letter-spacing:0.5px; }
-.ws-btn {
-  padding:6px 12px; border-radius:12px; border:1px solid var(--border);
-  background:none; color:var(--ink-dim); cursor:pointer;
-  font-family:var(--font-mono); font-size:0.6rem; letter-spacing:0.04em; transition:all 0.2s;
-  white-space:nowrap;
+.ws-topbar .ws-title { flex:1; font-family:var(--font-display); font-size:0.88rem; color:rgba(227,217,195,0.8); letter-spacing:0.5px; }
+.ws-icon-btn {
+  width:38px; height:38px; border-radius:50%; border:1px solid var(--border);
+  background:none; color:var(--ink-dim); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  position:relative; flex-shrink:0; transition:all 0.2s;
 }
-.ws-btn:active { transform:scale(0.95); }
-.ws-btn.accent { border-color:rgba(107,196,184,0.3); color:var(--accent); }
-.ws-btn.warn { border-color:rgba(224,160,80,0.3); color:#e0a050; }
+.ws-icon-btn:active { transform:scale(0.92); background:rgba(107,196,184,0.08); }
+.ws-icon-btn svg { width:16px; height:16px; }
+.ws-icon-btn .ws-badge {
+  position:absolute; top:-3px; right:-3px; min-width:16px; height:16px; border-radius:8px;
+  background:#e0a050; color:#1a1612; font-size:0.52rem; font-family:var(--font-mono); font-weight:700;
+  display:flex; align-items:center; justify-content:center; padding:0 3px;
+}
+.ws-back-link { display:flex; align-items:center; gap:4px; background:none; border:none; color:var(--ink-dim); cursor:pointer; font-family:var(--font-mono); font-size:0.7rem; padding:8px 4px; flex-shrink:0; }
+.ws-back-link svg { width:15px; height:15px; }
 
 /* Progress bar */
 .ws-progress { position:absolute; bottom:0; left:0; height:2px; background:var(--accent); width:0; transition:width 0.15s linear; box-shadow:0 0 6px var(--accent-glow); }
 
 .ws-body { height:calc(100vh - 50px); overflow-y:auto; -webkit-overflow-scrolling:touch; position:relative; }
 
-/* Chapter tabs */
+/* Chapter tabs — always visible once a chapter exists */
 .ws-chapter-tabs {
   display:flex; gap:6px; overflow-x:auto; padding:10px 16px;
   border-bottom:1px solid var(--border); -webkit-overflow-scrolling:touch;
+  align-items:center;
 }
 .ws-chapter-tabs::-webkit-scrollbar { display:none; }
 .ws-ch-tab {
-  flex-shrink:0; padding:6px 14px; border-radius:14px; border:1px solid var(--border);
+  flex-shrink:0; display:flex; align-items:center; gap:6px;
+  padding:6px 12px; border-radius:14px; border:1px solid var(--border);
   background:none; color:var(--ink-dim); cursor:pointer; font-size:0.68rem;
   font-family:var(--font-body); white-space:nowrap; transition:all 0.2s;
 }
 .ws-ch-tab.active { border-color:rgba(107,196,184,0.4); color:var(--accent); background:rgba(107,196,184,0.06); }
-.ws-ch-tab .ws-ch-del { margin-left:6px; opacity:0.5; }
+.ws-ch-tab .ws-ch-del { opacity:0.45; font-size:0.9em; }
+.ws-ch-tab .ws-ch-del:active { opacity:1; }
 .ws-ch-add {
-  flex-shrink:0; width:30px; height:30px; border-radius:50%; border:1px dashed var(--border);
+  flex-shrink:0; width:32px; height:32px; border-radius:50%; border:1px dashed var(--border);
   background:none; color:var(--ink-faint); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-size:0.9rem;
 }
 
 /* Paste mode */
 .ws-paste-area {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  height:100%; padding:40px 20px; gap:20px;
+  height:100%; padding:40px 20px; gap:16px;
 }
 .ws-paste-area textarea {
   width:100%; max-width:600px; height:40vh; border:1px dashed var(--border);
@@ -840,12 +856,19 @@ header > * { pointer-events: auto; }
   padding:20px; resize:none; outline:none;
 }
 .ws-paste-area textarea::placeholder { color:var(--ink-faint); }
-.ws-paste-hint { font-size:0.65rem; color:var(--ink-faint); font-family:var(--font-mono); }
+.ws-paste-hint { font-size:0.65rem; color:var(--ink-faint); font-family:var(--font-mono); text-align:center; }
 .ws-paste-area input.ws-ch-title-input {
   width:100%; max-width:600px; border:1px solid var(--border); border-radius:10px;
   background:rgba(30,25,18,0.4); color:var(--ink); padding:10px 14px;
   font-family:var(--font-body); font-size:0.78rem; outline:none;
 }
+.ws-paste-actions { display:flex; gap:10px; align-items:center; }
+.ws-start-btn {
+  padding:12px 30px; border-radius:22px; border:1px solid rgba(107,196,184,0.35);
+  background:rgba(107,196,184,0.06); color:var(--accent); cursor:pointer;
+  font-family:var(--font-mono); font-size:0.74rem; letter-spacing:0.05em;
+}
+.ws-start-btn:active { transform:scale(0.96); }
 
 /* Read mode */
 .ws-content { padding:20px 18px 120px; max-width:700px; margin:0 auto; }
@@ -872,6 +895,10 @@ header > * { pointer-events: auto; }
   font-family:var(--font-body); font-size:0.78rem; outline:none;
 }
 .ws-bottom input::placeholder { color:var(--ink-faint); }
+.ws-bottom button.ws-mark-btn {
+  padding:8px 16px; border-radius:10px; border:1px solid rgba(107,196,184,0.3);
+  background:none; color:var(--accent); cursor:pointer; font-family:var(--font-mono); font-size:0.65rem; flex-shrink:0;
+}
 
 /* Terms panel */
 .ws-terms-list { padding:12px 18px; border-bottom:1px solid var(--border); }
@@ -901,44 +928,6 @@ header > * { pointer-events: auto; }
 .ws-np-card .ws-np-jump, .ws-np-card .ws-np-del { font-size:0.6rem; color:var(--accent); cursor:pointer; }
 .ws-np-card .ws-np-del { color:#e0a050; }
 .ws-np-empty { text-align:center; padding:40px 20px; color:rgba(138,125,107,0.6); font-size:0.78rem; line-height:1.8; }
-
-/* Import answers modal */
-.ws-import-modal {
-  position:fixed; inset:0; z-index:10006; background:rgba(0,0,0,0.6);
-  display:none; align-items:center; justify-content:center; padding:20px;
-}
-.ws-import-modal.show { display:flex; }
-.ws-import-box {
-  width:100%; max-width:500px; max-height:80vh; background:rgba(24,20,16,0.98);
-  border:1px solid var(--border); border-radius:14px; padding:20px;
-  display:flex; flex-direction:column; gap:12px;
-}
-.ws-import-box textarea {
-  width:100%; height:35vh; border:1px solid var(--border); border-radius:8px;
-  background:rgba(30,25,18,0.5); color:var(--ink); padding:12px;
-  font-family:var(--font-body); font-size:0.76rem; line-height:1.8; resize:none; outline:none;
-}
-.ws-import-box .ws-import-hint { font-size:0.6rem; color:var(--ink-faint); line-height:1.6; }
-.ws-import-box .ws-import-actions { display:flex; gap:10px; justify-content:flex-end; }
-
-/* Export mode picker */
-.ws-export-modal {
-  position:fixed; inset:0; z-index:10006; background:rgba(0,0,0,0.6);
-  display:none; align-items:center; justify-content:center; padding:20px;
-}
-.ws-export-modal.show { display:flex; }
-.ws-export-box {
-  width:100%; max-width:340px; background:rgba(24,20,16,0.98);
-  border:1px solid var(--border); border-radius:14px; padding:20px;
-  display:flex; flex-direction:column; gap:10px;
-}
-.ws-export-box .ws-export-title { font-size:0.8rem; color:rgba(227,217,195,0.85); margin-bottom:4px; font-family:var(--font-display); }
-.ws-export-opt {
-  padding:12px 14px; border-radius:10px; border:1px solid var(--border);
-  background:rgba(30,25,18,0.4); cursor:pointer; text-align:left;
-}
-.ws-export-opt .ws-eo-title { font-size:0.76rem; color:var(--accent); margin-bottom:3px; }
-.ws-export-opt .ws-eo-desc { font-size:0.62rem; color:var(--ink-faint); line-height:1.5; }
 </style>
 </head>
 <body>
@@ -1920,67 +1909,11 @@ function buildCountryNav() {
   if(!activeCountry) return;
   const nav = document.getElementById('country-chapter-nav');
   nav.innerHTML = '<div class="reader-nav-label">章节导航</div>' +
-    '<button class="reader-ch-btn reader-extra-btn" onclick="openPeopleView()"><span class="ch-num">◆</span>人物志</button>' +
-    '<button class="reader-ch-btn reader-extra-btn" onclick="openRegionView()"><span class="ch-num">◆</span>地区表</button>' +
-    '<div style="height:1px;background:var(--border);margin:8px 14px;"></div>' +
     activeCountry.chapters.map((c,i) =>
       `<button class="reader-ch-btn${i===0?' active':''}" data-ch="${c.id}" onclick="scrollToCountryChapter('${c.id}',this)">
         <span class="ch-num">${c.num}</span>${c.title}
       </button>`
     ).join('');
-}
-
-// === PEOPLE & REGION SECTIONS (framework — data optional per country) ===
-async function openPeopleView() {
-  if(!activeCountry) return;
-  closeChapterNav();
-  showToast('加载中...');
-  let data = null;
-  try {
-    const resp = await fetch(activeCountry.key + '_people.json');
-    if(resp.ok) data = await resp.json();
-  } catch(e) {}
-  showSidePanel('人物志', data && data.length ? data.map(p =>
-    `<div class="ws-np-card" style="border-left-color:rgba(107,196,184,0.3);">
-      <div style="font-size:0.85rem;color:var(--accent);margin-bottom:4px;font-family:var(--font-display);">${p.name}${p.years?'<span style=\"color:var(--ink-faint);font-size:0.65rem;margin-left:8px;\">'+p.years+'</span>':''}</div>
-      <div style="font-size:0.76rem;color:rgba(227,217,195,0.75);line-height:1.8;">${p.desc}</div>
-    </div>`
-  ).join('') : '<div class="ws-np-empty">这个国家还没有人物介绍<br>发送人物资料给我，我可以加进来</div>');
-}
-
-async function openRegionView() {
-  if(!activeCountry) return;
-  closeChapterNav();
-  showToast('加载中...');
-  let data = null;
-  try {
-    const resp = await fetch(activeCountry.key + '_regions.json');
-    if(resp.ok) data = await resp.json();
-  } catch(e) {}
-  showSidePanel('地区表', data && data.length ? data.map(r =>
-    `<div class="ws-np-card" style="border-left-color:rgba(196,162,101,0.3);">
-      <div style="font-size:0.85rem;color:var(--gold);margin-bottom:4px;font-family:var(--font-display);">${r.name}</div>
-      <div style="font-size:0.76rem;color:rgba(227,217,195,0.75);line-height:1.8;">${r.desc}</div>
-    </div>`
-  ).join('') : '<div class="ws-np-empty">这个国家还没有地区表<br>发送地区资料给我，我可以加进来</div>');
-}
-
-function showSidePanel(title, bodyHtml) {
-  let panel = document.getElementById('generic-side-panel');
-  if(!panel) {
-    panel = document.createElement('div');
-    panel.id = 'generic-side-panel';
-    panel.className = 'ws-notes-panel';
-    panel.innerHTML = '<div class="ws-np-hdr"><div class="ws-np-title" id="gsp-title"></div><button class="ws-btn" onclick="closeSidePanel()">×</button></div><div class="ws-np-body" id="gsp-body"></div>';
-    document.body.appendChild(panel);
-  }
-  document.getElementById('gsp-title').textContent = title;
-  document.getElementById('gsp-body').innerHTML = bodyHtml;
-  panel.classList.add('open');
-}
-function closeSidePanel() {
-  const panel = document.getElementById('generic-side-panel');
-  if(panel) panel.classList.remove('open');
 }
 
 function scrollToCountryChapter(chId, btn) {
@@ -2618,7 +2551,6 @@ let _wsChapters = JSON.parse(localStorage.getItem('ws_chapters') || '[]');
 let _wsActiveId = localStorage.getItem('ws_active') || '';
 let _wsTerms = JSON.parse(localStorage.getItem('ws_terms') || '[]');
 let _wsNotes = JSON.parse(localStorage.getItem('ws_notes') || '{}');
-let _wsExportOrder = JSON.parse(localStorage.getItem('ws_export_order') || '[]');
 
 // Migrate old single-chapter format (ws_text + ws-p-N notes) if present
 (function migrateOldWorkshop() {
@@ -2739,7 +2671,7 @@ function renderWorkshopReader() {
   document.getElementById('ws-bottom').style.display = 'flex';
 
   var tabs = document.getElementById('ws-chapter-tabs');
-  if (_wsChapters.length > 1) {
+  if (_wsChapters.length >= 1) {
     tabs.style.display = 'flex';
     tabs.innerHTML = _wsChapters.map(function(c) {
       return '<button class="ws-ch-tab' + (c.id === _wsActiveId ? ' active' : '') + '" onclick="switchWsChapter(\'' + c.id + '\')">' +
@@ -2813,10 +2745,11 @@ function closeWsNote(pid) {
 }
 
 function updateWsNotesBtn() {
-  var btn = document.getElementById('ws-notes-btn');
-  if (!btn) return;
+  var badge = document.getElementById('ws-notes-badge');
+  if (!badge) return;
   var count = Object.keys(_wsNotes).filter(function(k) { return _wsNotes[k] && _wsNotes[k].trim(); }).length;
-  btn.textContent = count ? ('笔记 (' + count + ')') : '笔记';
+  if (count) { badge.textContent = count; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
 }
 
 // === ROBUST LONG-PRESS: cancels on ANY scroll movement of the container, not just finger drift ===
@@ -2873,16 +2806,7 @@ document.addEventListener('keydown', function(e) {
 function openWsNotesPanel() {
   var panel = document.getElementById('ws-notes-panel');
   var body = document.getElementById('ws-np-body');
-  var entries = [];
-  _wsChapters.forEach(function(ch) {
-    var paras = ch.text.split('\n').filter(function(p) { return p.trim(); });
-    paras.forEach(function(p, i) {
-      var pid = ch.id + '-p-' + i;
-      if (_wsNotes[pid] && _wsNotes[pid].trim()) {
-        entries.push({ pid: pid, chTitle: ch.title, ctx: p.substring(0, 70), note: _wsNotes[pid] });
-      }
-    });
-  });
+  var entries = wsCollectNoteEntries();
   body.innerHTML = entries.length ? entries.map(function(en) {
     return '<div class="ws-np-card">' +
       '<div class="ws-np-ch">' + en.chTitle + '</div>' +
@@ -2912,10 +2836,7 @@ function jumpToWsNote(pid) {
   }, 200);
 }
 
-// === EXPORT (two formats) ===
-function openExportModal() { document.getElementById('ws-export-modal').classList.add('show'); }
-function closeExportModal() { document.getElementById('ws-export-modal').classList.remove('show'); }
-
+// === EXPORT ===
 function wsCollectNoteEntries() {
   var entries = [];
   _wsChapters.forEach(function(ch) {
@@ -2930,32 +2851,17 @@ function wsCollectNoteEntries() {
   return entries;
 }
 
-function doExportWorkshop(mode) {
-  closeExportModal();
+function doExportWorkshop() {
   var entries = wsCollectNoteEntries();
   var output = '';
-
-  if (mode === 'full') {
-    if (_wsTerms.length) output += '【术语待查】\n' + _wsTerms.join('\n') + '\n\n';
-    if (entries.length) {
-      output += '【想法笔记】\n';
-      entries.forEach(function(en) {
-        output += '[' + en.chTitle + ']\n原文：' + en.ctx + '…\n想法：' + en.note + '\n\n';
-      });
-    }
-  } else {
-    // Pure question format — numbered list, no context
-    entries.forEach(function(en, i) {
-      output += (i + 1) + '. ' + en.note + '\n';
+  if (_wsTerms.length) output += '【术语待查】\n' + _wsTerms.join('\n') + '\n\n';
+  if (entries.length) {
+    output += '【想法笔记】\n';
+    entries.forEach(function(en) {
+      output += '[' + en.chTitle + ']\n原文：' + en.ctx + '…\n想法：' + en.note + '\n\n';
     });
   }
-
   if (!output.trim()) { showToast('没有内容'); return; }
-
-  // Save export order for later import correlation
-  _wsExportOrder = entries.map(function(en) { return en.pid; });
-  localStorage.setItem('ws_export_order', JSON.stringify(_wsExportOrder));
-
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(output).then(function() { showToast('已复制'); });
   } else {
@@ -2964,60 +2870,6 @@ function doExportWorkshop(mode) {
     document.body.appendChild(ta); ta.select(); document.execCommand('copy');
     document.body.removeChild(ta); showToast('已复制');
   }
-}
-
-// === IMPORT ANSWERS (close the loop) ===
-function openImportModal() {
-  if (!_wsExportOrder.length) { showToast('请先导出问题'); return; }
-  document.getElementById('ws-import-modal').classList.add('show');
-}
-function closeImportModal() { document.getElementById('ws-import-modal').classList.remove('show'); }
-
-function doImportAnswers() {
-  var text = document.getElementById('ws-import-input').value.trim();
-  if (!text) return;
-  // Split by numbered list markers: "1. " "2. " etc at line starts
-  var parts = text.split(/\n(?=\d+\.\s)/);
-  var matched = 0;
-  parts.forEach(function(part) {
-    var m = part.match(/^(\d+)\.\s*([\s\S]*)/);
-    if (!m) return;
-    var idx = parseInt(m[1]) - 1;
-    var answer = m[2].trim();
-    var pid = _wsExportOrder[idx];
-    if (pid && _wsNotes[pid] && answer) {
-      if (!_wsNotes[pid].includes('【解答】')) {
-        _wsNotes[pid] = _wsNotes[pid] + '\n\n【解答】' + answer;
-        matched++;
-      }
-    }
-  });
-  wsSaveNotes();
-  document.getElementById('ws-import-input').value = '';
-  closeImportModal();
-  renderWorkshopReader();
-  showToast(matched ? ('已整理 ' + matched + ' 条') : '未匹配到对应问题');
-}
-
-function confirmClearChapter() {
-  var ch = wsActiveChapter();
-  if (!ch) { clearAllWorkshop(); return; }
-  if (!confirm('清空当前章节「' + ch.title + '」？想法笔记也会一并删除。')) return;
-  deleteWsChapter(ch.id);
-  showToast('已清空');
-}
-
-function clearAllWorkshop() {
-  _wsChapters = []; _wsNotes = {}; _wsTerms = []; _wsActiveId = '';
-  localStorage.removeItem('ws_chapters');
-  localStorage.removeItem('ws_notes');
-  localStorage.removeItem('ws_terms');
-  localStorage.removeItem('ws_active');
-  document.getElementById('ws-paste').style.display = 'flex';
-  document.getElementById('ws-reader').style.display = 'none';
-  document.getElementById('ws-bottom').style.display = 'none';
-  document.getElementById('ws-chapter-tabs').style.display = 'none';
-  showToast('已清空');
 }
 
 init();
@@ -3072,12 +2924,18 @@ if ('serviceWorker' in navigator) {
 <!-- LEARNING WORKSHOP -->
 <div id="workshop-page">
   <div class="ws-topbar">
-    <button class="ws-btn" onclick="closeWorkshop()">← 返回</button>
+    <button class="ws-back-link" onclick="closeWorkshop()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+      返回
+    </button>
     <div class="ws-title">学习工坊</div>
-    <button class="ws-btn" onclick="openWsNotesPanel()" id="ws-notes-btn">笔记</button>
-    <button class="ws-btn accent" onclick="openExportModal()">导出</button>
-    <button class="ws-btn" onclick="openImportModal()">导入答案</button>
-    <button class="ws-btn warn" onclick="confirmClearChapter()">清空</button>
+    <button class="ws-icon-btn" onclick="openWsNotesPanel()" title="想法笔记">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>
+      <span class="ws-badge" id="ws-notes-badge" style="display:none;"></span>
+    </button>
+    <button class="ws-icon-btn" onclick="doExportWorkshop()" title="导出">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    </button>
     <div class="ws-progress" id="ws-progress"></div>
   </div>
   <div class="ws-chapter-tabs" id="ws-chapter-tabs" style="display:none;"></div>
@@ -3085,8 +2943,10 @@ if ('serviceWorker' in navigator) {
     <div class="ws-paste-area" id="ws-paste">
       <input type="text" class="ws-ch-title-input" id="ws-ch-title" placeholder="章节标题（可选，如：第三章）">
       <textarea id="ws-input" placeholder="把学习材料粘贴到这里..."></textarea>
-      <button class="ws-btn accent" onclick="loadWorkshopText()" style="padding:10px 28px;font-size:0.72rem;">开始阅读</button>
-      <div class="ws-paste-hint">粘贴一章内容，长按写想法，底部输入框标记术语。可添加多个章节</div>
+      <div class="ws-paste-actions">
+        <button class="ws-start-btn" onclick="loadWorkshopText()">开始阅读</button>
+      </div>
+      <div class="ws-paste-hint">粘贴一章内容，长按写想法，底部输入框标记术语<br>可以添加多个章节，学完一章就删掉它</div>
     </div>
     <div id="ws-reader" style="display:none;">
       <div class="ws-terms-list" id="ws-terms-list"></div>
@@ -3095,7 +2955,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="ws-bottom" id="ws-bottom" style="display:none;">
     <input type="text" id="ws-term-input" placeholder="输入术语名称，回车标记">
-    <button class="ws-btn accent" onclick="addWorkshopTerm()">标记</button>
+    <button class="ws-mark-btn" onclick="addWorkshopTerm()">标记</button>
   </div>
 </div>
 
@@ -3103,38 +2963,11 @@ if ('serviceWorker' in navigator) {
 <div class="ws-notes-panel" id="ws-notes-panel">
   <div class="ws-np-hdr">
     <div class="ws-np-title">想法笔记</div>
-    <button class="ws-btn" onclick="closeWsNotesPanel()">×</button>
+    <button class="ws-icon-btn" onclick="closeWsNotesPanel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
   </div>
   <div class="ws-np-body" id="ws-np-body"></div>
-</div>
-
-<!-- Export mode picker -->
-<div class="ws-export-modal" id="ws-export-modal">
-  <div class="ws-export-box">
-    <div class="ws-export-title">选择导出格式</div>
-    <button class="ws-export-opt" onclick="doExportWorkshop('full')">
-      <div class="ws-eo-title">完整版</div>
-      <div class="ws-eo-desc">术语列表 + 原文片段与想法对照</div>
-    </button>
-    <button class="ws-export-opt" onclick="doExportWorkshop('questions')">
-      <div class="ws-eo-title">纯问题版</div>
-      <div class="ws-eo-desc">仅编号想法，方便整段发给 AI 提问</div>
-    </button>
-    <button class="ws-btn" onclick="closeExportModal()" style="align-self:center;margin-top:4px;">取消</button>
-  </div>
-</div>
-
-<!-- Import answers modal -->
-<div class="ws-import-modal" id="ws-import-modal">
-  <div class="ws-import-box">
-    <div class="ws-export-title">导入 AI 回答</div>
-    <div class="ws-import-hint">粘贴带编号的回答（1. ... 2. ...），会按顺序对应到你上次导出的问题，自动附加到对应笔记后面。</div>
-    <textarea id="ws-import-input" placeholder="1. 回答内容...&#10;2. 回答内容..."></textarea>
-    <div class="ws-import-actions">
-      <button class="ws-btn" onclick="closeImportModal()">取消</button>
-      <button class="ws-btn accent" onclick="doImportAnswers()">整理导入</button>
-    </div>
-  </div>
 </div>
 
 
