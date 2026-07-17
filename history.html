@@ -877,6 +877,13 @@ header > * { pointer-events: auto; }
   color:rgba(227,217,195,0.8); margin-bottom:16px;
 }
 .ws-content .ws-marked { background:rgba(107,196,184,0.12); border-bottom:1px solid rgba(107,196,184,0.4); padding:0 2px; cursor:pointer; }
+.ws-content strong { color:rgba(227,217,195,0.98); font-weight:700; }
+.ws-content em { font-style:italic; color:rgba(227,217,195,0.7); }
+.ws-content h3, .ws-content h4 { font-family:var(--font-display); color:var(--gold); font-weight:600; margin:22px 0 10px; line-height:1.5; }
+.ws-content h3 { font-size:1.02rem; }
+.ws-content h4 { font-size:0.9rem; color:rgba(196,162,101,0.85); }
+.ws-para.ws-heading { border-left-color:transparent !important; padding-left:0; }
+.ws-para.ws-heading .ndot { display:none; }
 .ws-content .ws-para { position:relative; padding-left:10px; border-left:2px solid transparent; }
 .ws-content .ws-para.has-note { border-left-color:rgba(224,160,80,0.35); }
 .ws-content .ws-para .ndot { position:absolute; left:-1px; top:10px; width:5px; height:5px; border-radius:50%; background:#e0a050; opacity:0; transition:opacity 0.3s; }
@@ -941,6 +948,13 @@ header > * { pointer-events: auto; }
   display:flex; flex-direction:column; gap:10px;
 }
 .ws-export-box .ws-export-title { font-size:0.8rem; color:rgba(227,217,195,0.85); margin-bottom:4px; font-family:var(--font-display); }
+.ws-export-scope-row { display:flex; gap:8px; margin-bottom:10px; }
+.ws-scope-btn {
+  flex:1; padding:9px; border-radius:10px; border:1px solid var(--border);
+  background:rgba(30,25,18,0.4); color:var(--ink-dim); cursor:pointer;
+  font-family:var(--font-mono); font-size:0.68rem;
+}
+.ws-scope-btn.active { border-color:rgba(107,196,184,0.4); color:var(--accent); background:rgba(107,196,184,0.08); }
 .ws-export-opt {
   padding:12px 14px; border-radius:10px; border:1px solid var(--border);
   background:rgba(30,25,18,0.4); cursor:pointer; text-align:left;
@@ -2695,7 +2709,7 @@ function renderWorkshopReader() {
     tabs.style.display = 'flex';
     tabs.innerHTML = _wsChapters.map(function(c) {
       return '<button class="ws-ch-tab' + (c.id === _wsActiveId ? ' active' : '') + '" onclick="switchWsChapter(\'' + c.id + '\')">' +
-        c.title + '<span class="ws-ch-del" onclick="deleteWsChapter(\'' + c.id + '\',event)">×</span></button>';
+        escapeHtml(c.title) + '<span class="ws-ch-del" onclick="deleteWsChapter(\'' + c.id + '\',event)">×</span></button>';
     }).join('') + '<button class="ws-ch-add" onclick="addAnotherChapter()">+</button>';
   } else {
     tabs.style.display = 'none';
@@ -2709,14 +2723,33 @@ function renderWorkshopReader() {
   content.innerHTML = paras.map(function(p, i) {
     var pid = ch.id + '-p-' + i;
     var hasNote = _wsNotes[pid] ? true : false;
-    var html = highlightTerms(p);
-    return '<div class="ws-para' + (hasNote ? ' has-note' : '') + '" id="' + pid + '"><div class="ndot"></div><p>' + html + '</p>' +
+    var trimmed = p.trim();
+    var headerMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+    var isHeader = !!headerMatch;
+    var bodyText = isHeader ? headerMatch[2] : p;
+    var html = highlightTerms(mdInline(bodyText));
+    var tag = isHeader ? (headerMatch[1].length <= 2 ? 'h3' : 'h4') : 'p';
+    var noteVal = escapeHtml(_wsNotes[pid] || '');
+    return '<div class="ws-para' + (isHeader ? ' ws-heading' : '') + (hasNote ? ' has-note' : '') + '" id="' + pid + '"><div class="ndot"></div><' + tag + '>' + html + '</' + tag + '>' +
       '<div class="ch-notebox" id="nb-' + pid + '"><button class="nb-close" onclick="closeWsNote(\'' + pid + '\')">×</button>' +
-      '<textarea placeholder="写想法..." oninput="saveWsNote(\'' + pid + '\',this.value)">' + (_wsNotes[pid] || '') + '</textarea></div></div>';
+      '<textarea placeholder="写想法..." oninput="saveWsNote(\'' + pid + '\',this.value)">' + noteVal + '</textarea></div></div>';
   }).join('');
 
   renderWsTermsList();
   updateWsNotesBtn();
+}
+
+// === Minimal safe markdown: bold, italic — escapes HTML first to prevent breakage ===
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function mdInline(text) {
+  var t = escapeHtml(text);
+  t = t.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+  t = t.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+  t = t.replace(/(^|[^\w])_([^_]+)_(?!\w)/g, '$1<em>$2</em>');
+  return t;
 }
 
 function highlightTerms(text) {
@@ -2829,9 +2862,9 @@ function openWsNotesPanel() {
   var entries = wsCollectNoteEntries();
   body.innerHTML = entries.length ? entries.map(function(en) {
     return '<div class="ws-np-card">' +
-      '<div class="ws-np-ch">' + en.chTitle + '</div>' +
-      '<div class="ws-np-ctx">「' + en.ctx + '…」</div>' +
-      '<textarea oninput="saveWsNote(\'' + en.pid + '\',this.value)">' + en.note + '</textarea>' +
+      '<div class="ws-np-ch">' + escapeHtml(en.chTitle) + '</div>' +
+      '<div class="ws-np-ctx">「' + escapeHtml(en.ctx) + '…」</div>' +
+      '<textarea oninput="saveWsNote(\'' + en.pid + '\',this.value)">' + escapeHtml(en.note) + '</textarea>' +
       '<div class="ws-np-actions">' +
       '<span class="ws-np-jump" onclick="jumpToWsNote(\'' + en.pid + '\')">跳转原文</span>' +
       '<span class="ws-np-del" onclick="deleteWsNoteFromPanel(\'' + en.pid + '\')">删除</span>' +
@@ -2857,9 +2890,12 @@ function jumpToWsNote(pid) {
 }
 
 // === EXPORT ===
-function wsCollectNoteEntries() {
+let _wsExportScope = 'current'; // 'current' or 'all'
+
+function wsCollectNoteEntries(scopeChId) {
   var entries = [];
   _wsChapters.forEach(function(ch) {
+    if (scopeChId && ch.id !== scopeChId) return;
     var paras = ch.text.split('\n').filter(function(p) { return p.trim(); });
     paras.forEach(function(p, i) {
       var pid = ch.id + '-p-' + i;
@@ -2874,12 +2910,33 @@ function wsCollectNoteEntries() {
 function doExportWorkshop() {
   var entries = wsCollectNoteEntries();
   if (!entries.length && !_wsTerms.length) { showToast('没有内容'); return; }
+  buildExportScopeRow();
   document.getElementById('ws-export-modal').classList.add('show');
+}
+
+function buildExportScopeRow() {
+  var wrap = document.getElementById('ws-export-scope-wrap');
+  var row = document.getElementById('ws-export-scope-row');
+  if (!row || !wrap) return;
+  if (_wsChapters.length > 1) {
+    wrap.style.display = 'block';
+    row.innerHTML =
+      '<button class="ws-scope-btn' + (_wsExportScope === 'current' ? ' active' : '') + '" onclick="setExportScope(\'current\')">仅本章</button>' +
+      '<button class="ws-scope-btn' + (_wsExportScope === 'all' ? ' active' : '') + '" onclick="setExportScope(\'all\')">全部章节</button>';
+  } else {
+    wrap.style.display = 'none';
+    _wsExportScope = 'all';
+  }
+}
+function setExportScope(s) {
+  _wsExportScope = s;
+  buildExportScopeRow();
 }
 
 function doExportFormat(mode) {
   document.getElementById('ws-export-modal').classList.remove('show');
-  var entries = wsCollectNoteEntries();
+  var scopeId = (_wsExportScope === 'current' && _wsChapters.length > 1) ? _wsActiveId : null;
+  var entries = wsCollectNoteEntries(scopeId);
   var output = '';
 
   if (mode === 'full') {
@@ -3009,7 +3066,11 @@ if ('serviceWorker' in navigator) {
 <!-- Export format picker -->
 <div class="ws-export-modal" id="ws-export-modal">
   <div class="ws-export-box">
-    <div class="ws-export-title">选择导出格式</div>
+    <div id="ws-export-scope-wrap" style="display:none;">
+      <div class="ws-export-title">导出范围</div>
+      <div class="ws-export-scope-row" id="ws-export-scope-row"></div>
+    </div>
+    <div class="ws-export-title" style="margin-top:4px;">导出格式</div>
     <button class="ws-export-opt" onclick="doExportFormat('full')">
       <div class="ws-eo-title">完整版</div>
       <div class="ws-eo-desc">术语列表 + 原文片段与想法对照</div>
